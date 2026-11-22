@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { api, clearToken, getToken, saveToken } from './api.js';
 import { t } from './i18n/index.js';
+import { UserContext, browserLanguage } from './UserContext.js';
 import Join from './pages/Join.jsx';
 import Shelf from './pages/Shelf.jsx';
 import ItemPage from './pages/ItemPage.jsx';
@@ -33,29 +36,75 @@ function BottomNav({ lang }) {
 }
 
 export default function App() {
-  // Fixed for now. Step 2 replaces this with the logged-in user's language (from /api/me).
-  const lang = 'en';
-
-  // On the join screen you are not a member yet, so the tabs would lead nowhere.
+  const [me, setMe] = useState(null); // { user, group } of the logged-in neighbor
+  const [loading, setLoading] = useState(Boolean(getToken()));
+  const [loadFailed, setLoadFailed] = useState(false);
   const { pathname } = useLocation();
-  const showNav = pathname !== '/join';
+
+  // On start: if we have a token, ask the server who we are.
+  useEffect(() => {
+    if (!getToken()) return;
+    api
+      .get('/api/me')
+      .then(setMe)
+      .catch((error) => {
+        // 401 = the server doesn't know this token. api.js already forgot it → join screen.
+        if (error.status !== 401) setLoadFailed(true);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Before joining we don't know the user's language yet, so use the browser's.
+  const lang = me ? me.user.lang : browserLanguage();
+
+  // Elder mode is a class on <body>; styles.css uses it to make everything bigger.
+  // <html lang> helps screen readers, and makes browsers pick Japanese fonts for Japanese.
+  useEffect(() => {
+    document.body.classList.toggle('elder', Boolean(me?.user.elder_mode));
+    document.documentElement.lang = lang === 'ja-easy' ? 'ja' : lang;
+  }, [me, lang]);
+
+  // After /api/join or the demo login: remember the token and who we are.
+  function login({ token, user, group }) {
+    saveToken(token);
+    setMe({ user, group });
+  }
+
+  function logout() {
+    clearToken();
+    setMe(null);
+  }
+
+  let page;
+  if (loading) {
+    page = <p>{t(lang, 'common.loading')}</p>;
+  } else if (loadFailed) {
+    page = <p className="error">{t(lang, 'common.error')}</p>;
+  } else if (!me && pathname !== '/join') {
+    // No token yet (not a member): every page except /join sends you to /join.
+    page = <Navigate to="/join" replace />;
+  } else {
+    page = (
+      <Routes>
+        <Route path="/join" element={<Join />} />
+        <Route path="/" element={<Shelf />} />
+        <Route path="/item/:id" element={<ItemPage />} />
+        <Route path="/my-items" element={<MyItems />} />
+        <Route path="/loans" element={<Loans />} />
+        <Route path="/loan/:id" element={<LoanPage />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/poster" element={<Poster />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
 
   return (
-    <div className="app">
-      <main className="page">
-        <Routes>
-          <Route path="/join" element={<Join lang={lang} />} />
-          <Route path="/" element={<Shelf lang={lang} />} />
-          <Route path="/item/:id" element={<ItemPage lang={lang} />} />
-          <Route path="/my-items" element={<MyItems lang={lang} />} />
-          <Route path="/loans" element={<Loans lang={lang} />} />
-          <Route path="/loan/:id" element={<LoanPage lang={lang} />} />
-          <Route path="/settings" element={<Settings lang={lang} />} />
-          <Route path="/poster" element={<Poster lang={lang} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-      {showNav && <BottomNav lang={lang} />}
-    </div>
+    <UserContext.Provider value={{ user: me?.user, group: me?.group, lang, login, logout, setMe }}>
+      <div className="app">
+        <main className="page">{page}</main>
+        {me && pathname !== '/join' && <BottomNav lang={lang} />}
+      </div>
+    </UserContext.Provider>
   );
 }

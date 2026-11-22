@@ -2,6 +2,8 @@
 
 :root {
   --accent: #264d73; /* Japanese indigo (藍色), the one accent color */
+  --accent-soft: #e5edf5; /* light tint of the accent, for highlighted boxes */
+  --danger: #b3261e; /* error messages */
   --bg: #faf8f3; /* warm off-white */
   --surface: #ffffff; /* cards, bottom nav */
   --text: #2a2a2a;
@@ -79,6 +81,168 @@ h1 {
 .nav-icon {
   font-size: 1.5em;
   line-height: 1;
+}
+
+/* ---------- Shared building blocks ---------- */
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+h2 {
+  font-size: 1.1em;
+  margin: 0 0 12px;
+}
+
+.label {
+  display: block;
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.field {
+  margin-bottom: 22px;
+}
+
+.text-input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.text-input:focus {
+  border-color: var(--accent);
+  outline: 3px solid var(--accent-soft);
+}
+
+.hint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.error {
+  margin: 6px 0 12px;
+  color: var(--danger);
+}
+
+/* The one big action of a screen ("Join", "Can I borrow it?") */
+.button-primary {
+  width: 100%;
+  min-height: calc(var(--tap) + 8px);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.1em;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button-primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Chips (components/ChipGroup.jsx): big tap targets, the selected one is filled */
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: var(--tap);
+  padding: 0 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.chip.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ---------- Join page ---------- */
+
+.brand {
+  margin-bottom: 20px;
+}
+
+.brand-name {
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.25em;
+  font-weight: 700;
+}
+
+.brand-tagline {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.group-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+.group-preview p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.group-icon {
+  font-size: 2em;
+  line-height: 1;
+}
+
+.demo {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--border);
+}
+
+.demo h2 {
+  color: var(--muted);
+  font-size: 0.95em;
+}
+
+.demo-users {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.demo-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.demo-user span {
+  color: var(--muted);
+  font-size: 0.85em;
 }
 
 /* Temporary: marks pages that are not built yet. */
