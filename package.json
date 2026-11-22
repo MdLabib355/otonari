@@ -1,0 +1,18 @@
+{
+  "name": "otonari",
+  "private": true,
+  "description": "Borrow from next door, in your own language. A PWA for neighbors in Japan.",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "postinstall": "npm install --prefix client && npm install --prefix server",
+    "dev": "concurrently --names server,client --prefix-colors blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "seed": "node server/seed.js",
+    "build": "npm run build --prefix client",
+    "start": "node server/index.js"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7"
+  }
+}

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Local settings (commit server/.env.example instead)
+.env
+
+# SQLite database, plus the -wal / -shm / -journal files SQLite may create next to it.
+# Recreate it any time with: npm run seed
+server/otonari.db*
+
+# Uploaded photos (the folder itself stays, thanks to .gitkeep)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Client build output (npm run build)
+client/dist/
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
