@@ -1,0 +1,100 @@
+{
+  "meta": { "lang": "ja-easy", "name": "やさしい にほんご", "locale": "ja-JP", "speech": "ja-JP" },
+
+  "ui": {
+    "tagline": "となりの ひとに かりる。じぶんの ことばで。",
+    "nav.shelf": "たな",
+    "nav.myItems": "かせる もの",
+    "nav.loans": "かりる・かす",
+    "nav.settings": "せってい",
+    "shelf.available": "かせます",
+    "shelf.lent": "いま かしています",
+    "borrow.when": "いつ つかいますか",
+    "borrow.today": "きょう",
+    "borrow.tomorrow": "あした",
+    "borrow.dayAfter": "あさって",
+    "borrow.morning": "あさ",
+    "borrow.afternoon": "ひる",
+    "borrow.evening": "ゆうがた",
+    "borrow.howLong": "なんにち かりますか",
+    "borrow.days": "{n}にち",
+    "borrow.day": "1にち",
+    "borrow.preview": "あいての がめん:",
+    "borrow.send": "かして ください",
+    "loan.accept": "はい",
+    "loan.decline": "いいえ",
+    "loan.takePhoto": "しゃしんを とる",
+    "loan.confirmReceived": "もらいました",
+    "loan.confirmReturn": "もどりました",
+    "loan.showOriginal": "あいての がめんを みる",
+    "speak.button": "よみあげる"
+  },
+
+  "items": {
+    "takoyaki_maker": "たこやき き",
+    "hot_plate": "ホットプレート",
+    "rice_cooker_large": "おおきい すいはんき",
+    "donabe": "どなべ",
+    "blender": "ミキサー",
+    "cassette_stove": "カセットコンロ",
+    "bread_maker": "パンを つくる きかい",
+    "futon_dryer": "ふとんを かわかす きかい",
+    "vacuum_cleaner": "そうじき",
+    "steam_iron": "アイロン",
+    "carpet_cleaner": "カーペット クリーナー",
+    "dehumidifier": "じょしつき",
+    "high_pressure_washer": "こうあつ せんじょうき",
+    "ladder": "きゃたつ",
+    "power_drill": "でんどう ドリル",
+    "tool_set": "こうぐ セット",
+    "extension_cord": "えんちょう コード",
+    "bicycle_pump": "じてんしゃの くうきいれ",
+    "projector": "プロジェクター",
+    "bluetooth_speaker": "スピーカー",
+    "air_purifier": "くうき せいじょうき",
+    "electric_heater": "でんき ストーブ",
+    "board_game": "ボードゲーム",
+    "baby_stroller": "ベビーカー",
+    "lawn_mower": "しばかりき",
+    "hedge_trimmer": "きを きる きかい",
+    "camping_tent": "テント",
+    "suitcase": "スーツケース"
+  },
+
+  "spots": {
+    "entrance": "いりぐち",
+    "mailbox": "ゆうびんうけ の まえ",
+    "bike_parking": "じてんしゃ おきば",
+    "notice_board": "けいじばん の まえ",
+    "konbini": "ちかくの コンビニ"
+  },
+
+  "phrases": {
+    "request": "{item} を かりたいです。{start} から {end} まで です。いいですか。",
+    "cancel": "ごめんなさい。この おねがいは やめます。",
+    "accept": "はい、どうぞ。{start} に {spot} で わたします。",
+    "decline": "ごめんなさい。いまは かせません。",
+    "declineBusy": "ごめんなさい。その ひは わたしが つかいます。",
+    "handoverPhoto": "{item} の しゃしんを とりました。みて ください。",
+    "received": "{item} を もらいました。たいせつに つかいます。",
+    "returned": "{item} を かえします。ありがとう ございました。",
+    "returnConfirmed": "{item} が もどりました。ありがとう ございました。また どうぞ。",
+
+    "qr.onMyWay": "いまから いきます。",
+    "qr.atSpot": "{spot} に つきました。",
+    "qr.late": "ごめんなさい。すこし おくれます。",
+    "qr.noProblem": "だいじょうぶ です。",
+    "qr.thanks": "ありがとう ございます。",
+
+    "sys.dueSoon": "おしらせ:{end} までに {spot} で {item} を かえして ください。",
+    "sys.overdue": "おしらせ:{item} を かえす ひ({end})が すぎました。{name} に かえして ください。",
+    "sys.overdueLender": "おしらせ:{name} に「{item} を かえして ください」と おしらせ しました。"
+  },
+
+  "tips": {
+    "beforeRequest": "ヒント:かりた ものは きれいに して、やくそくの ひ までに かえしましょう。",
+    "atHandover": "ヒント:「ありがとう ございます」と いいましょう。",
+    "atReturn": "ヒント:おくれる ときは「すこし おくれます」を おくりましょう。",
+    "forLender": "あいては にほんごが にがて かもしれません。おとなりが あいての ことばで みせます。"
+  }
+}
