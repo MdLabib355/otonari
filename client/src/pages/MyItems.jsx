@@ -1,13 +1,154 @@
-import { t } from '../i18n/index.js';
+import { useEffect, useState } from 'react';
+import { api } from '../api.js';
+import ChipGroup from '../components/ChipGroup.jsx';
+import { CATEGORIES, DURATIONS, ITEMS, SPOTS, findItem } from '../data/catalog.js';
+import { categoryName, itemName, spotName, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
-// Placeholder: listing and adding my items is built in Step 3.
+// Spot names are lowercase because they sit inside sentences ("at the building entrance").
+// On a chip they look better with a capital letter (no effect on Japanese or Bengali).
+function capitalize(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// My items: what I lend, plus the "Add an item" form (pick from the fixed catalog, never typed).
 export default function MyItems() {
   const { lang } = useUser();
+  const [items, setItems] = useState(null); // null = still loading
+  const [failed, setFailed] = useState(false);
+  // The form starts with sensible defaults, so often picking the item is the only choice needed.
+  const [itemKey, setItemKey] = useState(null);
+  const [maxDays, setMaxDays] = useState(3);
+  const [spot, setSpot] = useState('entrance');
+  const [busy, setBusy] = useState(false);
+
+  function loadItems() {
+    api
+      .get('/api/my-items')
+      .then(setItems)
+      .catch(() => setFailed(true));
+  }
+
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  async function addItem() {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await api.post('/api/items', { item_key: itemKey, max_days: maxDays, spot });
+      setItemKey(null);
+      loadItems();
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // the new item appears in the list at the top
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeItem(id) {
+    setFailed(false);
+    try {
+      await api.delete(`/api/items/${id}`);
+    } catch (error) {
+      // 409: it was reserved or lent in the meantime; reloading shows that.
+      if (error.status !== 409) setFailed(true);
+    }
+    loadItems();
+  }
+
+  const durationOptions = DURATIONS.map((n) => ({
+    value: n,
+    label: n === 1 ? t(lang, 'borrow.day') : t(lang, 'borrow.days', { n }),
+  }));
+  const spotOptions = SPOTS.map((key) => ({ value: key, label: capitalize(spotName(lang, key)) }));
+
   return (
     <section>
       <h1>{t(lang, 'myItems.title')}</h1>
-      <p className="placeholder">/my-items</p>
+
+      {failed && <p className="error">{t(lang, 'common.error')}</p>}
+      {!items && !failed && <p>{t(lang, 'common.loading')}</p>}
+      {items?.length === 0 && <p className="empty">{t(lang, 'myItems.empty')}</p>}
+      {items?.length > 0 && (
+        <ul className="my-items">
+          {items.map((item) => (
+            <MyItemRow key={item.id} item={item} lang={lang} onRemove={removeItem} />
+          ))}
+        </ul>
+      )}
+
+      <h2 className="section-title">{t(lang, 'myItems.add')}</h2>
+
+      <div className="field">
+        <p className="label">{t(lang, 'myItems.pick')}</p>
+        {CATEGORIES.map((category) => (
+          <div key={category}>
+            <h3 className="catalog-heading">{categoryName(lang, category)}</h3>
+            <div className="catalog-grid">
+              {ITEMS.filter((item) => item.category === category).map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={item.key === itemKey ? 'catalog-item selected' : 'catalog-item'}
+                  aria-pressed={item.key === itemKey}
+                  onClick={() => setItemKey(item.key)}
+                >
+                  <span className="catalog-emoji" aria-hidden="true">
+                    {item.emoji}
+                  </span>
+                  {itemName(lang, item.key)}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="field">
+        <p className="label">{t(lang, 'myItems.maxDays')}</p>
+        <ChipGroup label={t(lang, 'myItems.maxDays')} options={durationOptions} value={maxDays} onChange={setMaxDays} />
+      </div>
+
+      <div className="field">
+        <p className="label">{t(lang, 'myItems.spot')}</p>
+        <ChipGroup label={t(lang, 'myItems.spot')} options={spotOptions} value={spot} onChange={setSpot} />
+      </div>
+
+      <button type="button" className="button-primary" disabled={!itemKey || busy} onClick={addItem}>
+        {itemKey && `${findItem(itemKey).emoji} `}
+        {t(lang, 'myItems.save')}
+      </button>
     </section>
+  );
+}
+
+// One of my items. It can't be removed while it is reserved or lent.
+function MyItemRow({ item, lang, onRemove }) {
+  const canRemove = item.status === 'available';
+  const days = item.max_days === 1 ? t(lang, 'item.maxDay') : t(lang, 'item.maxDays', { n: item.max_days });
+
+  return (
+    <li className="my-item">
+      <span className="item-emoji" aria-hidden="true">
+        {findItem(item.item_key)?.emoji}
+      </span>
+      <div className="my-item-text">
+        <strong>{itemName(lang, item.item_key)}</strong>
+        <span className="muted">
+          {days} · {t(lang, 'item.spot', { spot: spotName(lang, item.spot) })}
+        </span>
+        {!canRemove && <span className="hint">{t(lang, 'myItems.cantRemove')}</span>}
+      </div>
+      {canRemove ? (
+        <button type="button" className="button-secondary" onClick={() => onRemove(item.id)}>
+          {t(lang, 'myItems.remove')}
+        </button>
+      ) : (
+        <span className={`badge badge-${item.status}`}>{t(lang, `shelf.${item.status}`)}</span>
+      )}
+    </li>
   );
 }

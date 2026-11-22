@@ -42,7 +42,8 @@ export function createTables() {
       max_days INTEGER NOT NULL DEFAULT 3,
       spot TEXT NOT NULL,                 -- key from SPOTS, e.g. 'entrance'
       status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','lent')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      removed_at TEXT                     -- set when the owner removes it (soft delete); NULL = on the shelf
     );
 
     CREATE TABLE IF NOT EXISTS loans (
@@ -75,6 +76,13 @@ export function createTables() {
 }
 
 createTables();
+
+// Databases created before `removed_at` existed get the column added here
+// (`npm run seed` would also fix it, because it recreates all tables).
+const itemColumns = db.pragma('table_info(items)').map((column) => column.name);
+if (!itemColumns.includes('removed_at')) {
+  db.exec('ALTER TABLE items ADD COLUMN removed_at TEXT');
+}
 
 // Start from empty tables: drop them all and create them again (used by seed.js).
 // Children go first, because of the foreign keys.

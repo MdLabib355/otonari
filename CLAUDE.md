@@ -89,11 +89,16 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 
 - **Client**: React 18 + Vite, **plain JavaScript (no TypeScript)**, `react-router-dom`, plain CSS
   (`client/src/styles.css`), `vite-plugin-pwa`, `qrcode` (for the poster).
-- **Server**: Node.js 20+ (LTS), Express, `better-sqlite3`, `multer` (photo upload), `cors`, `dotenv`.
+- **Server**: Node.js 20+ (LTS), Express, `better-sqlite3`, `multer` (photo upload), `cors`, `dotenv`,
+  `nodemon` (dev only: restarts the server when a server `.js` file is saved).
 - **Database**: SQLite file `server/otonari.db` (git-ignored). Recreated + seeded with `npm run seed`.
 - **Photos**: saved to `server/uploads/` (git-ignored, keep `.gitkeep`), served at `/uploads/...`.
 - **Dev**: root `package.json` runs both with `concurrently` → `npm run dev`.
   Client on port 5173, server on port 3001, Vite proxies `/api` and `/uploads` to 3001.
+  The server runs under `nodemon` (config in `server/package.json`): it watches only server `.js` files and
+  ignores `node_modules`, `uploads/` and the database files, so database writes, seeding and photo uploads
+  never restart it. (Not `node --watch`: on Windows it restarts when files are merely read.)
+- **For the demo, always use `npm run build` + `npm start` (no file watcher).**
 - **No API keys or secrets exist in this project.** `.env` holds only `PORT` and `DEMO_MODE`.
   `.env` is in `.gitignore`; commit `.env.example`.
 
@@ -182,7 +187,8 @@ CREATE TABLE items (
   max_days INTEGER NOT NULL DEFAULT 3,
   spot TEXT NOT NULL,                 -- key from SPOTS, e.g. 'entrance'
   status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','lent')),
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  removed_at TEXT                     -- set when the owner removes it (soft delete); NULL = on the shelf
 );
 
 CREATE TABLE loans (
@@ -228,6 +234,11 @@ Item status: `available` → `reserved` (on accept) → `lent` (on received) →
 declined-after-accept is not possible). Accepting a loan auto-declines other pending loans for that item
 (send them the `decline` phrase).
 
+**Removing an item is a soft delete** (loans point to items, so the row must stay): only an `available`
+item can be removed; it gets `removed_at`, its pending loans are declined (send them the `decline`
+phrase), and it disappears from the shelf and My items. Old loans and messages still find it.
+Removed items can never be requested.
+
 ---
 
 ## 6. API (all JSON, all under `/api`, all require `Authorization: Bearer <token>` except join + demo)
@@ -238,7 +249,7 @@ declined-after-accept is not possible). Accepting a loan auto-declines other pen
 | `POST /api/join` `{code,nickname,lang}` | anyone | creates user → `{token,user,group}` | – |
 | `GET /api/me` / `PATCH /api/me` `{lang,elder_mode}` | user | read/update me | – |
 | `GET /api/shelf` | user | items in my group + owner nickname + status | – |
-| `GET /api/my-items` / `POST /api/items` `{item_key,max_days,spot}` / `DELETE /api/items/:id` | owner | manage my items (can't delete if reserved/lent) | – |
+| `GET /api/my-items` / `POST /api/items` `{item_key,max_days,spot}` / `DELETE /api/items/:id` | owner | manage my items (can't delete if reserved/lent; delete = soft delete, see section 5) | `decline` → pending borrowers (on delete) |
 | `POST /api/loans` `{item_id,start_at,end_at}` | borrower | create pending loan | `request` → lender |
 | `GET /api/loans` | user | my loans as borrower and lender, with item + other user | – |
 | `GET /api/loans/:id` | participant | loan + messages (+ sender lang for "show original") | – |
@@ -265,6 +276,7 @@ Write one helper `createMessage(loan, fromUserId, toUserId, phraseKey)` in `serv
 ### Server rules
 - Every route checks the user belongs to the same group as the item/loan, and the right role
   (lender vs borrower). Return `403` otherwise.
+- Items with `removed_at` set are hidden from the shelf and My items, and `POST /api/loans` must refuse them.
 - Validate `phrase_key` against a whitelist; validate `item_key`/`spot` against the catalog
   (keep a copy of allowed keys in `server/allowedKeys.js` — just arrays of strings).
 - Photo upload: images only, max 5 MB, random filename.

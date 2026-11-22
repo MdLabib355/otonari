@@ -35,6 +35,7 @@
     "shelf.allCategories": "সব",
 
     "item.maxDays": "সর্বোচ্চ {n} দিন",
+    "item.maxDay": "সর্বোচ্চ ১ দিন",
     "item.spot": "হস্তান্তর: {spot}",
 
     "borrow.when": "কখন দরকার?",

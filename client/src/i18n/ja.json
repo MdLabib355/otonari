@@ -35,6 +35,7 @@
     "shelf.allCategories": "すべて",
 
     "item.maxDays": "最大{n}日間",
+    "item.maxDay": "最大1日間",
     "item.spot": "受け渡し:{spot}",
 
     "borrow.when": "いつ使いますか?",

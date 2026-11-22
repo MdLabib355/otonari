@@ -35,6 +35,7 @@
     "shelf.allCategories": "All",
 
     "item.maxDays": "Up to {n} days",
+    "item.maxDay": "Up to 1 day",
     "item.spot": "Handover: {spot}",
 
     "borrow.when": "When do you need it?",
