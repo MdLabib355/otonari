@@ -1,6 +1,8 @@
 // The neighborhood shelf, and managing my own items.
 //   GET    /api/shelf       user    every item on my group's shelf, with the owner's nickname
 //   GET    /api/my-items    user    my own items
+//   GET    /api/items/:id   user    one item of my group, with the owner's nickname and language
+//                                   (the item page shows the request in the OWNER's language)
 //   POST   /api/items       user    { item_key, max_days, spot } → put a new item on the shelf
 //   DELETE /api/items/:id   owner   take it off the shelf (not while it is reserved or lent)
 //
@@ -35,6 +37,24 @@ router.get('/my-items', requireUser, (req, res) => {
     )
     .all(req.user.id);
   res.json(items);
+});
+
+router.get('/items/:id', requireUser, (req, res) => {
+  const item = db
+    .prepare(
+      `SELECT items.id, items.group_id, items.item_key, items.max_days, items.spot, items.status,
+              items.owner_id, users.nickname AS owner_nickname, users.lang AS owner_lang
+       FROM items JOIN users ON users.id = items.owner_id
+       WHERE items.id = ? AND items.removed_at IS NULL`
+    )
+    .get(req.params.id);
+  if (!item) {
+    return res.status(404).json({ error: 'Item not found' });
+  }
+  if (item.group_id !== req.user.group_id) {
+    return res.status(403).json({ error: 'Not in your neighborhood' });
+  }
+  res.json(item);
 });
 
 router.post('/items', requireUser, (req, res) => {

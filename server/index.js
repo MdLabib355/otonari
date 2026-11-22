@@ -12,6 +12,7 @@ import { db } from './db.js';
 import demoRoutes from './routes/demo.js';
 import groupRoutes from './routes/groups.js';
 import itemRoutes from './routes/items.js';
+import loanRoutes from './routes/loans.js';
 
 // Load server/.env by its full path, because `npm start` runs from the project root
 // while `npm run dev` runs from the server folder.
@@ -38,6 +39,7 @@ app.get('/api/health', (req, res) => {
 // Login is checked per route with requireUser (see auth.js).
 app.use('/api', groupRoutes);
 app.use('/api', itemRoutes);
+app.use('/api', loanRoutes);
 
 // Demo-only routes ("continue as a neighbor"): only when DEMO_MODE=true in server/.env.
 if (process.env.DEMO_MODE === 'true') {

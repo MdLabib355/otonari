@@ -249,6 +249,7 @@ Removed items can never be requested.
 | `POST /api/join` `{code,nickname,lang}` | anyone | creates user → `{token,user,group}` | – |
 | `GET /api/me` / `PATCH /api/me` `{lang,elder_mode}` | user | read/update me | – |
 | `GET /api/shelf` | user | items in my group + owner nickname + status | – |
+| `GET /api/items/:id` | user (same group) | one item + owner nickname + owner lang (the item page previews the request in the owner's language) | – |
 | `GET /api/my-items` / `POST /api/items` `{item_key,max_days,spot}` / `DELETE /api/items/:id` | owner | manage my items (can't delete if reserved/lent; delete = soft delete, see section 5) | `decline` → pending borrowers (on delete) |
 | `POST /api/loans` `{item_id,start_at,end_at}` | borrower | create pending loan | `request` → lender |
 | `GET /api/loans` | user | my loans as borrower and lender, with item + other user | – |
