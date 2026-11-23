@@ -180,7 +180,7 @@ async function insertReturnedLoan(mariaId, tanakaId, client) {
     [mariaId, tanakaId, 'qr.thanks', japanTime(6, 18, 7)],
   ];
   for (const [fromId, toId, phraseKey, when] of conversation) {
-    const messageId = await createMessage(loan, fromId, toId, phraseKey, client);
+    const messageId = await createMessage(loan, fromId, toId, phraseKey, client, {}, { silent: true });
     await query('UPDATE messages SET created_at = $1, read_at = $1 WHERE id = $2', [when, messageId], client);
   }
 }

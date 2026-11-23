@@ -1,4 +1,5 @@
-// PostgreSQL connection pool, parameterized query runner, and atomic transaction helper.
+// PostgreSQL connection pool, parameterized query runner, and atomic transaction helper
+// with post-commit hook support so SSE/push notifications never fire on rolled-back writes.
 
 import pg from 'pg';
 
@@ -35,19 +36,37 @@ export async function query(sql, params = [], client = null) {
   return executor.query(sql, params);
 }
 
-// Runs `fn(client)` inside a single PostgreSQL transaction, guaranteeing client release.
+// Schedule side-effects (SSE, Web Push) to execute strictly after COMMIT (or immediately if non-transactional).
+export function afterCommit(client, fn) {
+  if (client && Array.isArray(client._afterCommit)) {
+    client._afterCommit.push(fn);
+  } else {
+    Promise.resolve().then(fn).catch((err) => console.error('Post-commit hook failed:', err));
+  }
+}
+
 export async function withTransaction(fn) {
   const client = await getPool().connect();
+  client._afterCommit = [];
+  let committed = false;
   try {
     await client.query('BEGIN');
     const result = await fn(client);
     await client.query('COMMIT');
+    committed = true;
     return result;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
   } finally {
+    const callbacks = client._afterCommit;
+    delete client._afterCommit;
     client.release();
+    if (committed && callbacks.length > 0) {
+      for (const cb of callbacks) {
+        Promise.resolve().then(cb).catch((err) => console.error('Post-commit hook failed:', err));
+      }
+    }
   }
 }
 

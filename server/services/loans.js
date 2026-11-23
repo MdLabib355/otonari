@@ -1,12 +1,21 @@
 // Shared domain helpers for messages, open-loan checks, trust scoring, and public user views.
 
-import { query } from '../db/pool.js';
+import { afterCommit, query } from '../db/pool.js';
+import { dispatchMessageNotification } from './notifications.js';
 
 function toIso(value) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-export async function createMessage(loan, fromUserId, toUserId, phraseKey, client = null, extraParams = {}) {
+export async function createMessage(
+  loan,
+  fromUserId,
+  toUserId,
+  phraseKey,
+  client = null,
+  extraParams = {},
+  { silent = false } = {}
+) {
   const itemRes = await query('SELECT item_key, spot FROM items WHERE id = $1', [loan.item_id], client);
   const item = itemRes.rows[0];
   const otherId = toUserId === loan.borrower_id ? loan.lender_id : loan.borrower_id;
@@ -28,6 +37,17 @@ export async function createMessage(loan, fromUserId, toUserId, phraseKey, clien
     [loan.id, fromUserId, toUserId, phraseKey, JSON.stringify(params)],
     client
   );
+
+  if (!silent) {
+    afterCommit(client, () =>
+      dispatchMessageNotification(toUserId, {
+        loanId: loan.id,
+        fromUserId,
+        phraseKey,
+        params,
+      })
+    );
+  }
   return result.rows[0].id;
 }
 

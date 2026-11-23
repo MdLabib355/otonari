@@ -7,7 +7,9 @@ import { GROUP_TYPES, ISSUE_KEYS } from '../config/constants.js';
 import { query, withTransaction } from '../db/pool.js';
 import { requireManager } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
+import { disconnectUser } from '../services/events.js';
 import { createMessage, declinePendingLoans } from '../services/loans.js';
+import { dispatchStatusNotification } from '../services/notifications.js';
 import { hashPassword, verifyPassword } from '../services/passwords.js';
 import { createTransferCode } from '../services/transfer.js';
 
@@ -278,6 +280,7 @@ router.post('/manager/groups/:id/members/:userId/approve', requireManager, requi
   if (updateRes.rows.length === 0) {
     return res.status(404).json({ error: 'Pending member not found' });
   }
+  dispatchStatusNotification(userId, 'approved');
   res.status(204).end();
 });
 
@@ -294,6 +297,7 @@ router.post('/manager/groups/:id/members/:userId/reject', requireManager, requir
   if (updateRes.rows.length === 0) {
     return res.status(404).json({ error: 'Pending member not found' });
   }
+  dispatchStatusNotification(userId, 'rejected');
   res.status(204).end();
 });
 
@@ -366,6 +370,7 @@ router.post('/manager/groups/:id/members/:userId/remove', requireManager, requir
   if (outcome.status !== 204) {
     return res.status(outcome.status).json({ error: outcome.error });
   }
+  disconnectUser(userId);
   res.status(204).end();
 });
 

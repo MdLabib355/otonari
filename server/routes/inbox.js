@@ -1,11 +1,18 @@
-// Notification inbox & sticky return-due loans.
-//   GET  /api/inbox       user   my unread messages, oldest first, with sender + loan + item + borrower_trust
-//   POST /api/inbox/read  user   { ids } -> mark those messages (only ones sent to me) as read
-//   GET  /api/due-loans   user   my active borrowed loans due within 24h or overdue (no return photo yet)
+// 3-Layer Notification Routes:
+//   GET    /api/inbox           user          all piled-up unread notifications (oldest first)
+//   POST   /api/inbox/read      user          { ids } -> mark specific unread messages read
+//   POST   /api/inbox/read-all  user          mark all unread messages read
+//   GET    /api/due-loans       user          active borrowed loans due within 24h or overdue
+//   GET    /api/events          resident-any  authenticated SSE live event stream
+//   GET    /api/push/vapid-key  user          VAPID public key for browser PushManager
+//   POST   /api/push/subscribe  user          register/update Web Push subscription
+//   DELETE /api/push/subscribe  user          remove Web Push subscription
 
 import express from 'express';
 import { query, withTransaction } from '../db/pool.js';
-import { requireUser } from '../middleware/auth.js';
+import { requireResidentAnyStatus, requireUser } from '../middleware/auth.js';
+import { subscribeUser } from '../services/events.js';
+import { getVapidPublicKey, removeSubscription, saveSubscription } from '../services/push.js';
 
 const router = express.Router();
 
@@ -77,6 +84,14 @@ router.post('/inbox/read', requireUser, async (req, res) => {
   res.json({ updated });
 });
 
+router.post('/inbox/read-all', requireUser, async (req, res) => {
+  const result = await query(
+    'UPDATE messages SET read_at = NOW() WHERE to_user_id = $1 AND read_at IS NULL',
+    [req.user.id]
+  );
+  res.json({ updated: result.rowCount });
+});
+
 router.get('/due-loans', requireUser, async (req, res) => {
   const result = await query(
     `SELECT loans.id, loans.end_at, items.item_key, items.spot,
@@ -93,6 +108,32 @@ router.get('/due-loans', requireUser, async (req, res) => {
     [req.user.id]
   );
   res.json(result.rows);
+});
+
+router.get('/events', requireResidentAnyStatus, (req, res) => {
+  subscribeUser(req.user.id, res);
+});
+
+router.get('/push/vapid-key', requireUser, async (req, res) => {
+  const publicKey = await getVapidPublicKey();
+  res.json({ publicKey });
+});
+
+router.post('/push/subscribe', requireUser, async (req, res) => {
+  const ok = await saveSubscription(req.user.id, req.body);
+  if (!ok) {
+    return res.status(400).json({ error: 'Valid push subscription (endpoint + keys.p256dh + keys.auth) required' });
+  }
+  res.status(201).json({ ok: true });
+});
+
+router.delete('/push/subscribe', requireUser, async (req, res) => {
+  const endpoint = req.body?.endpoint;
+  if (typeof endpoint !== 'string' || !endpoint) {
+    return res.status(400).json({ error: 'endpoint is required' });
+  }
+  await removeSubscription(req.user.id, endpoint);
+  res.status(204).end();
 });
 
 export default router;

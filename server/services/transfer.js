@@ -1,7 +1,8 @@
 // Single-use 10-minute transfer/restore codes for multi-device linking and manager-assisted lost-phone restore.
 
 import crypto from 'node:crypto';
-import { query, withTransaction } from '../db/pool.js';
+import { afterCommit, query, withTransaction } from '../db/pool.js';
+import { disconnectUser } from './events.js';
 import { getMe } from './loans.js';
 
 // Unambiguous characters (excludes I, L, O, 0, 1).
@@ -66,6 +67,7 @@ export async function consumeTransferCode(rawCode) {
     if (row.rotate_token) {
       token = crypto.randomUUID();
       await query('UPDATE users SET token = $1 WHERE id = $2', [token, user.id], client);
+      afterCommit(client, () => disconnectUser(user.id));
     }
 
     const me = await getMe(user.id, client);
