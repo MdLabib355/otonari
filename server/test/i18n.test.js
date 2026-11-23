@@ -2,13 +2,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { DURATIONS, ITEM_KEYS, LANGUAGES, QUICK_REPLY_KEYS, SPOT_KEYS } from '../config/constants.js';
+import { DURATIONS, ISSUE_KEYS, ITEM_KEYS, LANGUAGES, QUICK_REPLY_KEYS, SPOT_KEYS, STAMP_KEYS } from '../config/constants.js';
 import {
   DURATIONS as CLIENT_DURATIONS,
+  ISSUE_KEYS as CLIENT_ISSUE_KEYS,
   ITEMS as CLIENT_ITEMS,
   LANGUAGES as CLIENT_LANGUAGES,
   QUICK_REPLIES as CLIENT_QUICK_REPLIES,
   SPOTS as CLIENT_SPOTS,
+  STAMP_KEYS as CLIENT_STAMP_KEYS,
 } from '../../client/src/data/catalog.js';
 
 const i18nDir = path.join(import.meta.dirname, '..', '..', 'client', 'src', 'i18n');
@@ -31,6 +33,8 @@ describe('Slice 4: Catalog & 4-language i18n parity (T39)', () => {
     );
     assert.deepEqual(SPOT_KEYS, CLIENT_SPOTS);
     assert.deepEqual(QUICK_REPLY_KEYS, CLIENT_QUICK_REPLIES);
+    assert.deepEqual(ISSUE_KEYS, CLIENT_ISSUE_KEYS);
+    assert.deepEqual(STAMP_KEYS, CLIENT_STAMP_KEYS);
     assert.deepEqual(DURATIONS, CLIENT_DURATIONS);
     assert.deepEqual(LANGUAGES, CLIENT_LANGUAGES);
   });
@@ -49,9 +53,12 @@ describe('Slice 4: Catalog & 4-language i18n parity (T39)', () => {
       'sys.dueSoon',
       'sys.overdue',
       'sys.overdueLender',
+      'sys.expired',
       'pingNeedBack',
       'pingOverdue',
       ...QUICK_REPLY_KEYS,
+      ...ISSUE_KEYS,
+      ...STAMP_KEYS,
     ];
 
     for (const lang of LANGUAGES) {

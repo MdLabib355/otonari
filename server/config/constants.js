@@ -40,6 +40,10 @@ export const SPOT_KEYS = ['entrance', 'mailbox', 'bike_parking', 'notice_board',
 
 export const QUICK_REPLY_KEYS = ['qr.onMyWay', 'qr.atSpot', 'qr.late', 'qr.noProblem', 'qr.thanks'];
 
+export const ISSUE_KEYS = ['issue.missingOrBroken', 'issue.damaged'];
+
+export const STAMP_KEYS = ['stamp.bigThanks', 'stamp.clean', 'stamp.snack', 'stamp.anytime'];
+
 export const LANGUAGES = ['en', 'ja', 'ja-easy', 'bn'];
 
 export const GROUP_TYPES = ['building', 'block'];

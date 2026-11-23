@@ -50,6 +50,7 @@ export async function initDatabase() {
         CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled', 'expired', 'active', 'returned')),
       handover_photo TEXT,
       return_photo TEXT,
+      issue_photo TEXT,
       returned_at TIMESTAMPTZ,
       reminded_soon_at TIMESTAMPTZ,
       reminded_overdue_at TIMESTAMPTZ,
@@ -71,6 +72,7 @@ export async function initDatabase() {
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_url TEXT;
     ALTER TABLE items ADD COLUMN IF NOT EXISTS paused BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE loans ADD COLUMN IF NOT EXISTS last_pinged_at TIMESTAMPTZ;
+    ALTER TABLE loans ADD COLUMN IF NOT EXISTS issue_photo TEXT;
     ALTER TABLE loans DROP CONSTRAINT IF EXISTS loans_status_check;
     ALTER TABLE loans ADD CONSTRAINT loans_status_check
       CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled', 'expired', 'active', 'returned'));

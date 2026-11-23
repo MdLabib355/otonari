@@ -13,7 +13,7 @@
 //   POST /api/loans/:id/quick-reply       participant   { phrase_key } one of the five fixed quick replies
 
 import express from 'express';
-import { DURATIONS, QUICK_REPLY_KEYS } from '../config/constants.js';
+import { DURATIONS, ISSUE_KEYS, QUICK_REPLY_KEYS, STAMP_KEYS } from '../config/constants.js';
 import { query, withTransaction } from '../db/pool.js';
 import { requireUser } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
@@ -24,7 +24,7 @@ import {
   isTrusted,
   trustOf,
 } from '../services/loans.js';
-import { deletePhotoFile, receivePhoto, savePhoto } from '../services/photos.js';
+import { deletePhotoFile, receiveOptionalPhoto, receivePhoto, savePhoto } from '../services/photos.js';
 
 const router = express.Router();
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -421,6 +421,54 @@ router.post('/loans/:id/quick-reply', requireUser, quickReplyLimiter, loanRole('
   const otherId = loan.borrower_id === req.user.id ? loan.lender_id : loan.borrower_id;
   await createMessage(loan, req.user.id, otherId, phraseKey);
   res.json(await loanDetails(loan.id, req.user.id));
+});
+
+// Structured issue/damage report on an active or returned loan (optional photo, zero free text).
+router.post(
+  '/loans/:id/issue',
+  requireUser,
+  quickReplyLimiter,
+  receiveOptionalPhoto,
+  loanRole('participant'),
+  async (req, res) => {
+    const issueKey = req.body?.issue_key;
+    if (!ISSUE_KEYS.includes(issueKey)) {
+      return res.status(400).json({ error: 'Unknown issue type' });
+    }
+    if (req.loan.status !== 'active' && req.loan.status !== 'returned') {
+      return res.status(409).json({ error: 'Issues can only be reported on active or returned loans' });
+    }
+
+    const photo = req.file ? await savePhoto(req.file) : null;
+    try {
+      await withTransaction(async (client) => {
+        const loan = (await query('SELECT * FROM loans WHERE id = $1 FOR UPDATE', [req.loan.id], client)).rows[0];
+        if (photo) {
+          await query('UPDATE loans SET issue_photo = $1 WHERE id = $2', [photo, loan.id], client);
+        }
+        const otherId = loan.borrower_id === req.user.id ? loan.lender_id : loan.borrower_id;
+        await createMessage(loan, req.user.id, otherId, issueKey, client, photo ? { photo } : {});
+      });
+    } catch (error) {
+      if (photo) await deletePhotoFile(photo);
+      throw error;
+    }
+    res.json(await loanDetails(req.loan.id, req.user.id));
+  }
+);
+
+// Warm neighborly thank-you stamp on a completed (returned) loan.
+router.post('/loans/:id/stamp', requireUser, quickReplyLimiter, loanRole('participant'), async (req, res) => {
+  const stampKey = req.body?.stamp_key;
+  if (!STAMP_KEYS.includes(stampKey)) {
+    return res.status(400).json({ error: 'Unknown thank-you stamp' });
+  }
+  if (req.loan.status !== 'returned') {
+    return res.status(409).json({ error: 'Thank-you stamps can only be sent after return is confirmed' });
+  }
+  const otherId = req.loan.borrower_id === req.user.id ? req.loan.lender_id : req.loan.borrower_id;
+  await createMessage(req.loan, req.user.id, otherId, stampKey);
+  res.json(await loanDetails(req.loan.id, req.user.id));
 });
 
 export default router;

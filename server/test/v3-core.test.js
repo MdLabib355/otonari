@@ -194,4 +194,70 @@ describe('v3 Slice 1: Core upgrades, neighborhood stats, pause/edit, dup nicknam
     });
     assert.equal(overCap.status, 409);
   });
+
+  it('supports structured issue/damage report (with optional EXIF-stripped photo) and thank-you stamps', async () => {
+    const usersRes = await req('GET', '/api/demo/users');
+    const mariaInfo = usersRes.data.find((u) => u.nickname === 'Maria');
+    const tanakaInfo = usersRes.data.find((u) => u.nickname === 'Tanaka');
+    const maria = (await req('POST', '/api/demo/login', { body: { user_id: mariaInfo.id } })).data;
+    const tanaka = (await req('POST', '/api/demo/login', { body: { user_id: tanakaInfo.id } })).data;
+
+    // Seeded returned loan (Maria borrowed Tanaka's projector)
+    const loans = (await req('GET', '/api/loans', { token: maria.token })).data;
+    const returnedLoanId = loans.borrowing[0].id;
+
+    // Invalid stamp rejected
+    assert.equal(
+      (await req('POST', `/api/loans/${returnedLoanId}/stamp`, { token: maria.token, body: { stamp_key: 'hack' } })).status,
+      400
+    );
+
+    // Valid thank-you stamp on returned loan
+    const stampRes = await req('POST', `/api/loans/${returnedLoanId}/stamp`, {
+      token: maria.token,
+      body: { stamp_key: 'stamp.bigThanks' },
+    });
+    assert.equal(stampRes.status, 200);
+    assert.equal(stampRes.data.messages.at(-1).phrase_key, 'stamp.bigThanks');
+
+    // Structured issue report WITH optional PNG photo
+    const validPng = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
+    const form = new FormData();
+    form.append('issue_key', 'issue.damaged');
+    form.append('photo', new Blob([validPng], { type: 'image/png' }), 'scratch.png');
+    const issueRes = await fetch(`${baseUrl}/api/loans/${returnedLoanId}/issue`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tanaka.token}` },
+      body: form,
+    });
+    assert.equal(issueRes.status, 200);
+    const issueData = await issueRes.json();
+    assert.match(issueData.loan.issue_photo, /^\/uploads\/[0-9a-f-]{36}\.png$/);
+    assert.equal(issueData.messages.at(-1).phrase_key, 'issue.damaged');
+    assert.equal(issueData.messages.at(-1).params.photo, issueData.loan.issue_photo);
+
+    // Issue report on pending loan rejected (409) & stamp on pending loan rejected (409)
+    const rahim = await join('SAKURA-2611', 'Rahim', 'en');
+    const shelf = (await req('GET', '/api/shelf', { token: rahim.token })).data;
+    const ladder = shelf.find((i) => i.item_key === 'ladder');
+    const pendingLoan = (
+      await req('POST', '/api/loans', {
+        token: rahim.token,
+        body: {
+          item_id: ladder.id,
+          start_at: new Date(Date.now() + 2 * HOUR_MS).toISOString(),
+          end_at: new Date(Date.now() + 26 * HOUR_MS).toISOString(),
+        },
+      })
+    ).data.loan;
+
+    assert.equal(
+      (await req('POST', `/api/loans/${pendingLoan.id}/issue`, { token: rahim.token, body: { issue_key: 'issue.damaged' } })).status,
+      409
+    );
+    assert.equal(
+      (await req('POST', `/api/loans/${pendingLoan.id}/stamp`, { token: rahim.token, body: { stamp_key: 'stamp.clean' } })).status,
+      409
+    );
+  });
 });

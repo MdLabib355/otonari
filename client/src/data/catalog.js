@@ -50,6 +50,18 @@ export const SPOTS = ['entrance', 'mailbox', 'bike_parking', 'notice_board', 'ko
 // Fixed quick replies either side can send during a loan.
 export const QUICK_REPLIES = ['qr.onMyWay', 'qr.atSpot', 'qr.late', 'qr.noProblem', 'qr.thanks'];
 
+// Structured non-confrontational issue phrases (active or returned loans).
+export const ISSUE_KEYS = ['issue.missingOrBroken', 'issue.damaged'];
+
+// Warm Japanese neighborly thank-you stamps on completed (returned) loans.
+export const STAMPS = [
+  { key: 'stamp.bigThanks', emoji: '🙇' },
+  { key: 'stamp.clean', emoji: '✨' },
+  { key: 'stamp.snack', emoji: '🍪' },
+  { key: 'stamp.anytime', emoji: '🤝' },
+];
+export const STAMP_KEYS = STAMPS.map((s) => s.key);
+
 // Loan length choices (days). Chips above the item's max_days are hidden.
 export const DURATIONS = [1, 2, 3, 7];
 
