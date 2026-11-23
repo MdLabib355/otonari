@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { api, clearToken, getToken, saveToken } from './api.js';
+import { api, clearToken, getToken, openEventStream, saveToken } from './api.js';
 import { formatNumber, t } from './i18n/index.js';
 import { useInbox } from './useInbox.js';
 import { UserContext, browserLanguage } from './UserContext.js';
@@ -13,8 +13,8 @@ import Loans from './pages/Loans.jsx';
 import LoanPage from './pages/LoanPage.jsx';
 import Settings from './pages/Settings.jsx';
 import Poster from './pages/Poster.jsx';
+import Manager from './pages/Manager.jsx';
 
-// The four tabs of the bottom navigation. Emoji icons help people who can't read the label.
 const TABS = [
   { to: '/', icon: '🏘️', label: 'nav.shelf' },
   { to: '/my-items', icon: '📦', label: 'nav.myItems' },
@@ -38,42 +38,96 @@ function BottomNav({ lang, unreadCount }) {
   );
 }
 
+// Live waiting screen when a building has require_approval=true; unlocks automatically via SSE on approval.
+function PendingApproval({ me, lang, onUpdated, onLeave }) {
+  const isRejected = me.user.status === 'rejected';
+
+  useEffect(() => {
+    if (isRejected) return;
+    let active = true;
+    const controller = new AbortController();
+
+    async function listen() {
+      try {
+        await openEventStream({
+          signal: controller.signal,
+          onEvent: (evt) => {
+            if (evt.type === 'status') {
+              api.get('/api/me').then(onUpdated).catch(() => {});
+            }
+          },
+          onRevoked: onLeave,
+        });
+      } catch {
+        // Fallback poll handles reconnects
+      }
+    }
+    listen();
+
+    const timer = setInterval(() => {
+      if (active) api.get('/api/me').then(onUpdated).catch(() => {});
+    }, 5000);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+      controller.abort();
+    };
+  }, [isRejected]);
+
+  async function cancelAndLeave() {
+    try {
+      await api.post('/api/leave');
+    } catch {
+      // Ignore if already revoked
+    }
+    onLeave();
+  }
+
+  return (
+    <section>
+      <h1>{t(lang, 'pending.title')}</h1>
+      <p className={isRejected ? 'error' : 'notice'}>
+        {isRejected ? t(lang, 'pending.rejected') : t(lang, 'pending.body', { group: me.group.name })}
+      </p>
+      <div className="actions">
+        <button type="button" className="button-secondary" onClick={cancelAndLeave}>
+          {t(lang, 'settings.leave')}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
-  const [me, setMe] = useState(null); // { user, group } of the logged-in neighbor
+  const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(Boolean(getToken()));
   const [loadFailed, setLoadFailed] = useState(false);
-  const { inbox, dueLoans, refreshInbox, markRead, clearInbox } = useInbox(); // unread messages + due loans
+  const { inbox, dueLoans, refreshInbox, markRead, markAllRead, clearInbox } = useInbox();
   const { pathname } = useLocation();
 
-  // On start: if we have a token, ask the server who we are.
   useEffect(() => {
     if (!getToken()) return;
     api
       .get('/api/me')
       .then(setMe)
       .catch((error) => {
-        // 401 = the server doesn't know this token. api.js already forgot it → join screen.
         if (error.status !== 401) setLoadFailed(true);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  // Before joining we don't know the user's language yet, so use the browser's.
   const lang = me ? me.user.lang : browserLanguage();
 
-  // Elder mode is a class on <body>; styles.css uses it to make everything bigger.
-  // <html lang> helps screen readers, and makes browsers pick Japanese fonts for Japanese.
   useEffect(() => {
     document.body.classList.toggle('elder', Boolean(me?.user.elder_mode));
     document.documentElement.lang = lang === 'ja-easy' ? 'ja' : lang;
   }, [me, lang]);
 
-  // Every page starts at the top. (Otherwise it opens where the previous page was scrolled to.)
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
 
-  // After /api/join or the demo login: remember the token and who we are.
   function login({ token, user, group }) {
     saveToken(token);
     clearInbox();
@@ -86,18 +140,23 @@ export default function App() {
     setMe(null);
   }
 
+  const isPublicRoute = pathname === '/join' || pathname === '/poster' || pathname === '/manager';
+  const isApproved = me?.user?.status === 'approved';
+
   let page;
-  if (loading) {
+  if (loading && !isPublicRoute) {
     page = <p>{t(lang, 'common.loading')}</p>;
-  } else if (loadFailed) {
+  } else if (loadFailed && !isPublicRoute) {
     page = <p className="error">{t(lang, 'common.error')}</p>;
-  } else if (!me && pathname !== '/join' && pathname !== '/poster') {
-    // No token yet (not a member): only the join page, and a poster opened by its code.
+  } else if (!me && !isPublicRoute) {
     page = <Navigate to="/join" replace />;
+  } else if (me && !isApproved && !isPublicRoute) {
+    page = <PendingApproval me={me} lang={lang} onUpdated={setMe} onLeave={logout} />;
   } else {
     page = (
       <Routes>
         <Route path="/join" element={<Join />} />
+        <Route path="/manager" element={<Manager />} />
         <Route path="/" element={<Shelf />} />
         <Route path="/item/:id" element={<ItemPage />} />
         <Route path="/my-items" element={<MyItems />} />
@@ -110,7 +169,7 @@ export default function App() {
     );
   }
 
-  const showNav = me && pathname !== '/join';
+  const showNav = Boolean(me && isApproved && !isPublicRoute);
   const shared = {
     user: me?.user,
     group: me?.group,
@@ -122,6 +181,7 @@ export default function App() {
     dueLoans,
     refreshInbox,
     markRead,
+    markAllRead,
   };
 
   return (

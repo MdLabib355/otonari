@@ -100,7 +100,7 @@ export default function ItemPage() {
 
 function AskForItem({ item, onRefused }) {
   const { lang } = useUser();
-  if (item.status !== 'available') return <p className="notice">{t(lang, 'borrow.notAvailable')}</p>;
+  if (item.status !== 'available' || item.paused) return <p className="notice">{t(lang, 'borrow.notAvailable')}</p>;
   if (!item.allowed_for_me) return <p className="notice">🔒 {t(lang, 'trust.explain')}</p>;
   return <BorrowForm item={item} onRefused={onRefused} />;
 }

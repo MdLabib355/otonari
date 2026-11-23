@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { api } from '../api.js';
-import PhotoCapture from '../components/PhotoCapture.jsx';
+import PhotoCapture, { shrinkPhoto } from '../components/PhotoCapture.jsx';
 import PhraseBubble from '../components/PhraseBubble.jsx';
 import TipCard from '../components/TipCard.jsx';
 import TrustLine from '../components/TrustLine.jsx';
-import { QUICK_REPLIES, findItem } from '../data/catalog.js';
-import { displayName, formatDate, itemName, renderPhrase, t } from '../i18n/index.js';
+import { ISSUE_KEYS, QUICK_REPLIES, STAMPS, findItem } from '../data/catalog.js';
+import { displayName, formatDate, itemName, renderPhrase, spotName, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
 const QUICK_REPLY_STATUSES = ['accepted', 'active', 'returned'];
@@ -59,6 +59,7 @@ function Loan({ loanId }) {
       if (action === 'return' || action === 'return-confirmed' || action === 'cancel') {
         refreshInbox();
       }
+      return true;
     } catch (error) {
       if (action === 'ping' && error.status === 429) {
         setPingNotice(t(lang, 'loan.pingCooldown'));
@@ -67,6 +68,7 @@ function Loan({ loanId }) {
       } else {
         setFailed(true);
       }
+      return false;
     } finally {
       setBusy(false);
     }
@@ -104,6 +106,16 @@ function Loan({ loanId }) {
       {backLink}
       <LoanHeader loan={loan} item={item} other={other} lang={lang} />
 
+      {(loan.status === 'accepted' || loan.status === 'active') && (
+        <p className="handover-summary">
+          📍{' '}
+          {t(lang, 'loan.handoverSummary', {
+            spot: spotName(lang, item.spot),
+            start: formatDate(lang, loan.start_at),
+          })}
+        </p>
+      )}
+
       {state?.sentTo && loan.status === 'pending' && (
         <p className="notice">{t(lang, 'borrow.sent', { name: displayName(lang, state.sentTo) })}</p>
       )}
@@ -129,7 +141,11 @@ function Loan({ loanId }) {
       )}
       {loan.status === 'accepted' && <HandoverStep {...step} />}
       {loan.status === 'active' && <ReturnStep {...step} />}
+      {loan.status === 'returned' && <ThankYouStamps item={item} lang={lang} busy={busy} act={act} />}
       {QUICK_REPLY_STATUSES.includes(loan.status) && <QuickReplies item={item} lang={lang} busy={busy} act={act} />}
+      {(loan.status === 'active' || loan.status === 'returned') && (
+        <ReportIssue item={item} lang={lang} busy={busy} act={act} />
+      )}
       {loan.status === 'active' && (
         <DemoButtons
           loanId={loan.id}
@@ -299,6 +315,123 @@ function ReturnStep({ loan, iAmLender, otherName, lang, busy, act, sendPhoto, pi
       <button type="button" className="button-primary" disabled={busy} onClick={() => act('return-confirmed')}>
         {t(lang, 'loan.confirmReturn')}
       </button>
+    </div>
+  );
+}
+
+function ThankYouStamps({ item, lang, busy, act }) {
+  return (
+    <div className="step">
+      <p className="label">{t(lang, 'loan.stampsTitle')}</p>
+      <div className="chip-group">
+        {STAMPS.map((stamp) => (
+          <button
+            key={stamp.key}
+            type="button"
+            className="chip chip-stamp"
+            disabled={busy}
+            onClick={() => act('stamp', { stamp_key: stamp.key })}
+          >
+            {renderPhrase(lang, stamp.key, { item: item.item_key })}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReportIssue({ item, lang, busy, act }) {
+  const [open, setOpen] = useState(false);
+  const [issueKey, setIssueKey] = useState(ISSUE_KEYS[0]);
+  const [photo, setPhoto] = useState(null); // { file, url }
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoRefused, setPhotoRefused] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (photo) URL.revokeObjectURL(photo.url);
+    };
+  }, [photo]);
+
+  async function pickPhoto(event) {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    setPhoto(null);
+    setPhotoRefused(false);
+    setPhotoBusy(true);
+    try {
+      const jpeg = await shrinkPhoto(file);
+      setPhoto({ file: jpeg, url: URL.createObjectURL(jpeg) });
+    } catch {
+      setPhotoRefused(true);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function sendIssue() {
+    let payload;
+    if (photo) {
+      const form = new FormData();
+      form.append('issue_key', issueKey);
+      form.append('photo', photo.file, 'issue.jpg');
+      payload = form;
+    } else {
+      payload = { issue_key: issueKey };
+    }
+    const ok = await act('issue', payload);
+    if (ok) {
+      setPhoto(null);
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div className="step">
+      {!open ? (
+        <button type="button" className="text-button" onClick={() => setOpen(true)}>
+          ⚠️ {t(lang, 'loan.reportIssue')}
+        </button>
+      ) : (
+        <div className="issue-box">
+          <p className="label">⚠️ {t(lang, 'loan.reportIssue')}</p>
+          <div className="chip-stack">
+            {ISSUE_KEYS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={key === issueKey ? 'chip selected' : 'chip'}
+                style={{ textAlign: 'left', padding: '10px 14px', borderRadius: 12 }}
+                onClick={() => setIssueKey(key)}
+              >
+                {renderPhrase(lang, key, { item: item.item_key, spot: item.spot })}
+              </button>
+            ))}
+          </div>
+          <div className="actions" style={{ marginTop: 12, marginBottom: 0 }}>
+            <label className="photo-button button-secondary">
+              <span aria-hidden="true">📷</span> {t(lang, 'loan.issuePhotoOptional')}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="visually-hidden"
+                disabled={busy || photoBusy}
+                onChange={pickPhoto}
+              />
+            </label>
+            {photoRefused && <p className="error">{t(lang, 'loan.photoRefused')}</p>}
+            {photo && <img className="photo-preview" src={photo.url} alt="" />}
+            <button type="button" className="button-primary" disabled={busy || photoBusy} onClick={sendIssue}>
+              {t(lang, 'loan.sendIssue')}
+            </button>
+            <button type="button" className="button-secondary" onClick={() => setOpen(false)}>
+              {t(lang, 'myItems.cancelEdit')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,27 +3,42 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ChipGroup from '../components/ChipGroup.jsx';
 import { CATEGORIES, findItem } from '../data/catalog.js';
-import { categoryName, displayName, itemName, t } from '../i18n/index.js';
+import { categoryName, displayName, formatNumber, itemName, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
 // The neighborhood shelf: everything the neighbors in my group are happy to lend.
 export default function Shelf() {
   const { user, group, lang } = useUser();
-  const [items, setItems] = useState(null); // null = still loading
+  const [items, setItems] = useState(null);
+  const [stats, setStats] = useState(null);
   const [failed, setFailed] = useState(false);
   const [category, setCategory] = useState('all');
+  const [search, setSearch] = useState('');
+  const [availableOnly, setAvailableOnly] = useState(false);
 
   useEffect(() => {
     api
       .get('/api/shelf')
       .then(setItems)
       .catch(() => setFailed(true));
+    api.get('/api/group/stats').then(setStats).catch(() => {});
   }, []);
 
   return (
     <section>
       <h1>{t(lang, 'shelf.title', { group: group.name })}</h1>
       <p className="subtitle">{t(lang, 'shelf.subtitle')}</p>
+
+      {stats && (
+        <p className="stats-strip">
+          🤝{' '}
+          {t(lang, 'shelf.statsLine', {
+            members: formatNumber(lang, stats.members),
+            items: formatNumber(lang, stats.items),
+            crossLang: formatNumber(lang, stats.cross_language_loans),
+          })}
+        </p>
+      )}
 
       {failed && <p className="error">{t(lang, 'common.error')}</p>}
       {!items && !failed && <p>{t(lang, 'common.loading')}</p>}
@@ -36,13 +51,23 @@ export default function Shelf() {
         </div>
       )}
       {items?.length > 0 && (
-        <ShelfGrid items={items} category={category} setCategory={setCategory} myId={user.id} lang={lang} />
+        <ShelfGrid
+          items={items}
+          category={category}
+          setCategory={setCategory}
+          search={search}
+          setSearch={setSearch}
+          availableOnly={availableOnly}
+          setAvailableOnly={setAvailableOnly}
+          myId={user.id}
+          lang={lang}
+        />
       )}
     </section>
   );
 }
 
-function ShelfGrid({ items, category, setCategory, myId, lang }) {
+function ShelfGrid({ items, category, setCategory, search, setSearch, availableOnly, setAvailableOnly, myId, lang }) {
   const categoryOf = (item) => findItem(item.item_key)?.category;
 
   const categoryOptions = [
@@ -52,10 +77,39 @@ function ShelfGrid({ items, category, setCategory, myId, lang }) {
       label: categoryName(lang, key),
     })),
   ];
-  const visibleItems = items.filter((item) => category === 'all' || categoryOf(item) === category);
+
+  const q = search.trim().toLowerCase();
+  const visibleItems = items.filter((item) => {
+    if (category !== 'all' && categoryOf(item) !== category) return false;
+    if (availableOnly && (item.status !== 'available' || item.paused || item.owner_id === myId)) return false;
+    if (q) {
+      const label = itemName(lang, item.item_key).toLowerCase();
+      const owner = item.owner_nickname.toLowerCase();
+      if (!label.includes(q) && !owner.includes(q)) return false;
+    }
+    return true;
+  });
 
   return (
     <>
+      <div className="shelf-filters">
+        <input
+          type="search"
+          className="text-input"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t(lang, 'shelf.searchPlaceholder')}
+          aria-label={t(lang, 'shelf.searchPlaceholder')}
+        />
+        <button
+          type="button"
+          className={availableOnly ? 'chip selected' : 'chip'}
+          aria-pressed={availableOnly}
+          onClick={() => setAvailableOnly((v) => !v)}
+        >
+          {t(lang, 'shelf.availableOnly')}
+        </button>
+      </div>
       <ChipGroup options={categoryOptions} value={category} onChange={setCategory} />
       <div className="item-grid">
         {visibleItems.map((item) => (
@@ -67,7 +121,7 @@ function ShelfGrid({ items, category, setCategory, myId, lang }) {
 }
 
 function ItemCard({ item, mine, lang }) {
-  const badge = mine ? 'mine' : item.status;
+  const badge = item.paused ? 'paused' : mine ? 'mine' : item.status;
   return (
     <Link to={`/item/${item.id}`} className="item-card">
       {item.photo_url ? (

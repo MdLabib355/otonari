@@ -394,7 +394,7 @@ router.post('/manager/groups/:id/members/:userId/transfer-code', requireManager,
 router.get('/manager/groups/:id/issues', requireManager, requireOwnedGroup, async (req, res) => {
   const result = await query(
     `SELECT messages.id, messages.loan_id, messages.phrase_key, messages.params, messages.created_at,
-            items.item_key,
+            items.item_key, items.spot,
             reporter.nickname AS reporter_nickname,
             other_user.nickname AS other_nickname
      FROM messages
@@ -414,6 +414,7 @@ router.get('/manager/groups/:id/issues', requireManager, requireOwnedGroup, asyn
         id: row.id,
         loan_id: row.loan_id,
         item_key: row.item_key,
+        spot: row.spot,
         phrase_key: row.phrase_key,
         issue_photo: params?.photo ?? null,
         reporter_nickname: row.reporter_nickname,

@@ -5,13 +5,14 @@ import { findItem } from '../data/catalog.js';
 import { displayName, formatDate, formatNumber, itemName, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
-// All my loans, as borrower and as lender, newest first.
+const ACTIVE_STATUSES = new Set(['pending', 'accepted', 'active']);
+
+// All my loans, as borrower and as lender, grouped into Active & waiting vs. Past history.
 export default function Loans() {
   const { lang, inbox } = useUser();
-  const [loans, setLoans] = useState(null); // { borrowing, lending }, null = still loading
+  const [loans, setLoans] = useState(null);
   const [failed, setFailed] = useState(false);
 
-  // Load on start, and again whenever a message arrives (a new request, an answer, ...).
   const unreadIds = inbox.map((message) => message.id).join(',');
   useEffect(() => {
     api
@@ -39,18 +40,33 @@ export default function Loans() {
 }
 
 function LoanList({ title, loans, lang }) {
+  const active = loans.filter((loan) => ACTIVE_STATUSES.has(loan.status));
+  const past = loans.filter((loan) => !ACTIVE_STATUSES.has(loan.status));
+
   return (
     <div className="loan-list">
       <h2>{title}</h2>
       {loans.length === 0 && <p className="muted">{t(lang, 'loans.empty')}</p>}
-      {loans.map((loan) => (
-        <LoanCard key={loan.id} loan={loan} lang={lang} />
-      ))}
+      {active.length > 0 && (
+        <>
+          <h3 className="catalog-heading">{t(lang, 'loans.activeSection')}</h3>
+          {active.map((loan) => (
+            <LoanCard key={loan.id} loan={loan} lang={lang} />
+          ))}
+        </>
+      )}
+      {past.length > 0 && (
+        <>
+          <h3 className="catalog-heading">{t(lang, 'loans.pastSection')}</h3>
+          {past.map((loan) => (
+            <LoanCard key={loan.id} loan={loan} lang={lang} />
+          ))}
+        </>
+      )}
     </div>
   );
 }
 
-// One loan. Tapping it opens the conversation.
 function LoanCard({ loan, lang }) {
   return (
     <Link to={`/loan/${loan.id}`} className="loan-card">

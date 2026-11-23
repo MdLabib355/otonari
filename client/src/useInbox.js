@@ -1,7 +1,4 @@
-// My unread messages and active return-due loans. App.jsx keeps them once and shares them via useUser():
-//   - Banner.jsx   polls every 5 seconds while visible, shows unread messages + sticky return-due bar
-//   - BottomNav    shows unread count badge on the Loans tab
-//   - LoanPage     marks that loan's messages read and refreshes due loans on return
+// Unread notifications and active return-due loans shared via UserContext.
 
 import { useRef, useState } from 'react';
 import { api } from './api.js';
@@ -9,7 +6,6 @@ import { api } from './api.js';
 export function useInbox() {
   const [inbox, setInbox] = useState([]);
   const [dueLoans, setDueLoans] = useState([]);
-  // Monotonic counter discards stale responses so a message just read never re-appears.
   const version = useRef(0);
 
   async function refreshInbox() {
@@ -22,7 +18,7 @@ export function useInbox() {
         setDueLoans(due);
       }
     } catch {
-      // Transient network hiccup: next poll retries.
+      // Transient network hiccup or pending approval status: retry on next event/poll.
     }
   }
 
@@ -32,7 +28,17 @@ export function useInbox() {
     try {
       await api.post('/api/inbox/read', { ids });
     } catch {
-      // Still unread on server: next poll reconciles.
+      // Next refresh reconciles with server.
+    }
+  }
+
+  async function markAllRead() {
+    version.current += 1;
+    setInbox([]);
+    try {
+      await api.post('/api/inbox/read-all');
+    } catch {
+      refreshInbox();
     }
   }
 
@@ -42,5 +48,5 @@ export function useInbox() {
     setDueLoans([]);
   }
 
-  return { inbox, dueLoans, refreshInbox, markRead, clearInbox };
+  return { inbox, dueLoans, refreshInbox, markRead, markAllRead, clearInbox };
 }

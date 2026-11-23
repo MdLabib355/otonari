@@ -10,7 +10,7 @@ function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// My items: what I lend, plus the "Add an item" form (fixed catalog + optional real photo).
+// My items: what I lend (with pause & inline edit), plus the "Add an item" form.
 export default function MyItems() {
   const { lang } = useUser();
   const [items, setItems] = useState(null);
@@ -97,10 +97,10 @@ export default function MyItems() {
     loadItems();
   }
 
-  async function changeTrustedOnly(id, value) {
+  async function patchItem(id, change) {
     setFailed(false);
     try {
-      await api.patch(`/api/items/${id}`, { trusted_only: value });
+      await api.patch(`/api/items/${id}`, change);
     } catch {
       setFailed(true);
     }
@@ -127,8 +127,10 @@ export default function MyItems() {
               key={item.id}
               item={item}
               lang={lang}
+              durationOptions={durationOptions}
+              spotOptions={spotOptions}
               onRemove={removeItem}
-              onTrustedOnly={changeTrustedOnly}
+              onPatch={patchItem}
             />
           ))}
         </ul>
@@ -227,9 +229,17 @@ function TrustedSwitch({ lang, checked, onChange }) {
   );
 }
 
-function MyItemRow({ item, lang, onRemove, onTrustedOnly }) {
+function MyItemRow({ item, lang, durationOptions, spotOptions, onRemove, onPatch }) {
+  const [editing, setEditing] = useState(false);
+  const [editMaxDays, setEditMaxDays] = useState(item.max_days);
+  const [editSpot, setEditSpot] = useState(item.spot);
   const canRemove = item.status === 'available';
   const days = item.max_days === 1 ? t(lang, 'item.maxDay') : t(lang, 'item.maxDays', { n: item.max_days });
+
+  async function saveEdit() {
+    await onPatch(item.id, { max_days: editMaxDays, spot: editSpot });
+    setEditing(false);
+  }
 
   return (
     <li className="my-item">
@@ -248,13 +258,67 @@ function MyItemRow({ item, lang, onRemove, onTrustedOnly }) {
         {!canRemove && <span className="hint">{t(lang, 'myItems.cantRemove')}</span>}
       </div>
       {canRemove ? (
-        <button type="button" className="button-secondary" onClick={() => onRemove(item.id)}>
-          {t(lang, 'myItems.remove')}
-        </button>
+        <div className="my-item-buttons">
+          <button
+            type="button"
+            className="button-secondary"
+            onClick={() => {
+              setEditMaxDays(item.max_days);
+              setEditSpot(item.spot);
+              setEditing((v) => !v);
+            }}
+          >
+            {t(lang, 'myItems.edit')}
+          </button>
+          <button type="button" className="button-secondary" onClick={() => onRemove(item.id)}>
+            {t(lang, 'myItems.remove')}
+          </button>
+        </div>
       ) : (
         <span className={`badge badge-${item.status}`}>{t(lang, `shelf.${item.status}`)}</span>
       )}
-      <TrustedSwitch lang={lang} checked={item.trusted_only} onChange={(value) => onTrustedOnly(item.id, value)} />
+
+      {editing && (
+        <div className="my-item-edit">
+          <p className="label">{t(lang, 'myItems.maxDays')}</p>
+          <ChipGroup
+            label={t(lang, 'myItems.maxDays')}
+            options={durationOptions}
+            value={editMaxDays}
+            onChange={setEditMaxDays}
+          />
+          <p className="label" style={{ marginTop: 12 }}>
+            {t(lang, 'myItems.spot')}
+          </p>
+          <ChipGroup label={t(lang, 'myItems.spot')} options={spotOptions} value={editSpot} onChange={setEditSpot} />
+          <div className="my-item-buttons" style={{ marginTop: 12 }}>
+            <button type="button" className="button-primary" onClick={saveEdit}>
+              {t(lang, 'myItems.saveEdit')}
+            </button>
+            <button type="button" className="button-secondary" onClick={() => setEditing(false)}>
+              {t(lang, 'myItems.cancelEdit')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <label className="switch-row">
+        <span>⏸️ {t(lang, 'myItems.pause')}</span>
+        <input
+          type="checkbox"
+          role="switch"
+          className="switch"
+          checked={Boolean(item.paused)}
+          onChange={(event) => onPatch(item.id, { paused: event.target.checked })}
+        />
+      </label>
+      {item.paused && <p className="hint">{t(lang, 'myItems.pausedHint')}</p>}
+
+      <TrustedSwitch
+        lang={lang}
+        checked={Boolean(item.trusted_only)}
+        onChange={(value) => onPatch(item.id, { trusted_only: value })}
+      />
       {item.trusted_only && <p className="hint">{t(lang, 'trust.hint')}</p>}
     </li>
   );
