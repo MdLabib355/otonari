@@ -121,6 +121,25 @@ export function createMessage(loan, fromUserId, toUserId, phraseKey) {
   return result.lastInsertRowid;
 }
 
+// This person's pending or accepted loan for this item, if any. They can't ask for it a second time.
+export function findOpenLoan(itemId, borrowerId) {
+  return db
+    .prepare("SELECT id FROM loans WHERE item_id = ? AND borrower_id = ? AND status IN ('pending', 'accepted')")
+    .get(itemId, borrowerId);
+}
+
+// Politely decline every request still waiting for this item (except `exceptLoanId`):
+// when another request for it is accepted, or when the owner removes the item.
+// Each of those borrowers gets the 'decline' phrase.
+export function declinePendingLoans(itemId, exceptLoanId = null) {
+  const pendingLoans = db.prepare("SELECT * FROM loans WHERE item_id = ? AND status = 'pending'").all(itemId);
+  for (const loan of pendingLoans) {
+    if (loan.id === exceptLoanId) continue;
+    db.prepare("UPDATE loans SET status = 'declined' WHERE id = ?").run(loan.id);
+    createMessage(loan, loan.lender_id, loan.borrower_id, 'decline');
+  }
+}
+
 // What the client may see about a user: everything except the token.
 export function publicUser(user) {
   return {

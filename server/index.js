@@ -11,6 +11,7 @@ import express from 'express';
 import { db } from './db.js';
 import demoRoutes from './routes/demo.js';
 import groupRoutes from './routes/groups.js';
+import inboxRoutes from './routes/inbox.js';
 import itemRoutes from './routes/items.js';
 import loanRoutes from './routes/loans.js';
 
@@ -40,6 +41,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api', groupRoutes);
 app.use('/api', itemRoutes);
 app.use('/api', loanRoutes);
+app.use('/api', inboxRoutes);
 
 // Demo-only routes ("continue as a neighbor"): only when DEMO_MODE=true in server/.env.
 if (process.env.DEMO_MODE === 'true') {

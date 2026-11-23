@@ -52,6 +52,8 @@
     "borrow.send": "お借りできますか?",
     "borrow.sent": "お願いを送りました。{name}からお返事が届いたらお知らせします。",
     "borrow.notAvailable": "この物は現在お借りできません。",
+    "borrow.alreadyAsked": "すでにお願いを送っています。{name}からのご連絡をお待ちください。",
+    "borrow.openLoan": "お願いの内容を見る",
 
     "myItems.title": "私が貸せる物",
     "myItems.add": "物を登録する",

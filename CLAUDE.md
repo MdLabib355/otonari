@@ -234,6 +234,8 @@ Item status: `available` → `reserved` (on accept) → `lent` (on received) →
 declined-after-accept is not possible). Accepting a loan auto-declines other pending loans for that item
 (send them the `decline` phrase).
 
+**One open request per person and item**: `POST /api/loans` answers `409` `{error, loan_id}` if the borrower already has a `pending` or `accepted` loan for that item (`GET /api/items/:id` returns its id as `my_loan_id`, else `null`).
+
 **Removing an item is a soft delete** (loans point to items, so the row must stay): only an `available`
 item can be removed; it gets `removed_at`, its pending loans are declined (send them the `decline`
 phrase), and it disappears from the shelf and My items. Old loans and messages still find it.

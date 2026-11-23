@@ -1,12 +1,17 @@
 // Loans: a borrowing request and the conversation about it.
-//   POST /api/loans       borrower      { item_id, start_at, end_at } → new pending loan,
-//                                       and the 'request' phrase goes to the lender
-//   GET  /api/loans/:id   participant   the loan, its item, both people and the messages
+//   GET  /api/loans                   user          my loans: { borrowing: [...], lending: [...] }
+//   POST /api/loans                   borrower      { item_id, start_at, end_at } → new pending loan
+//   GET  /api/loans/:id               participant   the loan, its item, both people and the messages
+//   POST /api/loans/:id/accept        lender        pending → accepted (item reserved)
+//   POST /api/loans/:id/decline       lender        { reason: 'default' | 'busy' } pending → declined
+//   POST /api/loans/:id/cancel        borrower      pending → cancelled
+//   POST /api/loans/:id/quick-reply   participant   { phrase_key } one of the five fixed quick replies
+// Every step also sends the matching phrase to the other person (CLAUDE.md section 6).
 
 import express from 'express';
-import { DURATIONS } from '../allowedKeys.js';
+import { DURATIONS, QUICK_REPLY_KEYS } from '../allowedKeys.js';
 import { requireUser } from '../auth.js';
-import { createMessage, db } from '../db.js';
+import { createMessage, db, declinePendingLoans, findOpenLoan } from '../db.js';
 
 const router = express.Router();
 const DAY = 24 * 60 * 60 * 1000;
@@ -37,6 +42,54 @@ function loanDetails(loanId, viewerId) {
   };
 }
 
+// My loans from one side, newest first. As borrower the other person is the lender, and the other
+// way round. `unread` counts the messages to me in that loan that I haven't seen yet.
+function myLoans(myColumn, otherColumn, userId) {
+  return db
+    .prepare(
+      `SELECT loans.id, loans.status, loans.start_at, loans.end_at, items.item_key, items.spot,
+              other.nickname AS other_nickname, other.lang AS other_lang,
+              (SELECT COUNT(*) FROM messages
+                WHERE messages.loan_id = loans.id AND messages.to_user_id = ? AND messages.read_at IS NULL) AS unread
+       FROM loans
+       JOIN items ON items.id = loans.item_id
+       JOIN users AS other ON other.id = loans.${otherColumn}
+       WHERE loans.${myColumn} = ?
+       ORDER BY loans.id DESC`
+    )
+    .all(userId, userId);
+}
+
+// Middleware for the /loans/:id routes: loads the loan into req.loan and checks that I am its
+// 'lender', its 'borrower', or (for 'participant') either of them.
+function loanRole(role) {
+  return (req, res, next) => {
+    const loan = db.prepare('SELECT * FROM loans WHERE id = ?').get(req.params.id);
+    if (!loan) {
+      return res.status(404).json({ error: 'Loan not found' });
+    }
+    const iAmLender = loan.lender_id === req.user.id;
+    const iAmBorrower = loan.borrower_id === req.user.id;
+    const allowed = role === 'lender' ? iAmLender : role === 'borrower' ? iAmBorrower : iAmLender || iAmBorrower;
+    if (!allowed) {
+      return res.status(403).json({ error: `Only the ${role} can do this` });
+    }
+    req.loan = loan;
+    next();
+  };
+}
+
+function setStatus(loanId, status) {
+  db.prepare('UPDATE loans SET status = ? WHERE id = ?').run(status, loanId);
+}
+
+router.get('/loans', requireUser, (req, res) => {
+  res.json({
+    borrowing: myLoans('borrower_id', 'lender_id', req.user.id),
+    lending: myLoans('lender_id', 'borrower_id', req.user.id),
+  });
+});
+
 router.post('/loans', requireUser, (req, res) => {
   const { item_id, start_at, end_at } = req.body ?? {};
 
@@ -53,6 +106,11 @@ router.post('/loans', requireUser, (req, res) => {
   }
   if (item.owner_id === req.user.id) {
     return res.status(403).json({ error: "You can't borrow your own item" });
+  }
+  // Checked before the item status: once my request is accepted, the item is reserved (for me).
+  const openLoan = findOpenLoan(item.id, req.user.id);
+  if (openLoan) {
+    return res.status(409).json({ error: 'You already asked for this item', loan_id: openLoan.id });
   }
   if (item.status !== 'available') {
     return res.status(409).json({ error: 'This item is not available right now' });
@@ -86,14 +144,74 @@ router.post('/loans', requireUser, (req, res) => {
   res.status(201).json(loanDetails(loanId, req.user.id));
 });
 
-router.get('/loans/:id', requireUser, (req, res) => {
-  const loan = db.prepare('SELECT id, borrower_id, lender_id FROM loans WHERE id = ?').get(req.params.id);
-  if (!loan) {
-    return res.status(404).json({ error: 'Loan not found' });
+router.get('/loans/:id', requireUser, loanRole('participant'), (req, res) => {
+  res.json(loanDetails(req.loan.id, req.user.id));
+});
+
+// Yes: the item is reserved for this borrower, and everyone else who asked for it gets a polite no.
+router.post('/loans/:id/accept', requireUser, loanRole('lender'), (req, res) => {
+  const loan = req.loan;
+  if (loan.status !== 'pending') {
+    return res.status(409).json({ error: 'Only a waiting request can be accepted' });
   }
-  if (loan.borrower_id !== req.user.id && loan.lender_id !== req.user.id) {
-    return res.status(403).json({ error: 'Not your loan' });
+  const item = db.prepare('SELECT status, removed_at FROM items WHERE id = ?').get(loan.item_id);
+  if (item.status !== 'available' || item.removed_at) {
+    return res.status(409).json({ error: 'The item is not available' });
   }
+
+  const accept = db.transaction(() => {
+    setStatus(loan.id, 'accepted');
+    db.prepare("UPDATE items SET status = 'reserved' WHERE id = ?").run(loan.item_id);
+    createMessage(loan, loan.lender_id, loan.borrower_id, 'accept');
+    declinePendingLoans(loan.item_id, loan.id);
+  });
+  accept();
+  res.json(loanDetails(loan.id, req.user.id));
+});
+
+// No (reason 'default'), or "No – I need it those days" (reason 'busy').
+router.post('/loans/:id/decline', requireUser, loanRole('lender'), (req, res) => {
+  const loan = req.loan;
+  const reason = req.body?.reason ?? 'default';
+  if (!['default', 'busy'].includes(reason)) {
+    return res.status(400).json({ error: "reason must be 'default' or 'busy'" });
+  }
+  if (loan.status !== 'pending') {
+    return res.status(409).json({ error: 'Only a waiting request can be declined' });
+  }
+
+  const decline = db.transaction(() => {
+    setStatus(loan.id, 'declined');
+    createMessage(loan, loan.lender_id, loan.borrower_id, reason === 'busy' ? 'declineBusy' : 'decline');
+  });
+  decline();
+  res.json(loanDetails(loan.id, req.user.id));
+});
+
+// The borrower changes their mind (only while nobody has answered yet).
+router.post('/loans/:id/cancel', requireUser, loanRole('borrower'), (req, res) => {
+  const loan = req.loan;
+  if (loan.status !== 'pending') {
+    return res.status(409).json({ error: 'Only a waiting request can be cancelled' });
+  }
+
+  const cancel = db.transaction(() => {
+    setStatus(loan.id, 'cancelled');
+    createMessage(loan, loan.borrower_id, loan.lender_id, 'cancel');
+  });
+  cancel();
+  res.json(loanDetails(loan.id, req.user.id));
+});
+
+// One of the five fixed quick replies, to the other person. Only these keys: never free text.
+router.post('/loans/:id/quick-reply', requireUser, loanRole('participant'), (req, res) => {
+  const loan = req.loan;
+  const phraseKey = req.body?.phrase_key;
+  if (!QUICK_REPLY_KEYS.includes(phraseKey)) {
+    return res.status(400).json({ error: 'Unknown quick reply' });
+  }
+  const otherId = loan.borrower_id === req.user.id ? loan.lender_id : loan.borrower_id;
+  createMessage(loan, req.user.id, otherId, phraseKey);
   res.json(loanDetails(loan.id, req.user.id));
 });
 

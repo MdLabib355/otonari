@@ -9,6 +9,7 @@
 //  login   call with the { token, user, group } from /api/join or the demo login
 //  logout  forget the token (back to the join screen)
 //  setMe   call with the { user, group } from PATCH /api/me to update the whole app at once
+//  inbox, refreshInbox, markRead   my unread messages (see useInbox.js)
 //
 // (This lives in its own file so pages don't have to import App.jsx, which imports them.)
 

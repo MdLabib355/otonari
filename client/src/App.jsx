@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { api, clearToken, getToken, saveToken } from './api.js';
 import { t } from './i18n/index.js';
+import { useInbox } from './useInbox.js';
 import { UserContext, browserLanguage } from './UserContext.js';
+import Banner from './components/Banner.jsx';
 import Join from './pages/Join.jsx';
 import Shelf from './pages/Shelf.jsx';
 import ItemPage from './pages/ItemPage.jsx';
@@ -20,7 +22,7 @@ const TABS = [
   { to: '/settings', icon: '⚙️', label: 'nav.settings' },
 ];
 
-function BottomNav({ lang }) {
+function BottomNav({ lang, unreadCount }) {
   return (
     <nav className="bottom-nav">
       {TABS.map((tab) => (
@@ -29,6 +31,7 @@ function BottomNav({ lang }) {
             {tab.icon}
           </span>
           {t(lang, tab.label)}
+          {tab.to === '/loans' && unreadCount > 0 && <span className="count-badge">{unreadCount}</span>}
         </NavLink>
       ))}
     </nav>
@@ -39,6 +42,7 @@ export default function App() {
   const [me, setMe] = useState(null); // { user, group } of the logged-in neighbor
   const [loading, setLoading] = useState(Boolean(getToken()));
   const [loadFailed, setLoadFailed] = useState(false);
+  const { inbox, refreshInbox, markRead, clearInbox } = useInbox(); // unread messages to me
   const { pathname } = useLocation();
 
   // On start: if we have a token, ask the server who we are.
@@ -67,11 +71,13 @@ export default function App() {
   // After /api/join or the demo login: remember the token and who we are.
   function login({ token, user, group }) {
     saveToken(token);
+    clearInbox();
     setMe({ user, group });
   }
 
   function logout() {
     clearToken();
+    clearInbox();
     setMe(null);
   }
 
@@ -99,11 +105,15 @@ export default function App() {
     );
   }
 
+  const showNav = me && pathname !== '/join';
+  const shared = { user: me?.user, group: me?.group, lang, login, logout, setMe, inbox, refreshInbox, markRead };
+
   return (
-    <UserContext.Provider value={{ user: me?.user, group: me?.group, lang, login, logout, setMe }}>
+    <UserContext.Provider value={shared}>
       <div className="app">
+        {showNav && <Banner />}
         <main className="page">{page}</main>
-        {me && pathname !== '/join' && <BottomNav lang={lang} />}
+        {showNav && <BottomNav lang={lang} unreadCount={inbox.length} />}
       </div>
     </UserContext.Provider>
   );

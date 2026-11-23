@@ -60,6 +60,7 @@ h1 {
 }
 
 .bottom-nav a {
+  position: relative; /* the unread count sits on the corner of the icon */
   flex: 1;
   min-height: calc(var(--tap) + 12px);
   display: flex;
@@ -82,6 +83,25 @@ h1 {
 .nav-icon {
   font-size: 1.5em;
   line-height: 1;
+}
+
+/* Unread messages: on the Loans tab and on the loan cards */
+.count-badge {
+  min-width: 1.7em;
+  padding: 0 0.45em;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8em;
+  font-weight: 700;
+  line-height: 1.7em;
+  text-align: center;
+}
+
+.bottom-nav .count-badge {
+  position: absolute;
+  top: 4px;
+  left: calc(50% + 0.6em);
 }
 
 /* ---------- Shared building blocks ---------- */
@@ -306,6 +326,21 @@ h2 {
   color: var(--muted);
 }
 
+/* Loan statuses: the ones still going on stand out, the finished ones stay quiet. */
+.badge-pending,
+.badge-accepted,
+.badge-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badge-declined,
+.badge-cancelled,
+.badge-returned {
+  background: var(--quiet);
+  color: var(--muted);
+}
+
 /* ---------- Shelf ---------- */
 
 .item-grid {
@@ -490,6 +525,188 @@ h2 {
   background: var(--surface);
   font-size: 1.05em;
   line-height: 1.6;
+}
+
+/* ---------- New-message banner ---------- */
+
+/* Stays at the top while the page scrolls. It is part of the layout, so it never hides content. */
+.banner-area {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 8px 0;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.banner-emoji {
+  font-size: 1.8em;
+  line-height: 1;
+}
+
+.banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.banner-text p {
+  margin: 2px 0 0;
+  font-size: 0.95em;
+}
+
+.banner-open {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* ---------- Loans ---------- */
+
+.loan-list {
+  margin-bottom: 28px;
+}
+
+.loan-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.loan-card:active {
+  background: var(--accent-soft);
+}
+
+.loan-card-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.loan-card-text .badge {
+  margin-top: 4px;
+}
+
+/* ---------- Loan page (conversation) ---------- */
+
+.loan-facts {
+  margin: 12px 0 8px;
+  color: var(--muted);
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Mine on the right, theirs on the left, reminders in the middle. */
+.bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius);
+}
+
+.bubble-mine {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.bubble-theirs {
+  align-self: flex-start;
+  border-color: var(--border);
+  border-bottom-left-radius: 4px;
+  background: var(--surface);
+}
+
+.bubble-system {
+  align-self: center;
+  background: var(--quiet);
+  text-align: center;
+}
+
+.bubble-text {
+  margin: 0;
+}
+
+.bubble-label {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+.bubble-original {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+/* A small text link that is still easy to tap. */
+.bubble-toggle {
+  min-height: var(--tap);
+  margin-bottom: -8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.85em;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The answer buttons, below each other and as wide as the screen. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.actions .button-secondary {
+  min-height: calc(var(--tap) + 8px);
+  border-radius: var(--radius);
+  white-space: normal;
+}
+
+.button-secondary:disabled,
+.chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.quick-replies {
+  margin-bottom: 16px;
 }
 
 /* Temporary: marks pages that are not built yet. */

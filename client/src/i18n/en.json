@@ -52,6 +52,8 @@
     "borrow.send": "Can I borrow it?",
     "borrow.sent": "Request sent! You'll get a notification when {name} answers.",
     "borrow.notAvailable": "This item is not available right now.",
+    "borrow.alreadyAsked": "You've already asked — waiting for {name}",
+    "borrow.openLoan": "See my request",
 
     "myItems.title": "Things I can lend",
     "myItems.add": "Add an item",

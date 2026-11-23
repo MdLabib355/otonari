@@ -3,6 +3,7 @@
 //   GET    /api/my-items    user    my own items
 //   GET    /api/items/:id   user    one item of my group, with the owner's nickname and language
 //                                   (the item page shows the request in the OWNER's language)
+//                                   and my_loan_id if I already asked for it (else null)
 //   POST   /api/items       user    { item_key, max_days, spot } → put a new item on the shelf
 //   DELETE /api/items/:id   owner   take it off the shelf (not while it is reserved or lent)
 //
@@ -11,7 +12,7 @@
 import express from 'express';
 import { DURATIONS, ITEM_KEYS, SPOT_KEYS } from '../allowedKeys.js';
 import { requireUser } from '../auth.js';
-import { createMessage, db } from '../db.js';
+import { db, declinePendingLoans, findOpenLoan } from '../db.js';
 
 const router = express.Router();
 
@@ -54,10 +55,10 @@ router.get('/items/:id', requireUser, (req, res) => {
   if (item.group_id !== req.user.group_id) {
     return res.status(403).json({ error: 'Not in your neighborhood' });
   }
-  res.json(item);
+  res.json({ ...item, my_loan_id: findOpenLoan(item.id, req.user.id)?.id ?? null });
 });
 
-router.post('/items', requireUser, (req, res) => {
+router.post('/items',requireUser, (req, res) => {
   const { item_key, max_days, spot } = req.body ?? {};
 
   // Only keys from the catalog: that is what makes every item name translatable.
@@ -95,12 +96,7 @@ router.delete('/items/:id', requireUser, (req, res) => {
   // Take it off the shelf, and politely decline anyone still waiting for an answer.
   const removeItem = db.transaction(() => {
     db.prepare("UPDATE items SET removed_at = datetime('now') WHERE id = ?").run(item.id);
-
-    const pendingLoans = db.prepare("SELECT * FROM loans WHERE item_id = ? AND status = 'pending'").all(item.id);
-    for (const loan of pendingLoans) {
-      db.prepare("UPDATE loans SET status = 'declined' WHERE id = ?").run(loan.id);
-      createMessage(loan, req.user.id, loan.borrower_id, 'decline');
-    }
+    declinePendingLoans(item.id);
   });
   removeItem();
   res.status(204).end();

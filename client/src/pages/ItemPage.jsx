@@ -64,6 +64,8 @@ export default function ItemPage() {
   if (!item) return <p>{t(lang, 'common.loading')}</p>;
 
   const mine = item.owner_id === user.id;
+  const alreadyAsked = Boolean(item.my_loan_id);
+  const canAsk = !mine && !alreadyAsked;
   const maxDays = item.max_days === 1 ? t(lang, 'item.maxDay') : t(lang, 'item.maxDays', { n: item.max_days });
 
   return (
@@ -84,15 +86,30 @@ export default function ItemPage() {
         {maxDays} · {t(lang, 'item.spot', { spot: spotName(lang, item.spot) })}
       </p>
 
-      {!mine && item.status !== 'available' && <p className="notice">{t(lang, 'borrow.notAvailable')}</p>}
-      {!mine && item.status === 'available' && <BorrowForm item={item} onUnavailable={loadItem} />}
+      {alreadyAsked && <AlreadyAsked item={item} />}
+      {canAsk && item.status !== 'available' && <p className="notice">{t(lang, 'borrow.notAvailable')}</p>}
+      {canAsk && item.status === 'available' && <BorrowForm item={item} onRefused={loadItem} />}
     </section>
+  );
+}
+
+// I already have a pending or accepted request for this item: link to it instead of asking again.
+function AlreadyAsked({ item }) {
+  const { lang } = useUser();
+  const navigate = useNavigate();
+  return (
+    <>
+      <p className="notice">{t(lang, 'borrow.alreadyAsked', { name: displayName(lang, item.owner_nickname) })}</p>
+      <button type="button" className="button-primary" onClick={() => navigate(`/loan/${item.my_loan_id}`)}>
+        {t(lang, 'borrow.openLoan')}
+      </button>
+    </>
   );
 }
 
 // Day, time and length are all chips (nothing to type), and the preview shows the exact sentence
 // the owner will receive, in the OWNER's language.
-function BorrowForm({ item, onUnavailable }) {
+function BorrowForm({ item, onRefused }) {
   const { user, lang } = useUser();
   const navigate = useNavigate();
   const [dayOffset, setDayOffset] = useState(1); // tomorrow
@@ -135,8 +152,9 @@ function BorrowForm({ item, onUnavailable }) {
       navigate(`/loan/${result.loan.id}`, { state: { sentTo: item.owner_nickname } });
     } catch (error) {
       setBusy(false);
-      // 409: someone else got it first. Reloading the item shows "not available right now".
-      if (error.status === 409) onUnavailable();
+      // 409: someone else got it first, or I already asked (e.g. on another device).
+      // Reloading the item shows the right note for both.
+      if (error.status === 409) onRefused();
       else setFailed(true);
     }
   }
