@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
+import swaggerUi from 'swagger-ui-express';
 import { closeDatabase, query } from './db/pool.js';
 import { initDatabase } from './db/schema.js';
 import { seedDatabase } from './db/seed.js';
@@ -20,6 +21,9 @@ import loanRoutes from './routes/loans.js';
 import managerRoutes from './routes/manager.js';
 
 const clientDist = path.join(import.meta.dirname, '..', 'client', 'dist');
+const openapiSpec = JSON.parse(
+  fs.readFileSync(path.join(import.meta.dirname, 'docs', 'openapi.json'), 'utf8')
+);
 
 export function createApp() {
   const app = express();
@@ -40,6 +44,11 @@ export function createApp() {
       res.status(503).json({ ok: false, db: 'error', demo_mode: process.env.DEMO_MODE === 'true' });
     }
   });
+
+  app.get('/api/openapi.json', (req, res) => {
+    res.json(openapiSpec);
+  });
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec, { customSiteTitle: 'Otonari API Docs' }));
 
   app.use('/api', groupRoutes);
   app.use('/api', managerRoutes);
