@@ -31,7 +31,8 @@ export function createTables() {
       lang TEXT NOT NULL CHECK (lang IN ('en','ja','ja-easy','bn')),
       elder_mode INTEGER NOT NULL DEFAULT 0,
       token TEXT UNIQUE NOT NULL,         -- crypto.randomUUID()
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      left_at TEXT                        -- set when they leave (their token stops working); NULL = member
     );
 
     CREATE TABLE IF NOT EXISTS items (
@@ -41,6 +42,7 @@ export function createTables() {
       item_key TEXT NOT NULL,             -- key from catalog.js, e.g. 'futon_dryer'
       max_days INTEGER NOT NULL DEFAULT 3,
       spot TEXT NOT NULL,                 -- key from SPOTS, e.g. 'entrance'
+      trusted_only INTEGER NOT NULL DEFAULT 0,  -- 1 = only for people with an on-time return
       status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','lent')),
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       removed_at TEXT                     -- set when the owner removes it (soft delete); NULL = on the shelf
@@ -57,6 +59,7 @@ export function createTables() {
         CHECK (status IN ('pending','accepted','declined','cancelled','active','returned')),
       handover_photo TEXT,                -- '/uploads/xxx.jpg'
       return_photo TEXT,
+      returned_at TEXT,                   -- ISO 8601, when the borrower sent the return photo
       reminded_soon_at TEXT,
       reminded_overdue_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -77,12 +80,19 @@ export function createTables() {
 
 createTables();
 
-// Databases created before `removed_at` existed get the column added here
+// Databases created before these columns existed get them added here
 // (`npm run seed` would also fix it, because it recreates all tables).
-const itemColumns = db.pragma('table_info(items)').map((column) => column.name);
-if (!itemColumns.includes('removed_at')) {
-  db.exec('ALTER TABLE items ADD COLUMN removed_at TEXT');
+function addMissingColumn(table, column, type) {
+  const columns = db.pragma(`table_info(${table})`).map((info) => info.name);
+  if (!columns.includes(column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
 }
+
+addMissingColumn('users', 'left_at', 'TEXT');
+addMissingColumn('items', 'removed_at', 'TEXT');
+addMissingColumn('items', 'trusted_only', 'INTEGER NOT NULL DEFAULT 0');
+addMissingColumn('loans', 'returned_at', 'TEXT');
 
 // Start from empty tables: drop them all and create them again (used by seed.js).
 // Children go first, because of the foreign keys.
@@ -138,6 +148,25 @@ export function declinePendingLoans(itemId, exceptLoanId = null) {
     db.prepare("UPDATE loans SET status = 'declined' WHERE id = ?").run(loan.id);
     createMessage(loan, loan.lender_id, loan.borrower_id, 'decline');
   }
+}
+
+// How reliable a borrower has been: { joined_days, on_time, late }. Only completed returns count,
+// and "on time" means that the return photo was sent before the loan was due.
+export function trustOf(userId) {
+  return db
+    .prepare(
+      `SELECT CAST(julianday('now') - julianday(users.created_at) AS INTEGER) AS joined_days,
+              COUNT(CASE WHEN loans.returned_at <= loans.end_at THEN 1 END) AS on_time,
+              COUNT(CASE WHEN loans.returned_at > loans.end_at THEN 1 END) AS late
+       FROM users LEFT JOIN loans ON loans.borrower_id = users.id AND loans.status = 'returned'
+       WHERE users.id = ?`
+    )
+    .get(userId);
+}
+
+// "Trusted neighbors only" items need at least one on-time return.
+export function isTrusted(userId) {
+  return trustOf(userId).on_time > 0;
 }
 
 // What the client may see about a user: everything except the token.

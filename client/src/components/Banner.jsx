@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { findItem } from '../data/catalog.js';
 import { displayName, renderPhrase, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
+import TrustLine from './TrustLine.jsx';
 
 const POLL_EVERY_MS = 5000;
 
@@ -37,6 +38,7 @@ export default function Banner() {
                 : t(lang, 'banner.new', { name: displayName(lang, message.from_nickname) })}
             </strong>
             <p>{renderPhrase(lang, message.phrase_key, message.params)}</p>
+            {message.borrower_trust && <TrustLine lang={lang} trust={message.borrower_trust} />}
           </div>
           <Link to={`/loan/${message.loan_id}`} className="banner-open">
             {t(lang, 'banner.open')}

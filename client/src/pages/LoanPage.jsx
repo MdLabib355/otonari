@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import PhotoCapture from '../components/PhotoCapture.jsx';
 import PhraseBubble from '../components/PhraseBubble.jsx';
 import TipCard from '../components/TipCard.jsx';
+import TrustLine from '../components/TrustLine.jsx';
 import { QUICK_REPLIES, findItem } from '../data/catalog.js';
 import { displayName, formatDate, itemName, renderPhrase, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
@@ -85,7 +86,7 @@ function Loan({ loanId }) {
     );
   }
 
-  const { loan, item, borrower, lender, messages } = details;
+  const { loan, item, borrower, lender, borrower_trust, messages } = details;
   const iAmLender = loan.lender_id === user.id;
   const other = iAmLender ? borrower : lender;
   const step = { loan, iAmLender, otherName: displayName(lang, other.nickname), lang, busy, act, sendPhoto };
@@ -108,7 +109,9 @@ function Loan({ loanId }) {
       <LoanPhotos loan={loan} lang={lang} />
 
       {errorText}
-      {loan.status === 'pending' && <PendingActions iAmLender={iAmLender} lang={lang} busy={busy} act={act} />}
+      {loan.status === 'pending' && (
+        <PendingActions iAmLender={iAmLender} trust={borrower_trust} lang={lang} busy={busy} act={act} />
+      )}
       {loan.status === 'accepted' && <HandoverStep {...step} />}
       {loan.status === 'active' && <ReturnStep {...step} />}
       {QUICK_REPLY_STATUSES.includes(loan.status) && <QuickReplies item={item} lang={lang} busy={busy} act={act} />}
@@ -138,7 +141,7 @@ function LoanHeader({ loan, item, other, lang }) {
 }
 
 // While a request waits for an answer: the lender answers, the borrower can still cancel.
-function PendingActions({ iAmLender, lang, busy, act }) {
+function PendingActions({ iAmLender, trust, lang, busy, act }) {
   if (!iAmLender) {
     return (
       <div className="actions">
@@ -152,6 +155,7 @@ function PendingActions({ iAmLender, lang, busy, act }) {
   const decline = (reason) => act('decline', { reason });
   return (
     <div className="actions">
+      <TrustLine lang={lang} trust={trust} />
       <button type="button" className="button-primary" disabled={busy} onClick={() => act('accept')}>
         {t(lang, 'loan.accept')}
       </button>

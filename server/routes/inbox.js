@@ -1,11 +1,12 @@
 // The notification inbox: messages to me that I haven't read yet.
 // The client asks every 5 seconds (simple polling, no push notifications).
 //   GET  /api/inbox        user   my unread messages, oldest first, with sender + loan + item
+//                                 (and for a new request: borrower_trust, how reliable the borrower is)
 //   POST /api/inbox/read   user   { ids } → mark those messages (only ones sent to me) as read
 
 import express from 'express';
 import { requireUser } from '../auth.js';
-import { db } from '../db.js';
+import { db, trustOf } from '../db.js';
 
 const router = express.Router();
 
@@ -24,7 +25,13 @@ router.get('/inbox', requireUser, (req, res) => {
        ORDER BY messages.created_at, messages.id`
     )
     .all(req.user.id);
-  res.json(messages.map((message) => ({ ...message, params: JSON.parse(message.params) })));
+  res.json(
+    messages.map((message) => ({
+      ...message,
+      params: JSON.parse(message.params),
+      borrower_trust: message.phrase_key === 'request' ? trustOf(message.from_user_id) : null,
+    }))
+  );
 });
 
 router.post('/inbox/read', requireUser, (req, res) => {

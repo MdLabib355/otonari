@@ -13,6 +13,8 @@ export default function Settings() {
   const { user, group, lang, setMe, logout } = useUser();
   const [failed, setFailed] = useState(false);
   const [leaveTappedAt, setLeaveTappedAt] = useState(null); // time of the first tap on "Leave"
+  const [leaving, setLeaving] = useState(false);
+  const [leaveProblem, setLeaveProblem] = useState(null); // the text to show if leaving didn't work
 
   // The server answers with the updated { user, group }. Handing that to setMe re-renders the whole
   // app at once, in the new language or size.
@@ -25,13 +27,27 @@ export default function Settings() {
     }
   }
 
-  // Leaving forgets the token, and without it nobody can come back as the same person.
+  // Leaving can't be undone: my items leave the shelf, and nobody can come back as the same person.
   // So it takes two separate taps; an accidental double tap doesn't count.
   function tapLeave() {
     if (leaveTappedAt === null) {
+      setLeaveProblem(null);
       setLeaveTappedAt(Date.now());
     } else if (Date.now() - leaveTappedAt > DOUBLE_TAP_MS) {
+      leave();
+    }
+  }
+
+  async function leave() {
+    setLeaving(true);
+    try {
+      await api.post('/api/leave');
       logout();
+    } catch (error) {
+      // 409: there is still an accepted or active loan.
+      setLeaveProblem(error.status === 409 ? 'settings.leaveBlocked' : 'common.error');
+      setLeaveTappedAt(null);
+      setLeaving(false);
     }
   }
 
@@ -86,10 +102,12 @@ export default function Settings() {
         <button
           type="button"
           className={confirming ? 'button-secondary button-danger' : 'button-secondary'}
+          disabled={leaving}
           onClick={tapLeave}
         >
           {t(lang, confirming ? 'settings.leaveConfirm' : 'settings.leave')}
         </button>
+        {leaveProblem && <p className="error">{t(lang, leaveProblem)}</p>}
       </div>
     </section>
   );

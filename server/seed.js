@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { createMessage, db, resetDatabase } from './db.js';
 
 // Rahim is NOT here on purpose: he joins live during the demo.
-// Items are [item_key, max_days, spot].
+// Items are [item_key, max_days, spot], plus true for "trusted neighbors only".
 const GROUPS = [
   {
     code: 'SAKURA-2611',
@@ -30,7 +30,7 @@ const GROUPS = [
         lang: 'ja',
         elder: 0,
         items: [
-          ['projector', 2, 'mailbox'],
+          ['projector', 2, 'mailbox', true],
           ['power_drill', 1, 'mailbox'],
           ['dehumidifier', 7, 'entrance'],
         ],
@@ -111,14 +111,19 @@ function insertGroupsUsersAndItems() {
       .run(group.code, group.name, group.type, group.city).lastInsertRowid;
 
     for (const user of group.users) {
+      // They joined a month ago (the returned loan below is from last week).
       const userId = db
-        .prepare('INSERT INTO users (group_id, nickname, lang, elder_mode, token) VALUES (?, ?, ?, ?, ?)')
+        .prepare(
+          `INSERT INTO users (group_id, nickname, lang, elder_mode, token, created_at)
+           VALUES (?, ?, ?, ?, ?, datetime('now', '-30 days'))`
+        )
         .run(groupId, user.nickname, user.lang, user.elder, crypto.randomUUID()).lastInsertRowid;
       userIds[user.nickname] = userId;
 
-      for (const [itemKey, maxDays, spot] of user.items) {
-        db.prepare('INSERT INTO items (owner_id, group_id, item_key, max_days, spot) VALUES (?, ?, ?, ?, ?)')
-          .run(userId, groupId, itemKey, maxDays, spot);
+      for (const [itemKey, maxDays, spot, trustedOnly] of user.items) {
+        db.prepare(
+          'INSERT INTO items (owner_id, group_id, item_key, max_days, spot, trusted_only) VALUES (?, ?, ?, ?, ?, ?)'
+        ).run(userId, groupId, itemKey, maxDays, spot, trustedOnly ? 1 : 0);
       }
     }
   }
@@ -132,13 +137,15 @@ function insertReturnedLoan(mariaId, tanakaId) {
     .prepare("SELECT * FROM items WHERE owner_id = ? AND item_key = 'projector'")
     .get(tanakaId);
   const requestedAt = japanTime(9, 19, 30);
+  const returnedAt = japanTime(6, 17, 55); // five minutes before it was due: on time
 
   const loanId = db
     .prepare(
-      `INSERT INTO loans (item_id, borrower_id, lender_id, start_at, end_at, status, created_at)
-       VALUES (?, ?, ?, ?, ?, 'returned', datetime(?))`
+      `INSERT INTO loans (item_id, borrower_id, lender_id, start_at, end_at, status, returned_at, created_at)
+       VALUES (?, ?, ?, ?, ?, 'returned', ?, datetime(?))`
     )
-    .run(projector.id, mariaId, tanakaId, japanTime(8, 18), japanTime(6, 18), requestedAt).lastInsertRowid;
+    .run(projector.id, mariaId, tanakaId, japanTime(8, 18), japanTime(6, 18), returnedAt, requestedAt)
+    .lastInsertRowid;
   const loan = db.prepare('SELECT * FROM loans WHERE id = ?').get(loanId);
 
   // [from, to, phrase_key, when]
@@ -146,7 +153,7 @@ function insertReturnedLoan(mariaId, tanakaId) {
     [mariaId, tanakaId, 'request', requestedAt],
     [tanakaId, mariaId, 'accept', japanTime(9, 20, 5)],
     [mariaId, tanakaId, 'received', japanTime(8, 18, 10)],
-    [mariaId, tanakaId, 'returned', japanTime(6, 17, 55)],
+    [mariaId, tanakaId, 'returned', returnedAt],
     [tanakaId, mariaId, 'returnConfirmed', japanTime(6, 18, 5)],
     [mariaId, tanakaId, 'qr.thanks', japanTime(6, 18, 7)],
   ];

@@ -10,9 +10,11 @@ import { db } from './db.js';
 export function requireUser(req, res, next) {
   const header = req.get('Authorization') ?? '';
   const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : '';
-  const user = token ? db.prepare('SELECT * FROM users WHERE token = ?').get(token) : undefined;
+  const user = token
+    ? db.prepare('SELECT * FROM users WHERE token = ? AND left_at IS NULL').get(token)
+    : undefined;
 
-  // No token, or an unknown one (e.g. after `npm run seed`): the client should go to /join.
+  // No token, an unknown one (e.g. after `npm run seed`), or they left: the client should go to /join.
   if (!user) {
     return res.status(401).json({ error: 'Not logged in' });
   }

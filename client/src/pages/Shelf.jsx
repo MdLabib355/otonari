@@ -73,6 +73,11 @@ function ItemCard({ item, mine, lang }) {
         <span className="muted">{t(lang, 'shelf.from', { name: displayName(lang, item.owner_nickname) })}</span>
       )}
       <span className={`badge badge-${badge}`}>{t(lang, `shelf.${badge}`)}</span>
+      {item.trusted_only && (
+        <span className="badge lock-badge" role="img" aria-label={t(lang, 'trust.only')} title={t(lang, 'trust.only')}>
+          🔒
+        </span>
+      )}
     </Link>
   );
 }

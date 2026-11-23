@@ -18,6 +18,7 @@ router.get('/demo/users', (req, res) => {
     .prepare(
       `SELECT users.*, groups.name AS group_name, groups.code AS group_code
        FROM users JOIN groups ON groups.id = users.group_id
+       WHERE users.left_at IS NULL
        ORDER BY users.group_id, users.id`
     )
     .all();
@@ -35,7 +36,7 @@ router.post('/demo/login', (req, res) => {
   if (!Number.isInteger(userId)) {
     return res.status(400).json({ error: 'user_id must be a number' });
   }
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  const user = db.prepare('SELECT * FROM users WHERE id = ? AND left_at IS NULL').get(userId);
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }

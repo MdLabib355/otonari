@@ -20,6 +20,7 @@ export default function MyItems() {
   const [itemKey, setItemKey] = useState(null);
   const [maxDays, setMaxDays] = useState(3);
   const [spot, setSpot] = useState('entrance');
+  const [trustedOnly, setTrustedOnly] = useState(false);
   const [busy, setBusy] = useState(false);
 
   function loadItems() {
@@ -37,7 +38,7 @@ export default function MyItems() {
     setBusy(true);
     setFailed(false);
     try {
-      await api.post('/api/items', { item_key: itemKey, max_days: maxDays, spot });
+      await api.post('/api/items', { item_key: itemKey, max_days: maxDays, spot, trusted_only: trustedOnly });
       setItemKey(null);
       loadItems();
       window.scrollTo({ top: 0, behavior: 'smooth' }); // the new item appears in the list at the top
@@ -59,6 +60,16 @@ export default function MyItems() {
     loadItems();
   }
 
+  async function changeTrustedOnly(id, value) {
+    setFailed(false);
+    try {
+      await api.patch(`/api/items/${id}`, { trusted_only: value });
+    } catch {
+      setFailed(true);
+    }
+    loadItems();
+  }
+
   const durationOptions = DURATIONS.map((n) => ({
     value: n,
     label: n === 1 ? t(lang, 'borrow.day') : t(lang, 'borrow.days', { n }),
@@ -75,7 +86,13 @@ export default function MyItems() {
       {items?.length > 0 && (
         <ul className="my-items">
           {items.map((item) => (
-            <MyItemRow key={item.id} item={item} lang={lang} onRemove={removeItem} />
+            <MyItemRow
+              key={item.id}
+              item={item}
+              lang={lang}
+              onRemove={removeItem}
+              onTrustedOnly={changeTrustedOnly}
+            />
           ))}
         </ul>
       )}
@@ -117,6 +134,11 @@ export default function MyItems() {
         <ChipGroup label={t(lang, 'myItems.spot')} options={spotOptions} value={spot} onChange={setSpot} />
       </div>
 
+      <div className="field">
+        <TrustedSwitch lang={lang} checked={trustedOnly} onChange={setTrustedOnly} />
+        <p className="hint">{t(lang, 'trust.explain')}</p>
+      </div>
+
       <button type="button" className="button-primary" disabled={!itemKey || busy} onClick={addItem}>
         {itemKey && `${findItem(itemKey).emoji} `}
         {t(lang, 'myItems.save')}
@@ -125,8 +147,24 @@ export default function MyItems() {
   );
 }
 
+// "Trusted neighbors only": for one item, when adding it and later in the list.
+function TrustedSwitch({ lang, checked, onChange }) {
+  return (
+    <label className="switch-row">
+      <span>🔒 {t(lang, 'trust.only')}</span>
+      <input
+        type="checkbox"
+        role="switch"
+        className="switch"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </label>
+  );
+}
+
 // One of my items. It can't be removed while it is reserved or lent.
-function MyItemRow({ item, lang, onRemove }) {
+function MyItemRow({ item, lang, onRemove, onTrustedOnly }) {
   const canRemove = item.status === 'available';
   const days = item.max_days === 1 ? t(lang, 'item.maxDay') : t(lang, 'item.maxDays', { n: item.max_days });
 
@@ -149,6 +187,7 @@ function MyItemRow({ item, lang, onRemove }) {
       ) : (
         <span className={`badge badge-${item.status}`}>{t(lang, `shelf.${item.status}`)}</span>
       )}
+      <TrustedSwitch lang={lang} checked={item.trusted_only} onChange={(value) => onTrustedOnly(item.id, value)} />
     </li>
   );
 }

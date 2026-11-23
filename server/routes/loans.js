@@ -15,7 +15,7 @@
 import express from 'express';
 import { DURATIONS, QUICK_REPLY_KEYS } from '../allowedKeys.js';
 import { requireUser } from '../auth.js';
-import { createMessage, db, declinePendingLoans, findOpenLoan } from '../db.js';
+import { createMessage, db, declinePendingLoans, findOpenLoan, isTrusted, trustOf } from '../db.js';
 import { receivePhoto, savePhoto } from '../photos.js';
 
 const router = express.Router();
@@ -43,6 +43,7 @@ function loanDetails(loanId, viewerId) {
     item,
     borrower: person(loan.borrower_id),
     lender: person(loan.lender_id),
+    borrower_trust: viewerId === loan.lender_id ? trustOf(loan.borrower_id) : null, // only for the lender
     messages: messages.map((message) => ({ ...message, params: JSON.parse(message.params) })),
   };
 }
@@ -123,6 +124,9 @@ router.post('/loans', requireUser, (req, res) => {
   }
   if (item.status !== 'available') {
     return res.status(409).json({ error: 'This item is not available right now' });
+  }
+  if (item.trusted_only === 1 && !isTrusted(req.user.id)) {
+    return res.status(403).json({ error: 'Only for neighbors who have returned something on time' });
   }
 
   // The tap-only picker always asks for whole days (1, 2, 3 or 7), never more than the owner allows,
@@ -254,7 +258,12 @@ router.post('/loans/:id/return', requireUser, receivePhoto, loanRole('borrower')
 
   const photo = savePhoto(req.file);
   const giveBack = db.transaction(() => {
-    db.prepare('UPDATE loans SET return_photo = ? WHERE id = ?').run(photo, loan.id);
+    // This moment decides whether the return was on time, however slowly the lender confirms it.
+    db.prepare('UPDATE loans SET return_photo = ?, returned_at = ? WHERE id = ?').run(
+      photo,
+      new Date().toISOString(),
+      loan.id
+    );
     createMessage(loan, loan.borrower_id, loan.lender_id, 'returned');
   });
   giveBack();

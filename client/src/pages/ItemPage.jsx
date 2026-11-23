@@ -87,10 +87,17 @@ export default function ItemPage() {
       </p>
 
       {alreadyAsked && <AlreadyAsked item={item} />}
-      {canAsk && item.status !== 'available' && <p className="notice">{t(lang, 'borrow.notAvailable')}</p>}
-      {canAsk && item.status === 'available' && <BorrowForm item={item} onRefused={loadItem} />}
+      {canAsk && <AskForItem item={item} onRefused={loadItem} />}
     </section>
   );
+}
+
+// The request form, or the reason why I can't ask for this item.
+function AskForItem({ item, onRefused }) {
+  const { lang } = useUser();
+  if (item.status !== 'available') return <p className="notice">{t(lang, 'borrow.notAvailable')}</p>;
+  if (!item.allowed_for_me) return <p className="notice">🔒 {t(lang, 'trust.explain')}</p>;
+  return <BorrowForm item={item} onRefused={onRefused} />;
 }
 
 // I already have a pending or accepted request for this item: link to it instead of asking again.
@@ -153,8 +160,9 @@ function BorrowForm({ item, onRefused }) {
     } catch (error) {
       setBusy(false);
       // 409: someone else got it first, or I already asked (e.g. on another device).
-      // Reloading the item shows the right note for both.
-      if (error.status === 409) onRefused();
+      // 403: the owner has just switched on "trusted neighbors only".
+      // Reloading the item shows the right note for all of them.
+      if (error.status === 409 || error.status === 403) onRefused();
       else setFailed(true);
     }
   }

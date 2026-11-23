@@ -66,6 +66,15 @@
     "borrow.alreadyAsked": "আপনি আগেই অনুরোধ করেছেন — {name}-এর অপেক্ষায়",
     "borrow.openLoan": "আমার অনুরোধ দেখুন",
 
+    "trust.joinedToday": "আজ যোগ দিয়েছেন",
+    "trust.joinedDay": "১ দিন আগে যোগ দিয়েছেন",
+    "trust.joinedDays": "{n} দিন আগে যোগ দিয়েছেন",
+    "trust.return": "সময়মতো ফেরত ১ বার, দেরিতে {late} বার",
+    "trust.returns": "সময়মতো ফেরত {n} বার, দেরিতে {late} বার",
+    "trust.new": "নতুন প্রতিবেশী, এখনো ফেরতের কোনো রেকর্ড নেই",
+    "trust.only": "শুধু বিশ্বস্ত প্রতিবেশীদের জন্য",
+    "trust.explain": "শুধু সেই প্রতিবেশীদের জন্য, যাঁরা আগে সময়মতো কিছু ফেরত দিয়েছেন",
+
     "myItems.title": "যা আমি ধার দিতে পারি",
     "myItems.add": "জিনিস যোগ করুন",
     "myItems.pick": "একটি জিনিস বেছে নিন",
@@ -125,6 +134,7 @@
     "settings.poster": "যোগদানের পোস্টার প্রিন্ট করুন",
     "settings.leave": "এই গ্রুপ ছেড়ে দিন",
     "settings.leaveConfirm": "ছেড়ে দিতে আবার চাপুন",
+    "settings.leaveBlocked": "আগে আপনার চলমান ধারগুলো শেষ করুন",
 
     "speak.button": "পড়ে শোনান",
 

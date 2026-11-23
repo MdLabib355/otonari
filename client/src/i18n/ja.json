@@ -66,6 +66,15 @@
     "borrow.alreadyAsked": "すでにお願いを送っています。{name}からのご連絡をお待ちください。",
     "borrow.openLoan": "お願いの内容を見る",
 
+    "trust.joinedToday": "本日参加",
+    "trust.joinedDay": "1日前に参加",
+    "trust.joinedDays": "{n}日前に参加",
+    "trust.return": "期限内の返却1回、遅れ{late}回",
+    "trust.returns": "期限内の返却{n}回、遅れ{late}回",
+    "trust.new": "新しいご近所の方です。返却の記録はまだありません。",
+    "trust.only": "返却実績のある方のみ",
+    "trust.explain": "期限内に返却されたことのあるご近所の方のみ、お借りいただけます。",
+
     "myItems.title": "私が貸せる物",
     "myItems.add": "物を登録する",
     "myItems.pick": "物を選ぶ",
@@ -125,6 +134,7 @@
     "settings.poster": "参加用ポスターを印刷する",
     "settings.leave": "このグループを退会する",
     "settings.leaveConfirm": "もう一度押すと退会します",
+    "settings.leaveBlocked": "先に、現在の貸し借りを終えてください。",
 
     "speak.button": "読み上げる",
 

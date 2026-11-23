@@ -393,6 +393,7 @@ section > h1,
 }
 
 .item-card {
+  position: relative; /* for the 🔒 badge */
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -407,6 +408,14 @@ section > h1,
 
 .item-card:active {
   background: var(--accent-soft);
+}
+
+/* 🔒 "Trusted neighbors only", in the corner of the card */
+.item-card .lock-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--quiet);
 }
 
 .item-card .badge {
@@ -428,6 +437,7 @@ section > h1,
 
 .my-item {
   display: flex;
+  flex-wrap: wrap; /* the "trusted neighbors only" switch is a second row */
   align-items: center;
   gap: 12px;
   margin-bottom: 10px;
@@ -446,6 +456,14 @@ section > h1,
 
 .my-item .hint {
   margin-top: 4px;
+}
+
+.my-item .switch-row {
+  width: 100%;
+  padding: 8px 0 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
 }
 
 .catalog-heading {
@@ -603,6 +621,18 @@ section > h1,
 .banner-text p {
   margin: 2px 0 0;
   font-size: 0.95em;
+}
+
+/* How reliable the borrower has been: on the loan page, and in the banner of a new request */
+.trust-line {
+  margin: 0;
+  color: var(--muted);
+}
+
+.banner .trust-line {
+  margin-top: 6px;
+  color: inherit;
+  font-weight: 600;
 }
 
 .banner-open {
@@ -961,7 +991,6 @@ body.elder .catalog-grid {
 }
 
 body.elder .item-header,
-body.elder .my-item,
 body.elder .banner {
   flex-wrap: wrap;
 }

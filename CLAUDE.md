@@ -65,6 +65,14 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
   Thank you.
 - Every message bubble has a small toggle **"Show original"** that renders the same phrase in the
   sender's language (proves both sides saw the same meaning).
+- **Trust line** on every incoming request (loan page and banner), calculated from the database:
+  "Joined X days ago · N returns on time, M late", or "New neighbor, no returns yet".
+- **"Trusted neighbors only"** switch per item (when adding it, and on My items): only users with at least
+  one on-time completed return can request it. Small 🔒 badge on the shelf; for everyone else the item page
+  explains it instead of showing the time picker.
+- **Safe leaving** (Settings): refused while the user has an accepted or active loan ("Please finish your
+  current loans first"). Otherwise their items leave the shelf, their pending requests are cancelled, and
+  their token stops working.
 
 ### Must-have 3 — Handover & return loop
 - Handover: lender takes a **condition photo** → borrower taps **"I received it"** → loan becomes active.
@@ -140,6 +148,7 @@ otonari/
 │       │   ├── PhraseBubble.jsx   # renders one message + "show original" + 🔊
 │       │   ├── SpeakButton.jsx
 │       │   ├── TipCard.jsx
+│       │   ├── TrustLine.jsx      # the borrower's record, on an incoming request
 │       │   ├── ChipGroup.jsx      # big tappable chips
 │       │   ├── NewGroup.jsx       # start a new neighborhood (on the Join page)
 │       │   └── PhotoCapture.jsx   # <input type="file" accept="image/*" capture="environment">
@@ -188,7 +197,8 @@ CREATE TABLE users (
   lang TEXT NOT NULL CHECK (lang IN ('en','ja','ja-easy','bn')),
   elder_mode INTEGER NOT NULL DEFAULT 0,
   token TEXT UNIQUE NOT NULL,         -- crypto.randomUUID()
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  left_at TEXT                        -- set when they leave (their token stops working); NULL = member
 );
 
 CREATE TABLE items (
@@ -198,6 +208,7 @@ CREATE TABLE items (
   item_key TEXT NOT NULL,             -- key from catalog.js, e.g. 'futon_dryer'
   max_days INTEGER NOT NULL DEFAULT 3,
   spot TEXT NOT NULL,                 -- key from SPOTS, e.g. 'entrance'
+  trusted_only INTEGER NOT NULL DEFAULT 0,  -- 1 = only for people with an on-time return
   status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','lent')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   removed_at TEXT                     -- set when the owner removes it (soft delete); NULL = on the shelf
@@ -214,6 +225,7 @@ CREATE TABLE loans (
     CHECK (status IN ('pending','accepted','declined','cancelled','active','returned')),
   handover_photo TEXT,                -- '/uploads/xxx.jpg'
   return_photo TEXT,
+  returned_at TEXT,                   -- ISO 8601, when the borrower sent the return photo
   reminded_soon_at TEXT,
   reminded_overdue_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -253,6 +265,14 @@ item can be removed; it gets `removed_at`, its pending loans are declined (send 
 phrase), and it disappears from the shelf and My items. Old loans and messages still find it.
 Removed items can never be requested.
 
+**Trust**: only loans with status `returned` count. A return was on time if `returned_at <= end_at`
+(`returned_at` = the moment of the return photo, however slowly the lender confirms it), otherwise late.
+A user is *trusted* with at least one on-time return; `trusted_only` items can be requested by them only.
+
+**Leaving** is possible only without `accepted` or `active` loans. The user's available items are removed
+(soft delete, see above), their own pending requests become `cancelled` (lenders get the `cancel` phrase),
+and `left_at` is set: the token no longer works, and they are no longer counted or listed as a member.
+
 ---
 
 ## 6. API (all JSON, all under `/api`, all require `Authorization: Bearer <token>` except groups + join + demo)
@@ -263,12 +283,13 @@ Removed items can never be requested.
 | `POST /api/groups` `{name,type,city,create_anyway?}` | anyone | creates a group with a random, unique join code → `{code,name,type,city}`; creates no user. `409 {error,existing_name}` if the same city has a group with the same name (ignoring case and spaces), unless `create_anyway` is `true` | – |
 | `POST /api/join` `{code,nickname,lang}` | anyone | creates user → `{token,user,group}` | – |
 | `GET /api/me` / `PATCH /api/me` `{lang,elder_mode}` | user | read/update me | – |
-| `GET /api/shelf` | user | items in my group + owner nickname + status | – |
-| `GET /api/items/:id` | user (same group) | one item + owner nickname + owner lang (the item page previews the request in the owner's language) | – |
-| `GET /api/my-items` / `POST /api/items` `{item_key,max_days,spot}` / `DELETE /api/items/:id` | owner | manage my items (can't delete if reserved/lent; delete = soft delete, see section 5) | `decline` → pending borrowers (on delete) |
-| `POST /api/loans` `{item_id,start_at,end_at}` | borrower | create pending loan | `request` → lender |
+| `POST /api/leave` | user | leave the group, see section 5 (`409` with an accepted or active loan) | `decline` → borrowers waiting for my items; `cancel` → lenders of my pending requests |
+| `GET /api/shelf` | user | items in my group + owner nickname + status + `trusted_only` | – |
+| `GET /api/items/:id` | user (same group) | one item + owner nickname + owner lang (the item page previews the request in the owner's language) + `my_loan_id` + `allowed_for_me` (`false`: trusted neighbors only, and I'm not one) | – |
+| `GET /api/my-items` / `POST /api/items` `{item_key,max_days,spot,trusted_only?}` / `PATCH /api/items/:id` `{trusted_only}` / `DELETE /api/items/:id` | owner | manage my items (can't delete if reserved/lent; delete = soft delete, see section 5) | `decline` → pending borrowers (on delete) |
+| `POST /api/loans` `{item_id,start_at,end_at}` | borrower | create pending loan (`403` if the item is for trusted neighbors only and I'm not one) | `request` → lender |
 | `GET /api/loans` | user | my loans as borrower and lender, with item + other user | – |
-| `GET /api/loans/:id` | participant | loan + messages (+ sender lang for "show original") | – |
+| `GET /api/loans/:id` | participant | loan + messages (+ sender lang for "show original"); for the lender also `borrower_trust` `{joined_days,on_time,late}` | – |
 | `POST /api/loans/:id/accept` | lender | → accepted, item reserved | `accept` → borrower |
 | `POST /api/loans/:id/decline` `{reason:'default'\|'busy'}` | lender | → declined | `decline` / `declineBusy` → borrower |
 | `POST /api/loans/:id/cancel` | borrower (pending only) | → cancelled | `cancel` → lender |
@@ -277,7 +298,7 @@ Removed items can never be requested.
 | `POST /api/loans/:id/return` (multipart `photo`) | borrower | save return_photo | `returned` → lender |
 | `POST /api/loans/:id/return-confirmed` | lender | → returned, item available | `returnConfirmed` → borrower |
 | `POST /api/loans/:id/quick-reply` `{phrase_key}` | participant | only keys in QUICK_REPLIES | that phrase → other side |
-| `GET /api/inbox` | user | unread messages to me (with loan + item info) | – |
+| `GET /api/inbox` | user | unread messages to me (with loan + item info; a `request` also has `borrower_trust`) | – |
 | `POST /api/inbox/read` `{ids}` | user | mark read | – |
 | `GET /api/demo/users` | DEMO_MODE only | seeded users (for "continue as") | – |
 | `POST /api/demo/login` `{user_id}` | DEMO_MODE only | returns that user's token | – |
@@ -355,13 +376,15 @@ Seeded users in Sakura Heights (Rahim is NOT seeded — he joins live in the dem
 | nickname | lang | elder | items (item_key, max_days, spot) |
 |---|---|---|---|
 | Sato | ja | 1 | futon_dryer (3, entrance), takoyaki_maker (2, entrance), ladder (1, bike_parking) |
-| Tanaka | ja | 0 | projector (2, mailbox), power_drill (1, mailbox), dehumidifier (7, entrance) |
+| Tanaka | ja | 0 | projector (2, mailbox, trusted only), power_drill (1, mailbox), dehumidifier (7, entrance) |
 | Yamamoto | ja | 0 | hot_plate (2, entrance), donabe (2, entrance) |
 | Maria | en | 0 | suitcase (7, entrance), camping_tent (3, bike_parking) |
 | Ayesha | bn | 0 | bluetooth_speaker (2, mailbox), rice_cooker_large (2, entrance) |
 
 Hamaguchi-machi block: Inoue (ja, elder) lawn_mower (1, notice_board), hedge_trimmer (1, notice_board);
 Kobayashi (ja) high_pressure_washer (1, notice_board).
+
+All seeded users joined 30 days ago (`created_at`).
 
 Also seed one already-returned loan (Maria borrowed Tanaka's projector last week) so history isn't empty.
 
