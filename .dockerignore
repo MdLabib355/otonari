@@ -1,0 +1,16 @@
+node_modules
+client/node_modules
+server/node_modules
+client/dist
+.git
+.gitignore
+.env
+server/.env
+docs
+*.md
+server/test
+server/uploads/*
+!server/uploads/.gitkeep
+dev-volume
+*.db*
+*.log

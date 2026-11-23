@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-otonari}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-otonari}
+      POSTGRES_DB: ${POSTGRES_DB:-otonari}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - otonari_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-otonari} -d ${POSTGRES_DB:-otonari}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgres://${POSTGRES_USER:-otonari}:${POSTGRES_PASSWORD:-otonari}@db:5432/${POSTGRES_DB:-otonari}
+      UPLOADS_DIR: /data/uploads
+      DEMO_MODE: ${DEMO_MODE:-true}
+    ports:
+      - "${PORT:-3001}:3001"
+    volumes:
+      - otonari_uploads:/data/uploads
+
+volumes:
+  otonari_pgdata:
+  otonari_uploads:

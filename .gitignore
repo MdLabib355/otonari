@@ -12,6 +12,9 @@ server/otonari.db*
 server/uploads/*
 !server/uploads/.gitkeep
 
+# Optional local dummy volume folder for dev testing
+dev-volume/
+
 # Client build output (npm run build)
 client/dist/
 
