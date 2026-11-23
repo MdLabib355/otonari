@@ -1,17 +1,9 @@
 import assert from 'node:assert/strict';
 import { after, beforeEach, describe, it } from 'node:test';
-import {
-  closeDatabase,
-  declinePendingLoans,
-  findOpenLoan,
-  getMe,
-  isTrusted,
-  query,
-  trustOf,
-  withTransaction,
-} from '../db.js';
-import { checkReminders } from '../reminders.js';
-import { seedDatabase } from '../seed.js';
+import { closeDatabase, query, withTransaction } from '../db/pool.js';
+import { seedDatabase } from '../db/seed.js';
+import { declinePendingLoans, findOpenLoan, getMe, isTrusted, trustOf } from '../services/loans.js';
+import { checkReminders } from '../services/reminders.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 

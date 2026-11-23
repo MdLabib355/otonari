@@ -7,8 +7,10 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
-import { closeDatabase, createMessage, query, resetDatabase, withTransaction } from './db.js';
-import { deletePhotos } from './photos.js';
+import { closeDatabase, query, withTransaction } from './pool.js';
+import { resetDatabase } from './schema.js';
+import { createMessage } from '../services/loans.js';
+import { deletePhotos } from '../services/photos.js';
 
 const GROUPS = [
   {
@@ -91,7 +93,6 @@ const GROUPS = [
   },
 ];
 
-// ISO time (UTC) for "N days ago at hh:mm in Japan" (UTC+9, no daylight saving time).
 function japanTime(daysAgo, hour, minute = 0) {
   const japanNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const utc = Date.UTC(
@@ -148,7 +149,7 @@ async function insertReturnedLoan(mariaId, tanakaId, client) {
   );
   const projector = projectorRes.rows[0];
   const requestedAt = japanTime(9, 19, 30);
-  const returnedAt = japanTime(6, 17, 55); // 5 minutes before due: on time
+  const returnedAt = japanTime(6, 17, 55);
 
   const loanRes = await query(
     `INSERT INTO loans (item_id, borrower_id, lender_id, start_at, end_at, status, returned_at, created_at)
@@ -203,7 +204,7 @@ export async function seedDatabase({ empty = false, quiet = false } = {}) {
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
-  dotenv.config({ path: path.join(import.meta.dirname, '.env'), quiet: true });
+  dotenv.config({ path: path.join(import.meta.dirname, '..', '.env'), quiet: true });
   const empty = process.argv.includes('--empty');
   try {
     await seedDatabase({ empty });

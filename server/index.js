@@ -1,6 +1,4 @@
 // Otonari API server (Express 5 + PostgreSQL).
-// Development: Vite serves the React app on :5173 and proxies /api and /uploads to this server.
-// Production (`npm run build`, then `npm start` or Docker): serves built client/dist on one port.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,15 +6,17 @@ import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import { closeDatabase, initDatabase, query } from './db.js';
-import { servePhoto } from './photos.js';
-import { startReminders, stopReminders } from './reminders.js';
+import { closeDatabase, query } from './db/pool.js';
+import { initDatabase } from './db/schema.js';
+import { seedDatabase } from './db/seed.js';
+import { errorHandler, securityHeaders } from './middleware/security.js';
+import { servePhoto } from './services/photos.js';
+import { startReminders, stopReminders } from './services/reminders.js';
 import demoRoutes from './routes/demo.js';
 import groupRoutes from './routes/groups.js';
 import inboxRoutes from './routes/inbox.js';
 import itemRoutes from './routes/items.js';
 import loanRoutes from './routes/loans.js';
-import { seedDatabase } from './seed.js';
 
 const clientDist = path.join(import.meta.dirname, '..', 'client', 'dist');
 
@@ -25,17 +25,10 @@ export function createApp() {
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
 
-  app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Referrer-Policy', 'same-origin');
-    next();
-  });
-
+  app.use(securityHeaders);
   app.use(cors());
   app.use(express.json({ limit: '100kb' }));
 
-  // Condition and item photos stored in canonicalized UPLOADS_DIR volume.
   app.get('/uploads/:filename', servePhoto);
 
   app.get('/api/health', async (req, res) => {
@@ -67,17 +60,7 @@ export function createApp() {
     });
   }
 
-  app.use((err, req, res, next) => {
-    if (res.headersSent) {
-      return next(err);
-    }
-    const status = err.status || 500;
-    if (status >= 500) {
-      console.error(err);
-    }
-    res.status(status).json({ error: status >= 500 ? 'Server error' : err.message });
-  });
-
+  app.use(errorHandler);
   return app;
 }
 

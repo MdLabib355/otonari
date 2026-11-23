@@ -13,19 +13,18 @@
 //   POST /api/loans/:id/quick-reply       participant   { phrase_key } one of the five fixed quick replies
 
 import express from 'express';
-import { DURATIONS, QUICK_REPLY_KEYS } from '../allowedKeys.js';
-import { requireUser } from '../auth.js';
+import { DURATIONS, QUICK_REPLY_KEYS } from '../config/constants.js';
+import { query, withTransaction } from '../db/pool.js';
+import { requireUser } from '../middleware/auth.js';
+import { createRateLimiter } from '../middleware/rateLimit.js';
 import {
   createMessage,
   declinePendingLoans,
   findOpenLoan,
   isTrusted,
-  query,
   trustOf,
-  withTransaction,
-} from '../db.js';
-import { deletePhotoFile, receivePhoto, savePhoto } from '../photos.js';
-import { createRateLimiter } from '../rateLimit.js';
+} from '../services/loans.js';
+import { deletePhotoFile, receivePhoto, savePhoto } from '../services/photos.js';
 
 const router = express.Router();
 const DAY_MS = 24 * 60 * 60 * 1000;

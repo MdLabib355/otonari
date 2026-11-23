@@ -1,6 +1,4 @@
-// Keys and values the server accepts from the client, copied from client/src/data/catalog.js.
-// Everything that comes in (item, spot, quick reply, language, loan length) is checked against
-// these lists. If you add something to catalog.js, add it here too.
+// Domain allowlists accepted by the server (kept in sync with client/src/data/catalog.js).
 
 export const ITEM_KEYS = [
   // kitchen
@@ -38,15 +36,12 @@ export const ITEM_KEYS = [
   'suitcase',
 ];
 
-// Handover spots: shared places only, never a home address or room number.
 export const SPOT_KEYS = ['entrance', 'mailbox', 'bike_parking', 'notice_board', 'konbini'];
 
-// The only phrases a user can pick freely (everything else is chosen by the server).
 export const QUICK_REPLY_KEYS = ['qr.onMyWay', 'qr.atSpot', 'qr.late', 'qr.noProblem', 'qr.thanks'];
 
 export const LANGUAGES = ['en', 'ja', 'ja-easy', 'bn'];
 
 export const GROUP_TYPES = ['building', 'block'];
 
-// Loan lengths in days (an item's max_days must be one of these).
 export const DURATIONS = [1, 2, 3, 7];

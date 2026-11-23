@@ -4,8 +4,8 @@
 //   GET  /api/due-loans   user   my active borrowed loans due within 24h or overdue (no return photo yet)
 
 import express from 'express';
-import { requireUser } from '../auth.js';
-import { query, withTransaction } from '../db.js';
+import { query, withTransaction } from '../db/pool.js';
+import { requireUser } from '../middleware/auth.js';
 
 const router = express.Router();
 

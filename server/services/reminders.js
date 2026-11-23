@@ -1,10 +1,7 @@
-// Automatic polite reminders, so the lender never has to chase an overdue item.
-// Every 30 seconds, for each active loan without a return photo:
-//   <= 24 hours left (not overdue) -> 'sys.dueSoon' to borrower
-//   overdue                        -> 'sys.overdue' to borrower, and 'sys.overdueLender' to lender
-// reminded_soon_at / reminded_overdue_at guarantee idempotency across server restarts.
+// Automatic polite reminders (30s background job).
 
-import { createMessage, query, withTransaction } from './db.js';
+import { query, withTransaction } from '../db/pool.js';
+import { createMessage } from './loans.js';
 
 const CHECK_EVERY_MS = 30_000;
 const DAY_MS = 24 * 60 * 60 * 1000;

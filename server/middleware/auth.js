@@ -1,7 +1,6 @@
 // Login check: "Authorization: Bearer <token>" -> req.user (full row from users).
-// No passwords: the random UUID token from /api/join IS the identity.
 
-import { query } from './db.js';
+import { query } from '../db/pool.js';
 
 export async function requireUser(req, res, next) {
   const header = req.get('Authorization') ?? '';

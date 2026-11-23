@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { after, before, beforeEach, describe, it } from 'node:test';
-import { closeDatabase, query } from '../db.js';
+import { closeDatabase, query } from '../db/pool.js';
+import { seedDatabase } from '../db/seed.js';
 import { createApp } from '../index.js';
-import { checkReminders } from '../reminders.js';
-import { seedDatabase } from '../seed.js';
+import { checkReminders } from '../services/reminders.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;

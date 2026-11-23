@@ -7,10 +7,11 @@
 //   DELETE /api/items/:id   owner   soft-delete from shelf (not while reserved or lent)
 
 import express from 'express';
-import { DURATIONS, ITEM_KEYS, SPOT_KEYS } from '../allowedKeys.js';
-import { requireUser } from '../auth.js';
-import { declinePendingLoans, findOpenLoan, isTrusted, query, withTransaction } from '../db.js';
-import { deletePhotoFile, receiveOptionalPhoto, savePhoto } from '../photos.js';
+import { DURATIONS, ITEM_KEYS, SPOT_KEYS } from '../config/constants.js';
+import { query, withTransaction } from '../db/pool.js';
+import { requireUser } from '../middleware/auth.js';
+import { declinePendingLoans, findOpenLoan, isTrusted } from '../services/loans.js';
+import { deletePhotoFile, receiveOptionalPhoto, savePhoto } from '../services/photos.js';
 
 const router = express.Router();
 

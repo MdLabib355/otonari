@@ -8,8 +8,8 @@
   "scripts": {
     "postinstall": "npm install --prefix client && npm install --prefix server",
     "dev": "concurrently --names server,client --prefix-colors blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "seed": "node server/seed.js",
-    "seed:empty": "node server/seed.js --empty",
+    "seed": "node server/db/seed.js",
+    "seed:empty": "node server/db/seed.js --empty",
     "test": "node --test --test-concurrency=1 server/test/*.test.js",
     "build": "npm run build --prefix client",
     "render-build": "npm install --include=dev && npm run build",

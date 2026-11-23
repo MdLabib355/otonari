@@ -8,10 +8,11 @@
 
 import crypto from 'node:crypto';
 import express from 'express';
-import { GROUP_TYPES, LANGUAGES } from '../allowedKeys.js';
-import { requireUser } from '../auth.js';
-import { createMessage, declinePendingLoans, getMe, query, withTransaction } from '../db.js';
-import { createRateLimiter } from '../rateLimit.js';
+import { GROUP_TYPES, LANGUAGES } from '../config/constants.js';
+import { query, withTransaction } from '../db/pool.js';
+import { requireUser } from '../middleware/auth.js';
+import { createRateLimiter } from '../middleware/rateLimit.js';
+import { createMessage, declinePendingLoans, getMe } from '../services/loans.js';
 
 const router = express.Router();
 

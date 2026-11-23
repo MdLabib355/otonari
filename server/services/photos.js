@@ -1,5 +1,5 @@
-// Persistent volume photo storage (item photos, handover photos, return photos).
-// Enforces: image magic-byte validation, 5 MB cap, server-side JPEG EXIF/GPS stripping,
+// Persistent volume photo storage (item photos, handover photos, return photos, issue photos).
+// Enforces: magic-byte validation, 5 MB cap, server-side JPEG EXIF/GPS stripping,
 // UUID filenames, and canonicalized path-traversal checks inside UPLOADS_DIR.
 
 import crypto from 'node:crypto';
@@ -13,14 +13,12 @@ const MIME_BY_EXT = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_BYTES } }).single('photo');
 
-// Canonical upload root. Defaults to server/uploads locally; set UPLOADS_DIR=/data/uploads on Docker/Railway.
 export function getUploadsDir() {
-  const dir = path.resolve(process.env.UPLOADS_DIR || path.join(import.meta.dirname, 'uploads'));
+  const dir = path.resolve(process.env.UPLOADS_DIR || path.join(import.meta.dirname, '..', 'uploads'));
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
 
-// Inspect file magic bytes instead of trusting user-supplied filenames or Content-Type headers.
 export function imageExtension(buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 12) return null;
   const hex = buffer.toString('hex', 0, 12);
@@ -30,7 +28,6 @@ export function imageExtension(buffer) {
   return null;
 }
 
-// Removes JPEG APP1 (EXIF/GPS/XMP, 0xFFE1) and COM (0xFFFE) metadata segments server-side.
 export function stripJpegExif(buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 4 || buffer[0] !== 0xff || buffer[1] !== 0xd8) {
     return buffer;
@@ -52,13 +49,11 @@ export function stripJpegExif(buffer) {
     if (markerPos >= buffer.length) break;
 
     const marker = buffer[markerPos];
-    // Start of Scan (0xDA) or End of Image (0xD9): preserve remaining image payload verbatim.
     if (marker === 0xda || marker === 0xd9) {
       chunks.push(buffer.subarray(offset));
       break;
     }
 
-    // Standalone markers with no length field (RST0..RST7, TEM).
     if ((marker >= 0xd0 && marker <= 0xd7) || marker === 0x01) {
       chunks.push(buffer.subarray(offset, markerPos + 1));
       offset = markerPos + 1;
@@ -76,7 +71,6 @@ export function stripJpegExif(buffer) {
       break;
     }
 
-    // Drop APP1 (EXIF/GPS/XMP) and COM (comment) segments; keep all other JPEG segments.
     if (marker !== 0xe1 && marker !== 0xfe) {
       chunks.push(buffer.subarray(offset, nextOffset));
     }
@@ -110,7 +104,6 @@ export function receivePhoto(req, res, next) {
   });
 }
 
-// Accepts either plain JSON or multipart/form-data with an optional 'photo' file.
 export function receiveOptionalPhoto(req, res, next) {
   if (!req.is('multipart/form-data')) {
     return next();

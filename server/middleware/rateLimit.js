@@ -10,7 +10,6 @@ export function createRateLimiter({ windowMs, max, keyFn = (req) => req.ip }) {
     }
 
     const now = Date.now();
-    // Periodically prune expired keys so long-running processes stay bounded in memory.
     if (hits.size > 1000) {
       for (const [key, entry] of hits) {
         if (entry.resetAt <= now) hits.delete(key);

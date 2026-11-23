@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { DURATIONS, ITEM_KEYS, LANGUAGES, QUICK_REPLY_KEYS, SPOT_KEYS } from '../allowedKeys.js';
+import { DURATIONS, ITEM_KEYS, LANGUAGES, QUICK_REPLY_KEYS, SPOT_KEYS } from '../config/constants.js';
 import {
   DURATIONS as CLIENT_DURATIONS,
   ITEMS as CLIENT_ITEMS,

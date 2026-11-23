@@ -4,9 +4,10 @@
 //   POST /api/demo/fast-forward/:loanId   participant  { to: 'dueSoon' | 'overdue' } -> shifts dates & runs reminders
 
 import express from 'express';
-import { requireUser } from '../auth.js';
-import { getMe, publicUser, query, withTransaction } from '../db.js';
-import { checkReminders } from '../reminders.js';
+import { query, withTransaction } from '../db/pool.js';
+import { requireUser } from '../middleware/auth.js';
+import { getMe, publicUser } from '../services/loans.js';
+import { checkReminders } from '../services/reminders.js';
 
 const router = express.Router();
 const HOUR_MS = 60 * 60 * 1000;

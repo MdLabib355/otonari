@@ -14,7 +14,7 @@ import {
   savePhoto,
   servePhoto,
   stripJpegExif,
-} from '../photos.js';
+} from '../services/photos.js';
 
 // Minimal valid JPEG containing an APP1 EXIF/GPS segment ("Exif\0\0GPS_SECRET") before SOS + EOI.
 function makeJpegWithExif() {
