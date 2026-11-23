@@ -105,25 +105,18 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 
 ---
 
-## 3. Tech stack (fixed)
+## 3. Tech stack (v2)
 
 - **Client**: React 18 + Vite, **plain JavaScript (no TypeScript)**, `react-router-dom`, plain CSS
   (`client/src/styles.css`), `vite-plugin-pwa`, `qrcode` (for the poster).
-- **Server**: Node.js 20+ (LTS), Express, `better-sqlite3`, `multer` (photo upload), `cors`, `dotenv`,
-  `nodemon` (dev only: restarts the server when a server `.js` file is saved).
-- **Database**: SQLite file `server/otonari.db` (git-ignored). Recreated + seeded with `npm run seed`.
-- **Photos**: saved to `server/uploads/` (git-ignored, keep `.gitkeep`), served at `/uploads/...`.
-- **Dev**: root `package.json` runs both with `concurrently` → `npm run dev`.
-  Client on port 5173, server on port 3001, Vite proxies `/api` and `/uploads` to 3001.
-  The server runs under `nodemon` (config in `server/package.json`): it watches only server `.js` files and
-  ignores `node_modules`, `uploads/` and the database files, so database writes, seeding and photo uploads
-  never restart it. (Not `node --watch`: on Windows it restarts when files are merely read.)
-- **For the demo, always use `npm run build` + `npm start` (no file watcher).**
-- **Deploy** (Render.com, one free Node web service): build `npm run render-build`, start `npm start`,
-  environment `NODE_VERSION=22` and `DEMO_MODE=true` (Render sets `PORT`). The free plan loses the database
-  and the photos on every restart, so a server that starts without any groups runs the normal seed.
-- **No API keys or secrets exist in this project.** `.env` holds only `PORT` and `DEMO_MODE`.
-  `.env` is in `.gitignore`; commit `.env.example`.
+- **Server**: Node.js 22+ (LTS), Express 5, `pg` (PostgreSQL), `multer` (photo upload), `cors`, `dotenv`,
+  `nodemon` (dev only).
+- **Database**: PostgreSQL 16 via `DATABASE_URL` (local dev via `docker compose up -d db`; managed PostgreSQL on Railway). Recreated + seeded with `npm run seed`.
+- **Photos**: saved to canonicalized `UPLOADS_DIR` (defaults to `server/uploads/` locally; mounted Docker/Railway Volume `/data/uploads`), EXIF-stripped on client and server, served at `/uploads/:filename` via strict UUID allowlist.
+- **Containers & Deploy**: Multi-stage `Dockerfile`, `docker-compose.yml` (persistent `otonari_pgdata` + `otonari_uploads` volumes), and `railway.json`.
+- **Tests**: Node built-in test runner (`npm test` → `node --test --test-concurrency=1 server/test/*.test.js`).
+- **No external API keys exist in this project.** `.env` holds `PORT`, `DATABASE_URL`, optional `UPLOADS_DIR`, and `DEMO_MODE`. `.env` is in `.gitignore`; commit `server/.env.example`.
+- Full v2 architecture, PostgreSQL DDL, API contracts, and test matrix are maintained in `docs/refactor-plan.md`.
 
 ---
 

@@ -2,26 +2,25 @@
 
 **Borrow from next door, in your own language.**
 
-Otonari (お隣, "next door") is an installable web app (PWA) that lets neighbors in the same building or block in Japan lend and borrow things they rarely use, like a futon dryer, a stepladder or a takoyaki maker. Nobody types a message: every message is a fixed phrase that each neighbor reads in their own language (English, Japanese, Easy Japanese or Bengali).
+Otonari (お隣, "next door") is an installable web app (PWA) that lets neighbors in the same building or block in Japan lend and borrow things they rarely use, like a futon dryer, a stepladder, or a takoyaki maker. Nobody types a message: every message is a fixed phrase that each neighbor reads in their own language (English, Japanese, Easy Japanese, or Bengali).
 
-**The connection we update (TSUNAGU: Update the Way We Connect).** Neighbors live a few meters apart but never ask each other for help, because of language, shyness, and 遠慮 (*enryo*): the Japanese reluctance to impose on others, or to chase an overdue item. Otonari repairs this broken link between foreign residents, who need things but can't ask, and elderly residents, who own useful things but rarely talk to their neighbors. Asking takes a few taps, both sides read polite words in their own language, and the app sends the awkward reminder, so nobody has to.
+**The connection we update (TSUNAGU: Update the Way We Connect).** Neighbors live a few meters apart but never ask each other for help, because of language, shyness, and 遠慮 (*enryo*): the Japanese reluctance to impose on others, or to chase an overdue item. Otonari repairs this broken link between foreign residents, who need things but can't ask, and elderly residents, who own useful things but rarely talk to their neighbors. Asking takes a few taps, both sides read polite words in their own language, and Otonari handles polite reminders and return nudges so nobody has to have an awkward confrontation.
 
 ## Features
 
-- **Neighborhood shelf.** Join with the code on the poster in your building or block: a nickname and a language are enough. Share items by picking them from a fixed catalog.
-- **Borrowing in two languages.** Choose the day, time and length with taps, and see the exact sentence your neighbor will read before you send it. They tap Yes or No. Quick replies ("I'm on my way", "Thank you") cover the rest, and "Show original" proves that both sides saw the same meaning.
-- **Handover and return.** A condition photo before and after, side by side.
-- **Reminders nobody has to send.** 24 hours before an item is due, and again when it is overdue, Otonari politely reminds the borrower. When it is overdue, the lender is told that this has been taken care of.
-- **For elderly neighbors.** Large text and buttons, 🔊 read-aloud on every message, and Easy Japanese (やさしい日本語).
-- **Trust.** Every request shows how reliable the borrower has been, and an item can be limited to neighbors who have already returned something on time.
-- **QR poster.** A printable A4 poster in Japanese, English and Bengali for the notice board.
+- **Neighborhood shelf.** Join with the code on the poster in your building or block: a nickname and a language are enough. Share items by picking from a fixed 28-item catalog, with an optional real photo of your item.
+- **Borrowing in two languages with exact dates.** Pick `Today / Tomorrow / Day after` or any exact start date up to 14 days ahead, choose time and length, and preview the exact sentence your neighbor will read before sending. They tap Yes or No. Quick replies cover the rest, and "Show original" proves both sides saw the same meaning.
+- **Handover, safe cancellation, and return.** Either participant can cancel an accepted loan before handover (preventing stuck reservations). Condition photos before and after sit side by side.
+- **Automatic reminders, polite lender ping, and sticky return bar.** 24 hours before due and when overdue, Otonari reminds the borrower (and notifies the lender when overdue). A persistent sticky return-due / overdue bar stays visible at the top of the borrower's screen until the return photo is uploaded, and the lender can send a rate-limited polite nudge (`pingNeedBack` / `pingOverdue`) when they need the item back.
+- **For elderly neighbors.** Large text and buttons (Elder Mode), 🔊 read-aloud on every message and banner, and full Easy Japanese (やさしい日本語) coverage.
+- **Trust.** Every request shows how reliable the borrower has been (`on_time` / `late`), and valuable items can be restricted to neighbors with at least one on-time return.
+- **Trilingual QR poster.** Printable A4 poster in Japanese, English, and Bengali for the building notice board.
 - **Start a new neighborhood.** A building manager or neighborhood association leader creates a group and prints its poster.
-- **Etiquette tips** at the right moment: before asking, at handover and at return.
-- **Installable.** Add it to the home screen like an app; it updates itself. Only the app's own files stay on the phone: loans, messages and photos always come from the server.
+- **Installable PWA.** Add to the home screen like an app; automatically checks for updates. API responses and uploaded photos always come from the network.
 
 ## Screenshots
 
-<!-- Placeholders: replace the files in docs/screenshots/ with real screenshots, keeping the file names. -->
+<!-- Replace the placeholders in docs/screenshots/ with real screenshots before final submission. -->
 
 | 1. Join | 2. Ask | 3. Answer |
 |---|---|---|
@@ -35,35 +34,40 @@ Otonari (お隣, "next door") is an installable web app (PWA) that lets neighbor
 
 ## How to run
 
-You need [Node.js](https://nodejs.org) 22.12 or newer. There are no API keys and nothing to sign up for.
+### Option 1: Docker Compose (Recommended — Zero Setup, Persistent Volumes)
 
-**1. Install** (once)
+Requires [Docker](https://www.docker.com/). Starts PostgreSQL 16 (`otonari_pgdata` volume) and the production Otonari container (`otonari_uploads` volume mounted at `/data/uploads`):
 
 ```bash
 git clone <URL of this repository>
 cd otonari
-npm install
+docker compose up --build
 ```
 
-`npm install` also installs the `client` and `server` folders. Then create the settings file:
+Open <http://localhost:3001>. Both database rows and uploaded photos persist across `docker compose restart app`.
+
+### Option 2: Local Development (Node.js 22.12+ & PostgreSQL 16)
+
+1. Start PostgreSQL locally via Docker (or point `DATABASE_URL` to your own PostgreSQL instance):
 
 ```bash
+docker compose up -d db
+```
+
+2. Install dependencies and configure `server/.env`:
+
+```bash
+npm install
 cp server/.env.example server/.env
 ```
 
-(In the Windows command prompt: `copy server\.env.example server\.env`)
-
-**2. Fill the database**
+3. Seed demo data (optional — the server also auto-seeds automatically when starting on an empty database):
 
 ```bash
 npm run seed
 ```
 
-(The server does this by itself when it starts with an empty database.)
-
-**3. Run it**
-
-While developing, with automatic reload:
+4. Run dev servers (API on `:3001`, Vite on `:5173`):
 
 ```bash
 npm run dev
@@ -71,80 +75,90 @@ npm run dev
 
 Open <http://localhost:5173>.
 
-For a demo, as one server without file watching:
+5. Run automated tests (requires a running PostgreSQL test database):
 
 ```bash
-npm run build
-npm start
+DATABASE_URL=postgres://otonari:otonari@localhost:5432/otonari npm test
 ```
 
-Open <http://localhost:3001>, or `http://<IP address of this computer>:3001` on a phone in the same Wi-Fi.
-
-Join with the code `SAKURA-2611` (Sakura Heights) or `HAMA-3CHOME` (Hamaguchi-machi 3-chome), or tap a name under "Demo: continue as a neighbor". To show two neighbors on one computer, open the second one in a private window. The 5-step demo script is in [CLAUDE.md](CLAUDE.md), section 10.
-
-To install the app, choose "Install app" in the browser's menu ("Add to Home Screen" on an iPhone). Browsers allow this only over HTTPS and on `localhost`: at `http://<IP address of this computer>:3001` the app works, but can't be installed. On an iPhone, install it first and join inside the installed app, because it doesn't share the login with the browser.
+### Commands
 
 | Command | What it does |
 |---|---|
-| `npm run seed` | Resets the database, deletes all photos, and adds the demo neighbors with their items. |
-| `npm run seed:empty` | The same reset, but with only the two groups and nobody in them: for a demo with real people. |
-| `npm run dev` | Server (port 3001) and client (port 5173) with automatic reload. |
-| `npm run build` | Builds the client. Run it again after every change. |
-| `npm start` | Runs the server with the built client on port 3001. |
+| `docker compose up --build` | Runs PostgreSQL 16 + built Otonari container with persistent volumes on port `3001`. |
+| `npm run dev` | Runs Express API (`:3001`) with `nodemon` and Vite client (`:5173`) concurrently. |
+| `npm run seed` | Resets PostgreSQL tables, deletes uploaded photos, and loads the Nagasaki demo data. |
+| `npm run seed:empty` | Resets PostgreSQL tables with only the two groups (`SAKURA-2611`, `HAMA-3CHOME`) and no demo users. |
+| `npm test` | Runs the full `node:test` automated test suite (PostgreSQL, photos/EXIF, API, security, i18n parity). |
+| `npm run build` | Builds the React + PWA client into `client/dist/`. |
+| `npm start` | Starts the Express server serving both API and `client/dist/` on `PORT` (default `3001`). |
 
-Settings in `server/.env`: `PORT`, and `DEMO_MODE`. With `DEMO_MODE=true`, an active loan has fast-forward buttons for the reminders, and the join page offers "continue as a neighbor": only for the demo neighbors from `npm run seed`, never for people who joined with a code. `DEMO_MODE=false` hides both.
+Environment variables (`server/.env`):
+- `PORT`: server port (default `3001`)
+- `DATABASE_URL`: PostgreSQL connection string (required)
+- `DATABASE_SSL`: set `true` if your PostgreSQL host requires TLS without a custom CA
+- `UPLOADS_DIR`: directory for uploaded photos (defaults to `server/uploads`; set `/data/uploads` on Docker/Railway)
+- `DEMO_MODE`: `true` enables seeded demo neighbor quick-login and participant-gated reminder fast-forward; `false` hides all demo routes and buttons.
 
-## Deploy on Render
+## Deploy on Railway (Persistent PostgreSQL + Volume)
 
-Otonari runs on [Render](https://render.com) as one free Web Service (Node). Create it from this repository with these settings:
+Otonari includes `Dockerfile` and `railway.json` for one-step persistent deployment on [Railway](https://railway.com):
 
-| Setting | Value |
+1. Create a new Railway project from this GitHub repository (Railway automatically detects `Dockerfile` + `railway.json`).
+2. Add a **PostgreSQL** database service (`+ New → Database → PostgreSQL`) and link `DATABASE_URL` to the Otonari web service.
+3. Attach a **Volume** to the Otonari service mounted at `/data/uploads`.
+4. Set environment variables on the web service:
+
+| Variable | Value |
 |---|---|
-| Build Command | `npm run render-build` |
-| Start Command | `npm start` |
-| Environment variables | `NODE_VERSION` = `22` and `DEMO_MODE` = `true` |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+| `UPLOADS_DIR` | `/data/uploads` |
+| `DEMO_MODE` | `true` (or `false` for production buildings) |
+| `RAILWAY_RUN_UID` | `0` (required on Railway so the mounted Volume at `/data/uploads` is writable) |
 
-The address is HTTPS, so phones can install the app. The free plan sleeps after 15 minutes without visitors, and it resets the database and all photos whenever it restarts. The server then starts again with the demo data: everybody who had joined has to join again, and neighborhoods that people started themselves are gone. Anyone can act as the demo neighbors, so this is for demos, not for real lending.
+Both PostgreSQL data and uploaded photos persist across restarts and redeploys. Auto-seeding runs only once when the database is empty.
 
 ## Tech stack
 
-- **Client:** React 18, Vite, react-router-dom, plain JavaScript and plain CSS, `qrcode` for the poster, `vite-plugin-pwa` to make it installable
-- **Server:** Node.js, Express, better-sqlite3, multer for photo uploads, cors, dotenv
-- **Database:** one SQLite file (`server/otonari.db`); photos in `server/uploads/`
-- **Development:** concurrently, nodemon
-
-No TypeScript, CSS framework or state library: the code is meant to be read and explained by everyone on the team.
+- **Client:** React 18, Vite, react-router-dom, plain JavaScript & CSS, `qrcode`, `vite-plugin-pwa`
+- **Server:** Node.js 22+, Express 5, `pg` (PostgreSQL), `multer`, `cors`, `dotenv`
+- **Database & Storage:** PostgreSQL 16 (`TIMESTAMPTZ`, `JSONB`, `BOOLEAN`, partial indexes) + persistent `UPLOADS_DIR` volume
+- **Containers & Testing:** Multi-stage Docker (`node:22-slim`), Docker Compose, Node built-in `node:test`
 
 ## Project structure
 
 ```
 otonari/
-├── client/                   the React app
-│   ├── public/               the app icons (drawn by make-icons.ps1)
+├── Dockerfile                multi-stage production build (client + server)
+├── docker-compose.yml        PostgreSQL 16 + Otonari app with persistent volumes
+├── railway.json              Railway deployment & healthcheck configuration
+├── docs/
+│   ├── refactor-plan.md      v2 architecture, schema, API contracts & test matrix
+│   └── screenshots/          app screenshots
+├── client/                   React + Vite PWA
+│   ├── public/               PWA icons
 │   └── src/
-│       ├── pages/            one file per screen: Join, Shelf, ItemPage, MyItems, Loans, LoanPage, Settings, Poster
-│       ├── components/       Banner, PhraseBubble, SpeakButton, PhotoCapture, TrustLine, TipCard, ...
-│       ├── i18n/             en.json, ja.json, ja-easy.json, bn.json, and index.js, which renders the phrases
-│       ├── data/catalog.js   the items, handover spots, quick replies and loan lengths to choose from
-│       ├── App.jsx           routes, bottom navigation, new-message banner
-│       └── api.js, useInbox.js, UserContext.js, serviceWorker.js, styles.css
-├── server/                   the Express API
-│   ├── index.js              starts the server (and serves the built client)
-│   ├── db.js                 database tables and small helpers
-│   ├── routes/               groups, items, loans, inbox, demo
-│   ├── reminders.js          the polite reminders, checked every 30 seconds
-│   ├── photos.js             photo uploads
-│   ├── auth.js               token → user
-│   ├── allowedKeys.js        the only keys and values the server accepts
-│   └── seed.js               the demo data
-├── docs/screenshots/
-├── CLAUDE.md                 our specification
-└── BUILD_PROMPTS.md          our build steps
+│       ├── pages/            Join, Shelf, ItemPage, MyItems, Loans, LoanPage, Settings, Poster
+│       ├── components/       Banner (inbox + sticky due bar), PhraseBubble, SpeakButton, PhotoCapture, TrustLine, TipCard, ChipGroup, NewGroup
+│       ├── i18n/             en.json, ja.json, ja-easy.json, bn.json, index.js
+│       ├── data/catalog.js   fixed catalog, handover spots, quick replies, durations
+│       └── App.jsx, api.js, useInbox.js, UserContext.js, serviceWorker.js, styles.css
+└── server/                   Express 5 + PostgreSQL API
+    ├── index.js              Express app factory + startup/shutdown lifecycle
+    ├── db.js                 pg Pool, schema DDL, indexes, transactions, helpers
+    ├── auth.js               Bearer token middleware
+    ├── photos.js             UPLOADS_DIR volume storage, magic-byte validation, server-side EXIF stripping, path-traversal guard
+    ├── rateLimit.js          fixed-window rate limiter middleware
+    ├── reminders.js          30s automatic reminder job (FOR UPDATE SKIP LOCKED)
+    ├── seed.js               Nagasaki demo seeder (--empty supported)
+    ├── allowedKeys.js        server-side allowlists
+    ├── routes/               groups.js, items.js, loans.js, inbox.js, demo.js
+    └── test/                 db-reminders.test.js, photos.test.js, api.test.js, i18n.test.js
 ```
 
 ## How translation works
 
-**No AI, no translation service, no API keys.** The database never contains a translated sentence. A message is a phrase key and parameters:
+**No AI, no translation service, no API keys.** PostgreSQL never stores translated text. Each message is stored as a `phrase_key` and `JSONB` `params`:
 
 ```json
 {
@@ -159,41 +173,28 @@ otonari/
 }
 ```
 
-Each person's app renders it from that person's language file (`client/src/i18n/`):
-
-| Language | What the neighbor reads |
-|---|---|
-| English | May I borrow your futon dryer from Tue, Nov 24, 9:00 AM to Fri, Nov 27, 9:00 AM? |
-| 日本語 | 11月24日(火) 9:00から11月27日(金) 9:00まで、布団乾燥機をお借りしてもよろしいでしょうか。 |
-| やさしい にほんご | ふとんを かわかす きかい を かりたいです。11月24日(火) 9:00 から 11月27日(金) 9:00 まで です。いいですか。 |
-| বাংলা | আমি কি মঙ্গল ২৪ নভে, ৯:০০ AM থেকে শুক্র ২৭ নভে, ৯:০০ AM পর্যন্ত আপনার ফুটন (তোশক) ড্রায়ার ধার নিতে পারি? |
-
-- Everything inside a sentence is a key or a raw value too: items and handover spots come from fixed lists, dates are formatted for each language (always in Japan time), and nicknames stay as they are (with さん in Japanese).
-- Switching the language shows the whole conversation again in the new language.
-- A text that is missing in one language falls back: Easy Japanese → Japanese → English, and Bengali → English.
+Each neighbor's browser renders it from `client/src/i18n/` in Japan time (`Asia/Tokyo`), with locale digits and polite honorifics (`さん` in Japanese). Switching languages instantly re-renders the entire history.
 
 ## Privacy and safety
 
-- **Nicknames only.** No account, password or email. A random token in the browser is the whole identity.
-- **No room numbers.** Items are handed over at a shared spot, such as the building entrance or the bicycle parking.
-- **No free text between neighbors.** Nobody can be insulted, pressured or asked for personal data in the app.
-- **The join code is on a physical poster.** Only people who can see the notice board get the code, and only members of a group see its shelf. A conversation can be opened only by the two people in it.
-- **GPS is removed from photos.** The app redraws every photo in the browser before uploading it, so its position and other hidden data are never sent.
-- **Trust info.** The lender sees how long the borrower has been a member, and how many returns were on time or late.
-- **Trusted-neighbors-only items.** The owner can limit valuable items to people with at least one on-time return.
-- **Safe leaving.** Nobody can leave while a loan is accepted or active. When someone leaves, their items and open requests disappear and their token stops working.
-- **Read-aloud** uses the voices of the browser. Voices called "Online" are run by the maker of the browser, which receives the sentence that is read.
+- **Nicknames only.** No account, password, or email; random UUID Bearer token identity.
+- **No room numbers.** Handovers use shared public spots only.
+- **No free text between neighbors.** Server-side allowlists reject any unknown phrase, item, or spot key.
+- **Double EXIF/GPS stripping.** Photos are redrawn via browser `<canvas>` before upload **and** JPEG APP1 EXIF/GPS segments are stripped server-side in `server/photos.js`.
+- **Upload security.** Magic-byte verification, 5 MB cap, UUID filenames, canonicalized `UPLOADS_DIR` path-traversal guard, and `X-Content-Type-Options: nosniff`.
+- **Abuse & access controls.** Group/role authorization on all endpoints, rate limiting on group creation/lookup/join/quick-replies, per-loan cooldown on lender pings, participant auth on demo fast-forward, and security headers (`nosniff`, `X-Frame-Options: DENY`).
+- **Safe leaving.** Blocked while an `accepted` or `active` loan exists; otherwise items leave the shelf, pending requests are resolved, and the token is revoked.
 
 ## AI usage
 
-We used Claude in VS Code to write the code from our own specification ([CLAUDE.md](CLAUDE.md)), one step at a time ([BUILD_PROMPTS.md](BUILD_PROMPTS.md)). The phrases that neighbors send each other were written by the team and reviewed by a native Japanese speaker. Otonari itself uses no AI while it runs: every message comes from the language files.
+We used AI coding assistants (Claude in VS Code for v1 initial scaffolding from [CLAUDE.md](CLAUDE.md) as logged in [BUILD_PROMPTS.md](BUILD_PROMPTS.md), and Antigravity for v2 refactoring to PostgreSQL, Docker/volumes, security hardening, and automated testing as specified in [docs/refactor-plan.md](docs/refactor-plan.md)). Localization phrases were reviewed and refined by the team across Japanese, Easy Japanese, English, and Bengali. Otonari itself uses **no AI at runtime**.
 
 ## Team
 
 | Name | Role |
 |---|---|
 | _Name 1_ | _Role (e.g. lead, backend)_ |
-| _Name 2_ | _Role (e.g. frontend: join, shelf, my items)_ |
-| _Name 3_ | _Role (e.g. frontend: borrowing, messages, notifications)_ |
-| _Name 4_ | _Role (e.g. photos, elder mode, language review)_ |
-| _Name 5_ | _Role (e.g. poster, proposal, demo video)_ |
+| _Name 2_ | _Role (e.g. localization, QA, v2 architecture)_ |
+| _Name 3_ | _Role (e.g. frontend)_ |
+| _Name 4_ | _Role (e.g. user research, proposal)_ |
+| _Name 5_ | _Role (e.g. demo video, presentation)_ |
