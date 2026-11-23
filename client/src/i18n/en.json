@@ -3,7 +3,7 @@
 
   "ui": {
     "appName": "Otonari",
-    "tagline": "Borrow from next door — in your own language.",
+    "tagline": "Borrow and lend with your neighbors — in your own language.",
 
     "join.title": "Join your neighborhood",
     "join.codeLabel": "Join code (from the poster in your building or block)",
@@ -63,7 +63,7 @@
     "borrow.send": "Can I borrow it?",
     "borrow.sent": "Request sent! You'll get a notification when {name} answers.",
     "borrow.notAvailable": "This item is not available right now.",
-    "borrow.alreadyAsked": "You've already asked — waiting for {name}",
+    "borrow.alreadyAsked": "You've already asked — waiting for {name}'s reply",
     "borrow.openLoan": "See my request",
 
     "trust.joinedToday": "Joined today",
@@ -112,7 +112,7 @@
     "loan.confirmReceived": "I received it",
     "loan.returnStep": "Take a photo of the item when you return it",
     "loan.waitReturn": "Waiting for {name} to return it.",
-    "loan.confirmReturn": "I got it back",
+    "loan.confirmReturn": "Confirm return",
     "loan.handoverPhoto": "At handover",
     "loan.returnPhoto": "At return",
     "loan.quickReplies": "Quick replies",
@@ -131,15 +131,15 @@
     "settings.language": "Language",
     "settings.elderMode": "Large text & buttons",
     "settings.elderModeHint": "Bigger text, bigger buttons, and read-aloud.",
-    "settings.group": "Your neighborhood",
+    "settings.group": "Your neighborhood group",
     "settings.poster": "Print the join poster",
-    "settings.leave": "Leave this neighborhood",
+    "settings.leave": "Leave this group",
     "settings.leaveConfirm": "Tap again to leave",
     "settings.leaveBlocked": "Please finish your current loans first",
 
     "speak.button": "Read aloud",
 
-    "poster.title": "Borrow from your neighbors",
+    "poster.title": "Borrow and lend with your neighbors",
     "poster.body": "Scan to join the {group} sharing shelf. Ask in your own language — your neighbor reads it in theirs.",
     "poster.code": "Join code: {code}",
     "poster.address": "Open {url} and enter the code.",
@@ -181,7 +181,7 @@
     "bluetooth_speaker": "Bluetooth speaker",
     "air_purifier": "Air purifier",
     "electric_heater": "Electric heater",
-    "board_game": "Board games",
+    "board_game": "Board game",
     "baby_stroller": "Baby stroller",
     "lawn_mower": "Lawn mower",
     "hedge_trimmer": "Hedge trimmer",
@@ -215,14 +215,14 @@
     "qr.thanks": "Thank you very much.",
 
     "sys.dueSoon": "Reminder: please return the {item} by {end} at the {spot}.",
-    "sys.overdue": "Reminder: the {item} was due back on {end}. Please return it to {name} as soon as you can.",
+    "sys.overdue": "Reminder: the {item} was due back by {end}. Please return it to {name} as soon as you can.",
     "sys.overdueLender": "We've sent {name} a polite reminder about your {item}, so you don't have to."
   },
 
   "tips": {
     "beforeRequest": "Tip: in Japan, it's polite to return things clean and on time. A small thank-you snack is a nice touch, but never required.",
     "atHandover": "Tip: a short bow and \"arigatou gozaimasu\" goes a long way.",
-    "atReturn": "Tip: if you'll be late, tap \"Running a little late\" before the due time — it's much better than silence.",
+    "atReturn": "Tip: if you'll be late, tap \"Sorry, I'm running a little late.\" before the due time — it's much better than silence.",
     "forLender": "Your neighbor may speak a different language. Don't worry — Otonari shows everything in their language."
   }
 }

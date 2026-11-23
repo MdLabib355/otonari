@@ -26,11 +26,24 @@ function lookup(lang, section, key) {
   return key; // last resort: show the key so missing translations are easy to spot
 }
 
+// Format numbers using the viewer's locale digits (e.g., Bengali numerals for bn-BD).
+export function formatNumber(lang, value) {
+  return new Intl.NumberFormat(meta(lang).locale, { useGrouping: false }).format(value);
+}
+
+// Format a 24-hour slot like 9 -> "9:00" (or "৯:০০" in Bengali).
+export function formatHour(lang, hour) {
+  const zero = formatNumber(lang, 0);
+  return `${formatNumber(lang, hour)}:${zero}${zero}`;
+}
+
 // Replace {placeholders} in a template with values.
-function fill(template, values) {
-  return template.replace(/\{(\w+)\}/g, (match, name) =>
-    values[name] !== undefined ? String(values[name]) : match
-  );
+function fill(lang, template, values) {
+  return template.replace(/\{(\w+)\}/g, (match, name) => {
+    const value = values[name];
+    if (value === undefined) return match;
+    return typeof value === 'number' ? formatNumber(lang, value) : String(value);
+  });
 }
 
 export function meta(lang) {
@@ -39,7 +52,7 @@ export function meta(lang) {
 
 // UI strings: t('en', 'shelf.title', { group: 'Sakura Heights' })
 export function t(lang, key, values = {}) {
-  return fill(lookup(lang, 'ui', key), values);
+  return fill(lang, lookup(lang, 'ui', key), values);
 }
 
 export function itemName(lang, itemKey) {
@@ -71,9 +84,10 @@ export function formatDate(lang, iso) {
   }).format(new Date(iso));
 }
 
-// Japanese adds the polite honorific "さん" after a name.
+// Japanese adds the polite honorific "さん" after a name (unless the nickname already ends with it).
 export function displayName(lang, nickname) {
-  return lang === 'ja' || lang === 'ja-easy' ? `${nickname}さん` : nickname;
+  if (lang !== 'ja' && lang !== 'ja-easy') return nickname;
+  return nickname.endsWith('さん') ? nickname : `${nickname}さん`;
 }
 
 // Render one stored message in the viewer's language.
@@ -91,5 +105,5 @@ export function renderPhrase(lang, phraseKey, params = {}) {
   if (params.end) values.end = formatDate(lang, params.end);
   if (params.name) values.name = displayName(lang, params.name);
   if (params.n !== undefined) values.n = params.n;
-  return fill(lookup(lang, 'phrases', phraseKey), values);
+  return fill(lang, lookup(lang, 'phrases', phraseKey), values);
 }

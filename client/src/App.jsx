@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { api, clearToken, getToken, saveToken } from './api.js';
-import { t } from './i18n/index.js';
+import { formatNumber, t } from './i18n/index.js';
 import { useInbox } from './useInbox.js';
 import { UserContext, browserLanguage } from './UserContext.js';
 import Banner from './components/Banner.jsx';
@@ -31,7 +31,7 @@ function BottomNav({ lang, unreadCount }) {
             {tab.icon}
           </span>
           {t(lang, tab.label)}
-          {tab.to === '/loans' && unreadCount > 0 && <span className="count-badge">{unreadCount}</span>}
+          {tab.to === '/loans' && unreadCount > 0 && <span className="count-badge">{formatNumber(lang, unreadCount)}</span>}
         </NavLink>
       ))}
     </nav>

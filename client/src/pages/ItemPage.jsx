@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import ChipGroup from '../components/ChipGroup.jsx';
 import TipCard from '../components/TipCard.jsx';
 import { DURATIONS, START_DAYS, TIME_SLOTS, findItem } from '../data/catalog.js';
-import { displayName, formatDate, itemName, renderPhrase, spotName, t } from '../i18n/index.js';
+import { displayName, formatDate, formatHour, itemName, renderPhrase, spotName, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -132,7 +132,7 @@ function BorrowForm({ item, onRefused }) {
   }));
   const slotOptions = openSlots(dayOffset).map((name) => ({
     value: name,
-    label: `${t(lang, `borrow.${name}`)} ${TIME_SLOTS[name]}:00`,
+    label: `${t(lang, `borrow.${name}`)} ${formatHour(lang, TIME_SLOTS[name])}`,
   }));
   const lengthOptions = DURATIONS.filter((n) => n <= item.max_days).map((n) => ({
     value: n,

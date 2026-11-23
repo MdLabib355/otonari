@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { findItem } from '../data/catalog.js';
-import { displayName, formatDate, itemName, t } from '../i18n/index.js';
+import { displayName, formatDate, formatNumber, itemName, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
 // All my loans, as borrower and as lender, newest first.
@@ -65,7 +65,7 @@ function LoanCard({ loan, lang }) {
         </span>
         <span className={`badge badge-${loan.status}`}>{t(lang, `status.${loan.status}`)}</span>
       </div>
-      {loan.unread > 0 && <span className="count-badge">{loan.unread}</span>}
+      {loan.unread > 0 && <span className="count-badge">{formatNumber(lang, loan.unread)}</span>}
     </Link>
   );
 }
