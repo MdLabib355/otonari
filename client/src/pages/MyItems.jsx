@@ -40,6 +40,7 @@ export default function MyItems() {
     try {
       await api.post('/api/items', { item_key: itemKey, max_days: maxDays, spot, trusted_only: trustedOnly });
       setItemKey(null);
+      setTrustedOnly(false); // off by default, for every new item
       loadItems();
       window.scrollTo({ top: 0, behavior: 'smooth' }); // the new item appears in the list at the top
     } catch {
@@ -137,6 +138,7 @@ export default function MyItems() {
       <div className="field">
         <TrustedSwitch lang={lang} checked={trustedOnly} onChange={setTrustedOnly} />
         <p className="hint">{t(lang, 'trust.explain')}</p>
+        <p className="hint">{t(lang, 'trust.hint')}</p>
       </div>
 
       <button type="button" className="button-primary" disabled={!itemKey || busy} onClick={addItem}>
@@ -188,6 +190,7 @@ function MyItemRow({ item, lang, onRemove, onTrustedOnly }) {
         <span className={`badge badge-${item.status}`}>{t(lang, `shelf.${item.status}`)}</span>
       )}
       <TrustedSwitch lang={lang} checked={item.trusted_only} onChange={(value) => onTrustedOnly(item.id, value)} />
+      {item.trusted_only && <p className="hint">{t(lang, 'trust.hint')}</p>}
     </li>
   );
 }

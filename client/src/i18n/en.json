@@ -74,6 +74,7 @@
     "trust.new": "New neighbor, no returns yet",
     "trust.only": "Trusted neighbors only",
     "trust.explain": "Only for neighbors who have returned something on time",
+    "trust.hint": "Use this only for valuable items. New neighbors — often people new to Japan — need a first chance to build their record.",
 
     "myItems.title": "Things I can lend",
     "myItems.add": "Add an item",

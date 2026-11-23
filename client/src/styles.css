@@ -623,6 +623,12 @@ section > h1,
   font-size: 0.95em;
 }
 
+.banner-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 /* How reliable the borrower has been: on the loan page, and in the banner of a new request */
 .trust-line {
   margin: 0;
@@ -732,6 +738,40 @@ section > h1,
   margin: 0;
 }
 
+/* The text, and 🔊 to its right */
+.bubble-main {
+  display: flex;
+  align-items: flex-start;
+}
+
+.bubble-main .bubble-text {
+  flex: auto;
+  min-width: 0;
+}
+
+/* 🔊 Read aloud: a small icon with a full-size tap target (a big button with text in elder mode) */
+.speak-button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.speak-text {
+  display: none;
+}
+
+/* The icon uses the padding of the bubble, so the bubble stays as low as without it. */
+.bubble-main .speak-button {
+  margin: -10px -14px -10px 0;
+}
+
 .bubble-label {
   margin: 0 0 2px;
   color: var(--muted);
@@ -763,6 +803,10 @@ section > h1,
   flex-direction: column;
   gap: 10px;
   margin-bottom: 24px;
+}
+
+.actions .tip-card {
+  margin-bottom: 0;
 }
 
 .actions .button-secondary {
@@ -999,12 +1043,46 @@ body.elder .my-item-text {
   flex-basis: 8em; /* if the badge doesn't fit beside that, it moves to the next line */
 }
 
-body.elder .my-item .button-secondary,
-body.elder .banner-open {
-  justify-content: center;
+body.elder .my-item .button-secondary {
   width: 100%;
 }
 
 body.elder .badge {
   white-space: normal;
+}
+
+/* Read aloud: a big button with text, below the message (and beside "Open" in the banner) */
+body.elder .speak-button {
+  gap: 10px;
+  width: auto;
+  padding: 0 18px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+body.elder .speak-text {
+  display: inline;
+}
+
+body.elder .bubble-main {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+body.elder .bubble-main .speak-button {
+  margin: 12px 0 0;
+}
+
+body.elder .banner-buttons {
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+
+body.elder .banner-buttons > * {
+  flex: auto;
+  justify-content: center;
 }

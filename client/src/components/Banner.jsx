@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { findItem } from '../data/catalog.js';
 import { displayName, renderPhrase, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
+import SpeakButton from './SpeakButton.jsx';
 import TrustLine from './TrustLine.jsx';
 
 const POLL_EVERY_MS = 5000;
@@ -26,25 +27,35 @@ export default function Banner() {
   // The empty "status" box is always there, so screen readers notice when a message appears in it.
   return (
     <div className="banner-area" role="status">
-      {message && (
-        <div className="banner">
-          <span className="banner-emoji" aria-hidden="true">
-            {findItem(message.item_key)?.emoji}
-          </span>
-          <div className="banner-text">
-            <strong>
-              {message.from_user_id === null
-                ? `🔔 ${t(lang, 'banner.reminder')}`
-                : t(lang, 'banner.new', { name: displayName(lang, message.from_nickname) })}
-            </strong>
-            <p>{renderPhrase(lang, message.phrase_key, message.params)}</p>
-            {message.borrower_trust && <TrustLine lang={lang} trust={message.borrower_trust} />}
-          </div>
-          <Link to={`/loan/${message.loan_id}`} className="banner-open">
-            {t(lang, 'banner.open')}
-          </Link>
-        </div>
-      )}
+      {message && <BannerMessage message={message} lang={lang} />}
+    </div>
+  );
+}
+
+function BannerMessage({ message, lang }) {
+  const text = renderPhrase(lang, message.phrase_key, message.params);
+  const isReminder = message.from_user_id === null;
+  const title = isReminder
+    ? `🔔 ${t(lang, 'banner.reminder')}`
+    : t(lang, 'banner.new', { name: displayName(lang, message.from_nickname) });
+
+  return (
+    <div className="banner">
+      <span className="banner-emoji" aria-hidden="true">
+        {findItem(message.item_key)?.emoji}
+      </span>
+      <div className="banner-text">
+        <strong>{title}</strong>
+        <p>{text}</p>
+        {message.borrower_trust && <TrustLine lang={lang} trust={message.borrower_trust} />}
+      </div>
+      <div className="banner-buttons">
+        {/* Reminder texts already begin with "Reminder", so only other messages need their title read. */}
+        <SpeakButton lang={lang} text={isReminder ? text : `${title}\n${text}`} />
+        <Link to={`/loan/${message.loan_id}`} className="banner-open">
+          {t(lang, 'banner.open')}
+        </Link>
+      </div>
     </div>
   );
 }

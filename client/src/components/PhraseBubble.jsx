@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { displayName, meta, renderPhrase, t } from '../i18n/index.js';
+import SpeakButton from './SpeakButton.jsx';
 
 // One message of a loan, in MY language. Messages are stored as phrase_key + params, so the same
 // message can be rendered in any language at any time.
@@ -13,6 +14,7 @@ export default function PhraseBubble({ message, lang, myId, other }) {
   const isSystem = message.from_user_id === null;
   const isMine = message.from_user_id === myId;
   const hasOriginal = !isSystem && !isMine && message.from_lang !== lang;
+  const text = renderPhrase(lang, message.phrase_key, message.params);
 
   let side = 'theirs';
   if (isMine) side = 'mine';
@@ -21,7 +23,10 @@ export default function PhraseBubble({ message, lang, myId, other }) {
   return (
     <li className={`bubble bubble-${side}`}>
       {isSystem && <p className="bubble-label">🔔 {t(lang, 'loan.system')}</p>}
-      <p className="bubble-text">{renderPhrase(lang, message.phrase_key, message.params)}</p>
+      <div className="bubble-main">
+        <p className="bubble-text">{text}</p>
+        <SpeakButton lang={lang} text={text} />
+      </div>
 
       {hasOriginal && showOriginal && (
         <div className="bubble-original">

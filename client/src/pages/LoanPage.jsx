@@ -110,7 +110,14 @@ function Loan({ loanId }) {
 
       {errorText}
       {loan.status === 'pending' && (
-        <PendingActions iAmLender={iAmLender} trust={borrower_trust} lang={lang} busy={busy} act={act} />
+        <PendingActions
+          loanId={loan.id}
+          iAmLender={iAmLender}
+          trust={borrower_trust}
+          lang={lang}
+          busy={busy}
+          act={act}
+        />
       )}
       {loan.status === 'accepted' && <HandoverStep {...step} />}
       {loan.status === 'active' && <ReturnStep {...step} />}
@@ -141,7 +148,7 @@ function LoanHeader({ loan, item, other, lang }) {
 }
 
 // While a request waits for an answer: the lender answers, the borrower can still cancel.
-function PendingActions({ iAmLender, trust, lang, busy, act }) {
+function PendingActions({ loanId, iAmLender, trust, lang, busy, act }) {
   if (!iAmLender) {
     return (
       <div className="actions">
@@ -155,6 +162,7 @@ function PendingActions({ iAmLender, trust, lang, busy, act }) {
   const decline = (reason) => act('decline', { reason });
   return (
     <div className="actions">
+      <FirstRequestTip loanId={loanId} lang={lang} />
       <TrustLine lang={lang} trust={trust} />
       <button type="button" className="button-primary" disabled={busy} onClick={() => act('accept')}>
         {t(lang, 'loan.accept')}
@@ -167,6 +175,20 @@ function PendingActions({ iAmLender, trust, lang, busy, act }) {
       </button>
     </div>
   );
+}
+
+// Only on the very first request a lender ever gets: don't worry about the language.
+function FirstRequestTip({ loanId, lang }) {
+  const [isFirst, setIsFirst] = useState(false);
+
+  useEffect(() => {
+    api
+      .get('/api/loans')
+      .then(({ lending }) => setIsFirst(lending.at(-1)?.id === loanId)) // newest first, so the last is the first
+      .catch(() => setIsFirst(false));
+  }, [loanId]);
+
+  return isFirst && <TipCard lang={lang} tipKey="forLender" />;
 }
 
 // The condition before and after, side by side, so both people can compare.
