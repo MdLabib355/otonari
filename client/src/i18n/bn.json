@@ -3,10 +3,10 @@
 
   "ui": {
     "appName": "Otonari",
-    "tagline": "পাশের বাসা থেকে ধার নিন — নিজের ভাষায়।",
+    "tagline": "প্রতিবেশীদের সাথে ধার-লেনদেন করুন — নিজের ভাষায়।",
 
     "join.title": "আপনার প্রতিবেশী গ্রুপে যোগ দিন",
-    "join.codeLabel": "যোগদান কোড (আপনার ভবন বা এলাকার পোস্টারে আছে)",
+    "join.codeLabel": "যোগ দেওয়ার কোড (আপনার ভবন বা এলাকার পোস্টারে আছে)",
     "join.codePlaceholder": "যেমন SAKURA-2611",
     "join.groupFound": "{group} · {city}",
     "join.groupNotFound": "এই কোডটি পাওয়া যায়নি। অনুগ্রহ করে পোস্টারটি আবার দেখুন।",
@@ -24,7 +24,7 @@
     "newGroup.create": "গ্রুপ তৈরি করুন",
     "newGroup.duplicate": "{city}-এ {name} নামে একটি গ্রুপ আগে থেকেই আছে। নতুন গ্রুপ তৈরি করার আগে নোটিশ বোর্ডে সেটির পোস্টার খুঁজে দেখুন।",
     "newGroup.createAnyway": "তবুও তৈরি করুন",
-    "newGroup.done": "{group} তৈরি হয়েছে। এর যোগদান কোড:",
+    "newGroup.done": "{group} তৈরি হয়েছে। এর যোগ দেওয়ার কোড:",
     "newGroup.poster": "পোস্টার খুলুন",
 
     "groupType.building": "ভবন",
@@ -32,22 +32,22 @@
 
     "nav.shelf": "শেলফ",
     "nav.myItems": "আমার জিনিস",
-    "nav.loans": "ধার",
+    "nav.loans": "ধার-লেনদেন",
     "nav.settings": "সেটিংস",
 
     "shelf.title": "{group}-এর শেলফ",
     "shelf.subtitle": "প্রতিবেশীরা যেসব জিনিস ধার দিতে রাজি",
-    "shelf.empty": "শেলফে এখনো কিছু নেই। প্রথম জিনিসটি আপনিই দিন!",
+    "shelf.empty": "শেলফে এখনো কিছু নেই। প্রথম জিনিসটি আপনিই শেয়ার করুন!",
     "shelf.available": "পাওয়া যাচ্ছে",
     "shelf.lent": "ধার দেওয়া আছে",
-    "shelf.reserved": "সংরক্ষিত",
-    "shelf.mine": "আপনার",
-    "shelf.from": "{name}-এর কাছ থেকে",
+    "shelf.reserved": "বুক করা আছে",
+    "shelf.mine": "আপনার জিনিস",
+    "shelf.from": "{name}-এর জিনিস",
     "shelf.allCategories": "সব",
 
     "item.maxDays": "সর্বোচ্চ {n} দিন",
     "item.maxDay": "সর্বোচ্চ ১ দিন",
-    "item.spot": "হস্তান্তর: {spot}",
+    "item.spot": "দেওয়া-নেওয়ার স্থান: {spot}",
 
     "borrow.when": "কখন দরকার?",
     "borrow.today": "আজ",
@@ -63,7 +63,7 @@
     "borrow.send": "আমি কি এটা ধার নিতে পারি?",
     "borrow.sent": "অনুরোধ পাঠানো হয়েছে! {name} উত্তর দিলে আপনাকে জানানো হবে।",
     "borrow.notAvailable": "এই জিনিসটি এখন পাওয়া যাচ্ছে না।",
-    "borrow.alreadyAsked": "আপনি আগেই অনুরোধ করেছেন — {name}-এর অপেক্ষায়",
+    "borrow.alreadyAsked": "আপনি আগেই অনুরোধ করেছেন — {name}-এর উত্তরের অপেক্ষায়",
     "borrow.openLoan": "আমার অনুরোধ দেখুন",
 
     "trust.joinedToday": "আজ যোগ দিয়েছেন",
@@ -80,23 +80,23 @@
     "myItems.add": "জিনিস যোগ করুন",
     "myItems.pick": "একটি জিনিস বেছে নিন",
     "myItems.maxDays": "সর্বোচ্চ কত দিন",
-    "myItems.spot": "কোথায় হস্তান্তর করবেন",
+    "myItems.spot": "দেওয়া-নেওয়ার স্থান",
     "myItems.save": "শেলফে রাখুন",
     "myItems.remove": "সরিয়ে নিন",
-    "myItems.cantRemove": "সংরক্ষিত বা ধার দেওয়া জিনিস সরানো যায় না।",
+    "myItems.cantRemove": "বুক করা বা ধার দেওয়া জিনিস সরানো যায় না।",
     "myItems.empty": "আপনি এখনো কিছু শেয়ার করেননি।",
 
-    "loans.title": "ধার",
-    "loans.borrowing": "আমি যা ধার নিয়েছি",
-    "loans.lending": "আমি যা ধার দিয়েছি",
-    "loans.empty": "এখনো কোনো ধার নেই।",
+    "loans.title": "ধার-লেনদেন",
+    "loans.borrowing": "আমি যা ধার নিচ্ছি",
+    "loans.lending": "আমি যা ধার দিচ্ছি",
+    "loans.empty": "এখনো কোনো ধার-লেনদেন নেই।",
     "loans.with": "{name}-এর সাথে",
 
     "status.pending": "উত্তরের অপেক্ষায়",
-    "status.accepted": "রাজি হয়েছেন — হস্তান্তরের অপেক্ষায়",
-    "status.declined": "রাজি হননি",
+    "status.accepted": "গৃহীত — দেওয়া-নেওয়ার অপেক্ষায়",
+    "status.declined": "প্রত্যাখ্যাত",
     "status.cancelled": "বাতিল",
-    "status.active": "ধার নেওয়া আছে",
+    "status.active": "ধারে আছে",
     "status.returned": "ফেরত দেওয়া হয়েছে",
 
     "loan.period": "{start} → {end}",
@@ -108,20 +108,20 @@
     "loan.takePhoto": "ছবি তুলুন",
     "loan.sendPhoto": "ছবি পাঠান",
     "loan.photoRefused": "এই ছবিটি পাঠানো যাচ্ছে না। সর্বোচ্চ ৫ MB আকারের JPEG বা PNG ছবি ব্যবহার করুন।",
-    "loan.waitHandover": "হস্তান্তরের সময় {name} জিনিসটির অবস্থার ছবি তুলবেন।",
+    "loan.waitHandover": "দেওয়া-নেওয়ার সময় {name} জিনিসটির অবস্থার ছবি তুলবেন।",
     "loan.confirmReceived": "আমি পেয়েছি",
     "loan.returnStep": "ফেরত দেওয়ার সময় জিনিসটির একটি ছবি তুলুন",
-    "loan.waitReturn": "{name} ফেরত দেওয়ার অপেক্ষায়।",
-    "loan.confirmReturn": "ফেরত পেয়েছি",
-    "loan.handoverPhoto": "হস্তান্তরের সময়",
+    "loan.waitReturn": "{name}-এর ফেরত দেওয়ার অপেক্ষায়।",
+    "loan.confirmReturn": "ফেরত নিশ্চিত করুন",
+    "loan.handoverPhoto": "দেওয়া-নেওয়ার সময়",
     "loan.returnPhoto": "ফেরতের সময়",
     "loan.quickReplies": "দ্রুত উত্তর",
-    "loan.showOriginal": "মূলটি দেখুন",
-    "loan.hideOriginal": "মূলটি লুকান",
+    "loan.showOriginal": "মূল বার্তা দেখুন",
+    "loan.hideOriginal": "মূল বার্তা লুকান",
     "loan.originalIn": "{name} যেভাবে দেখেছেন ({language}):",
     "loan.system": "Otonari রিমাইন্ডার",
-    "loan.demoDueSoon": "ডেমো: সময় প্রায় শেষ",
-    "loan.demoOverdue": "ডেমো: সময় পেরিয়ে গেছে",
+    "loan.demoDueSoon": "ডেমো: ফেরতের সময় প্রায় শেষ",
+    "loan.demoOverdue": "ডেমো: ফেরতের সময় পেরিয়ে গেছে",
 
     "banner.new": "{name}-এর কাছ থেকে নতুন বার্তা",
     "banner.reminder": "রিমাইন্ডার",
@@ -132,22 +132,22 @@
     "settings.elderMode": "বড় লেখা ও বোতাম",
     "settings.elderModeHint": "বড় লেখা, বড় বোতাম এবং পড়ে শোনানোর সুবিধা।",
     "settings.group": "আপনার প্রতিবেশী গ্রুপ",
-    "settings.poster": "যোগদানের পোস্টার প্রিন্ট করুন",
+    "settings.poster": "যোগ দেওয়ার পোস্টার প্রিন্ট করুন",
     "settings.leave": "এই গ্রুপ ছেড়ে দিন",
     "settings.leaveConfirm": "ছেড়ে দিতে আবার চাপুন",
-    "settings.leaveBlocked": "আগে আপনার চলমান ধারগুলো শেষ করুন",
+    "settings.leaveBlocked": "আগে আপনার চলমান ধার-লেনদেনগুলো শেষ করুন",
 
     "speak.button": "পড়ে শোনান",
 
-    "poster.title": "প্রতিবেশীর কাছ থেকে ধার নিন",
+    "poster.title": "প্রতিবেশীদের সাথে ধার-লেনদেন করুন",
     "poster.body": "{group}-এর শেয়ারিং শেলফে যোগ দিতে স্ক্যান করুন। নিজের ভাষায় জিজ্ঞেস করুন — প্রতিবেশী পড়বেন তাঁর ভাষায়।",
-    "poster.code": "যোগদান কোড: {code}",
-    "poster.address": "{url} খুলে যোগদান কোডটি লিখুন।",
+    "poster.code": "যোগ দেওয়ার কোড: {code}",
+    "poster.address": "{url} খুলে যোগ দেওয়ার কোডটি লিখুন।",
     "poster.print": "প্রিন্ট করুন",
 
     "common.back": "ফিরে যান",
     "common.loading": "লোড হচ্ছে…",
-    "common.error": "কিছু একটা সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
+    "common.error": "একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
   },
 
   "categories": {
@@ -180,7 +180,7 @@
     "projector": "প্রজেক্টর",
     "bluetooth_speaker": "ব্লুটুথ স্পিকার",
     "air_purifier": "এয়ার পিউরিফায়ার",
-    "electric_heater": "বৈদ্যুতিক হিটার",
+    "electric_heater": "ইলেকট্রিক হিটার",
     "board_game": "বোর্ড গেম",
     "baby_stroller": "বেবি স্ট্রলার",
     "lawn_mower": "ঘাস কাটার যন্ত্র",
@@ -191,24 +191,24 @@
 
   "spots": {
     "entrance": "ভবনের প্রবেশপথ",
-    "mailbox": "মেইলবক্সের সামনে",
+    "mailbox": "মেইলবক্স",
     "bike_parking": "সাইকেল পার্কিং",
-    "notice_board": "এলাকার নোটিশ বোর্ডের সামনে",
+    "notice_board": "এলাকার নোটিশ বোর্ড",
     "konbini": "কাছের কনভিনিয়েন্স স্টোর"
   },
 
   "phrases": {
     "request": "আমি কি {start} থেকে {end} পর্যন্ত আপনার {item} ধার নিতে পারি?",
     "cancel": "দুঃখিত, আমি এই অনুরোধটি বাতিল করতে চাই।",
-    "accept": "জি, অবশ্যই নিন! {start} সময়ে {spot}-এ দিয়ে দেব।",
+    "accept": "হ্যাঁ, অবশ্যই নিন! {start} — {spot}-এ দিয়ে দেব।",
     "decline": "দুঃখিত, এবার ধার দিতে পারছি না।",
     "declineBusy": "দুঃখিত, ওই দিনগুলোতে আমার নিজেরই এটি দরকার।",
-    "handoverPhoto": "দেওয়ার আগে {item}-এর একটি ছবি তুলেছি। অনুগ্রহ করে অবস্থাটা দেখে নিন।",
+    "handoverPhoto": "দেওয়ার আগে {item}-এর একটি ছবি তুলেছি। অনুগ্রহ করে অবস্থা দেখে নিন।",
     "received": "{item} পেয়েছি। যত্ন করে ব্যবহার করব।",
     "returned": "{item} ফেরত দিচ্ছি। অনেক উপকার হয়েছে — আন্তরিক ধন্যবাদ!",
     "returnConfirmed": "{item} ফেরত পেয়েছি। ধন্যবাদ! আবার দরকার হলে নির্দ্বিধায় বলবেন।",
 
-    "qr.onMyWay": "এখনই আসছি।",
+    "qr.onMyWay": "আমি পথে আছি।",
     "qr.atSpot": "আমি এখন {spot}-এ আছি।",
     "qr.late": "দুঃখিত, একটু দেরি হবে।",
     "qr.noProblem": "কোনো সমস্যা নেই, ধীরে-সুস্থে আসুন।",
@@ -220,9 +220,9 @@
   },
 
   "tips": {
-    "beforeRequest": "টিপস: জাপানে ধার নেওয়া জিনিস পরিষ্কার করে, সময়মতো ফেরত দেওয়াই ভদ্রতা। ছোট একটা ধন্যবাদের উপহার (যেমন স্ন্যাকস) দিলে ভালো লাগে, তবে বাধ্যতামূলক নয়।",
+    "beforeRequest": "টিপস: জাপানে ধার নেওয়া জিনিস পরিষ্কার করে, সময়মতো ফেরত দেওয়াই ভদ্রতা। ছোট একটি ধন্যবাদের উপহার (যেমন স্ন্যাকস) দিলে ভালো লাগে, তবে বাধ্যতামূলক নয়।",
     "atHandover": "টিপস: হালকা মাথা নুইয়ে \"আরিগাতো গোজাইমাস\" (ধন্যবাদ) বললে সবাই খুশি হন।",
-    "atReturn": "টিপস: দেরি হলে সময় শেষ হওয়ার আগেই \"একটু দেরি হবে\" পাঠিয়ে দিন — চুপ করে থাকার চেয়ে অনেক ভালো।",
+    "atReturn": "টিপস: দেরি হলে সময় শেষ হওয়ার আগেই \"দুঃখিত, একটু দেরি হবে।\" পাঠিয়ে দিন — চুপ করে থাকার চেয়ে অনেক ভালো।",
     "forLender": "আপনার প্রতিবেশী হয়তো অন্য ভাষায় কথা বলেন। চিন্তা নেই — Otonari সবকিছু তাঁর ভাষায় দেখাবে।"
   }
 }

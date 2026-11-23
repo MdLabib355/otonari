@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import ChipGroup from '../components/ChipGroup.jsx';
 import NewGroup from '../components/NewGroup.jsx';
 import { LANGUAGES } from '../data/catalog.js';
-import { meta, t } from '../i18n/index.js';
+import { formatNumber, meta, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
 const GROUP_ICONS = { building: '🏢', block: '🏘️' };
@@ -122,7 +122,7 @@ export default function Join() {
                 <div>
                   <strong>{t(lang, 'join.groupFound', { group: preview.name, city: preview.city })}</strong>
                   <p>
-                    {t(lang, `groupType.${preview.type}`)} · 👥 {preview.memberCount}
+                    {t(lang, `groupType.${preview.type}`)} · 👥 {formatNumber(lang, preview.memberCount)}
                   </p>
                 </div>
               </div>
