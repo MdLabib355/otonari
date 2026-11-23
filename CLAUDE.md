@@ -89,9 +89,10 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
 - **Etiquette tips**: small tip cards at the right moment (before requesting, at handover, at return).
   Tips come from the `tips` section of the language files.
 - **QR join poster**: printable page `/poster` with the group name, join code and a QR code linking to
-  `/join?code=XXXX`, text in Japanese + English + Bengali. Also serves as our security layer:
-  only people who can physically see the notice board get the code. `/poster` shows my own group;
-  `/poster?code=XXXX-XXXX` shows that group without being a member.
+  `/join?code=XXXX`, text in Japanese + English + Bengali, and in small letters at the bottom the app
+  name "Otonari (おとなり)" and the web address to type (`<current origin>/join`). Also serves as our
+  security layer: only people who can physically see the notice board get the code. `/poster` shows my
+  own group; `/poster?code=XXXX-XXXX` shows that group without being a member.
 - **PWA**: installable (manifest + service worker via `vite-plugin-pwa`).
 
 ### NOT in scope (roadmap only — do not build)

@@ -142,6 +142,7 @@
     "poster.title": "Borrow from your neighbors",
     "poster.body": "Scan to join the {group} sharing shelf. Ask in your own language — your neighbor reads it in theirs.",
     "poster.code": "Join code: {code}",
+    "poster.address": "Open {url} and enter the code.",
     "poster.print": "Print",
 
     "common.back": "Back",

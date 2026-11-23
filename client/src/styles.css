@@ -1002,8 +1002,7 @@ section > h1,
   display: block;
 }
 
-.poster-group,
-.poster-texts p {
+.poster p {
   margin: 0;
 }
 
@@ -1026,9 +1025,20 @@ section > h1,
   white-space: nowrap;
 }
 
-.poster-texts > div {
+.poster-texts > div,
+.poster-footer {
   padding: 0.8em 0;
   border-top: 1px solid var(--border);
+}
+
+/* The app's name, and the address to type: in small letters at the bottom */
+.poster-footer {
+  padding-bottom: 0;
+  font-size: 0.8em;
+}
+
+.poster-address {
+  display: inline-block;
 }
 
 /* ---------- Elder mode (<body class="elder">) ---------- */
@@ -1178,9 +1188,9 @@ body.elder .banner-buttons > * {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    height: 250mm;
+    height: 270mm;
     margin: 0;
-    padding: 18mm 18mm 0;
+    padding: 16mm 15mm 0;
     border: none;
     font-size: 13.5pt;
   }
@@ -1202,7 +1212,7 @@ body.elder .banner-buttons > * {
   .poster-texts {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6mm;
+    gap: 4mm;
     font-size: 0.9em;
   }
 }

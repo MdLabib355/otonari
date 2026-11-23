@@ -142,6 +142,7 @@
     "poster.title": "ご近所で貸し借りしませんか",
     "poster.body": "QRコードを読み取って「{group}」の共有棚に参加できます。お互いの言葉で、気軽にお願いできます。",
     "poster.code": "参加コード:{code}",
+    "poster.address": "{url} を開いて、参加コードを入力してください。",
     "poster.print": "印刷する",
 
     "common.back": "戻る",

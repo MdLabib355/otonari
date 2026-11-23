@@ -9,10 +9,27 @@ import { useUser } from '../UserContext.js';
 // languages. Only the Print button is in the language of the person using the app.
 const POSTER_LANGS = ['ja', 'en', 'bn'];
 
+// The poster leads to the address this page has right now. So don't print a poster from localhost:
+// phones can't open that address.
+const JOIN_PAGE = `${window.location.origin}/join`;
+
 // The QR code as an SVG picture: it stays sharp, however large it is printed.
 async function qrPicture(text) {
   const svg = await QRCode.toString(text, { type: 'svg' });
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+// For whoever can't scan: "Open {url} and enter the code." The address is an element of its own, so
+// that it is not split over two lines.
+function AddressLine({ posterLang }) {
+  const [before, after] = t(posterLang, 'poster.address').split('{url}');
+  return (
+    <p lang={posterLang}>
+      {before}
+      <span className="poster-address">{JOIN_PAGE}</span>
+      {after}
+    </p>
+  );
 }
 
 // The join poster of my own group, or of the group in the address: /poster?code=XXXX-XXXX works
@@ -29,8 +46,7 @@ export default function Poster() {
     if (!code) return;
     setPoster(null);
     setProblem(null);
-    // Phones will open the address this page has right now, so don't print a poster from localhost.
-    const joinUrl = `${window.location.origin}/join?code=${encodeURIComponent(code)}`;
+    const joinUrl = `${JOIN_PAGE}?code=${encodeURIComponent(code)}`;
     api
       .get(`/api/groups/by-code/${encodeURIComponent(code)}`)
       .then(async (group) => setPoster({ code, joinUrl, qrCode: await qrPicture(joinUrl), ...group }))
@@ -69,6 +85,17 @@ export default function Poster() {
               <p>{t(posterLang, 'poster.body', { group: poster.name })}</p>
               <p>{t(posterLang, 'poster.code', { code: poster.code })}</p>
             </div>
+          ))}
+        </div>
+
+        <div className="poster-footer">
+          <p>
+            <strong>
+              {t('en', 'appName')} (<span lang="ja">{t('ja', 'appName')}</span>)
+            </strong>
+          </p>
+          {POSTER_LANGS.map((posterLang) => (
+            <AddressLine key={posterLang} posterLang={posterLang} />
           ))}
         </div>
       </div>
