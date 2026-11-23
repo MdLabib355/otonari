@@ -32,6 +32,7 @@ export async function initDatabase() {
       max_days INTEGER NOT NULL DEFAULT 3 CHECK (max_days IN (1, 2, 3, 7)),
       spot TEXT NOT NULL,
       trusted_only BOOLEAN NOT NULL DEFAULT FALSE,
+      paused BOOLEAN NOT NULL DEFAULT FALSE,
       photo_url TEXT,
       status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'lent')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -46,7 +47,7 @@ export async function initDatabase() {
       start_at TIMESTAMPTZ NOT NULL,
       end_at TIMESTAMPTZ NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled', 'active', 'returned')),
+        CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled', 'expired', 'active', 'returned')),
       handover_photo TEXT,
       return_photo TEXT,
       returned_at TIMESTAMPTZ,
@@ -68,8 +69,14 @@ export async function initDatabase() {
     );
 
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_url TEXT;
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS paused BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE loans ADD COLUMN IF NOT EXISTS last_pinged_at TIMESTAMPTZ;
+    ALTER TABLE loans DROP CONSTRAINT IF EXISTS loans_status_check;
+    ALTER TABLE loans ADD CONSTRAINT loans_status_check
+      CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled', 'expired', 'active', 'returned'));
 
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_active_nickname
+      ON users (group_id, LOWER(BTRIM(nickname))) WHERE left_at IS NULL;
     CREATE INDEX IF NOT EXISTS idx_items_group_active ON items(group_id) WHERE removed_at IS NULL;
     CREATE INDEX IF NOT EXISTS idx_items_owner_active ON items(owner_id) WHERE removed_at IS NULL;
     CREATE INDEX IF NOT EXISTS idx_loans_item_status ON loans(item_id, status);

@@ -106,17 +106,59 @@ router.post('/join', joinLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Unknown language' });
   }
 
-  const token = crypto.randomUUID();
-  const insertRes = await query(
-    'INSERT INTO users (group_id, nickname, lang, token) VALUES ($1, $2, $3, $4) RETURNING id',
-    [group.id, cleanNickname, lang, token]
+  const dupNick = await query(
+    `SELECT id FROM users
+     WHERE group_id = $1 AND left_at IS NULL AND LOWER(BTRIM(nickname)) = LOWER($2)
+     LIMIT 1`,
+    [group.id, cleanNickname]
   );
+  if (dupNick.rows.length > 0) {
+    return res.status(409).json({ error: 'That nickname is already used in this neighborhood' });
+  }
+
+  const token = crypto.randomUUID();
+  let insertRes;
+  try {
+    insertRes = await query(
+      'INSERT INTO users (group_id, nickname, lang, token) VALUES ($1, $2, $3, $4) RETURNING id',
+      [group.id, cleanNickname, lang, token]
+    );
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'That nickname is already used in this neighborhood' });
+    }
+    throw error;
+  }
   const me = await getMe(insertRes.rows[0].id);
   res.status(201).json({ token, ...me });
 });
 
 router.get('/me', requireUser, async (req, res) => {
   res.json(await getMe(req.user.id));
+});
+
+router.get('/group/stats', requireUser, async (req, res) => {
+  const groupId = req.user.group_id;
+  const [membersRes, itemsRes, loansRes] = await Promise.all([
+    query('SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND left_at IS NULL', [groupId]),
+    query('SELECT COUNT(*)::int AS count FROM items WHERE group_id = $1 AND removed_at IS NULL', [groupId]),
+    query(
+      `SELECT COUNT(*)::int AS completed_loans,
+              COUNT(CASE WHEN b.lang <> l.lang THEN 1 END)::int AS cross_language_loans
+       FROM loans
+       JOIN items ON items.id = loans.item_id
+       JOIN users AS b ON b.id = loans.borrower_id
+       JOIN users AS l ON l.id = loans.lender_id
+       WHERE items.group_id = $1 AND loans.status = 'returned'`,
+      [groupId]
+    ),
+  ]);
+  res.json({
+    members: membersRes.rows[0].count,
+    items: itemsRes.rows[0].count,
+    completed_loans: loansRes.rows[0].completed_loans,
+    cross_language_loans: loansRes.rows[0].cross_language_loans,
+  });
 });
 
 router.patch('/me', requireUser, async (req, res) => {

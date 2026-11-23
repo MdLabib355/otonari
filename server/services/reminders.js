@@ -25,15 +25,28 @@ async function remindLoan(loan, client) {
 
 export async function checkReminders() {
   return withTransaction(async (client) => {
-    const res = await query(
+    const activeRes = await query(
       `SELECT * FROM loans
        WHERE status = 'active' AND return_photo IS NULL
        FOR UPDATE SKIP LOCKED`,
       [],
       client
     );
-    for (const loan of res.rows) {
+    for (const loan of activeRes.rows) {
       await remindLoan(loan, client);
+    }
+
+    // Expire unanswered pending requests whose requested start time has already passed.
+    const expiredRes = await query(
+      `SELECT * FROM loans
+       WHERE status = 'pending' AND start_at < NOW()
+       FOR UPDATE SKIP LOCKED`,
+      [],
+      client
+    );
+    for (const loan of expiredRes.rows) {
+      await query("UPDATE loans SET status = 'expired' WHERE id = $1", [loan.id], client);
+      await createMessage(loan, FROM_SYSTEM, loan.borrower_id, 'sys.expired', client);
     }
   });
 }

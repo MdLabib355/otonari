@@ -37,6 +37,12 @@ const quickReplyLimiter = createRateLimiter({
   keyFn: (req) => `qr:${req.user?.id ?? req.ip}`,
 });
 
+const loanCreateLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 20,
+  keyFn: (req) => `loan:${req.user?.id ?? req.ip}`,
+});
+
 function parsePositiveInt(raw) {
   const num = Number(raw);
   return Number.isInteger(num) && num > 0 ? num : null;
@@ -125,7 +131,7 @@ router.get('/loans', requireUser, async (req, res) => {
   res.json({ borrowing, lending });
 });
 
-router.post('/loans', requireUser, async (req, res) => {
+router.post('/loans', requireUser, loanCreateLimiter, async (req, res) => {
   const { item_id, start_at, end_at } = req.body ?? {};
   const itemId = parsePositiveInt(item_id);
   if (!itemId) {
@@ -162,6 +168,9 @@ router.post('/loans', requireUser, async (req, res) => {
     }
     if (item.status !== 'available') {
       return { status: 409, body: { error: 'This item is not available right now' } };
+    }
+    if (item.paused) {
+      return { status: 409, body: { error: 'This item is temporarily paused by its owner' } };
     }
     if (item.trusted_only && !(await isTrusted(req.user.id, client))) {
       return { status: 403, body: { error: 'Only for neighbors who have returned something on time' } };
