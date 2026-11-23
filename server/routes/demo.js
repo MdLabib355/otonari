@@ -1,8 +1,10 @@
 // Demo-only routes. server/index.js mounts them ONLY when DEMO_MODE=true.
 //   GET  /api/demo/users                  public       seeded demo neighbors for quick demo login
 //   POST /api/demo/login                  public       { user_id } (is_demo only) -> { token, user, group }
+//   POST /api/demo/manager-login          public       seeded demo manager quick-login -> { token, manager }
 //   POST /api/demo/fast-forward/:loanId   participant  { to: 'dueSoon' | 'overdue' } -> shifts dates & runs reminders
 
+import crypto from 'node:crypto';
 import express from 'express';
 import { query, withTransaction } from '../db/pool.js';
 import { requireUser } from '../middleware/auth.js';
@@ -23,7 +25,7 @@ router.get('/demo/users', async (req, res) => {
     `SELECT users.*, groups.name AS group_name, groups.code AS group_code
      FROM users
      JOIN groups ON groups.id = users.group_id
-     WHERE users.is_demo = TRUE AND users.left_at IS NULL
+     WHERE users.is_demo = TRUE AND users.left_at IS NULL AND users.status = 'approved'
      ORDER BY users.group_id, users.id`
   );
   res.json(
@@ -40,7 +42,10 @@ router.post('/demo/login', async (req, res) => {
   if (!userId) {
     return res.status(400).json({ error: 'user_id must be a number' });
   }
-  const userRes = await query('SELECT * FROM users WHERE id = $1 AND left_at IS NULL', [userId]);
+  const userRes = await query(
+    "SELECT * FROM users WHERE id = $1 AND left_at IS NULL AND status = 'approved'",
+    [userId]
+  );
   const user = userRes.rows[0];
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
@@ -49,6 +54,17 @@ router.post('/demo/login', async (req, res) => {
     return res.status(403).json({ error: 'You can only continue as a demo neighbor' });
   }
   res.json({ token: user.token, ...(await getMe(user.id)) });
+});
+
+router.post('/demo/manager-login', async (req, res) => {
+  const mgrRes = await query('SELECT id, name, email FROM managers WHERE is_demo = TRUE ORDER BY id LIMIT 1');
+  const manager = mgrRes.rows[0];
+  if (!manager) {
+    return res.status(404).json({ error: 'Demo manager not found' });
+  }
+  const token = crypto.randomUUID();
+  await query('INSERT INTO manager_sessions (token, manager_id) VALUES ($1, $2)', [token, manager.id]);
+  res.json({ token, manager });
 });
 
 router.post('/demo/fast-forward/:loanId', requireUser, async (req, res) => {

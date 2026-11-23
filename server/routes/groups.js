@@ -1,27 +1,25 @@
-// Starting, joining and leaving a neighborhood group, and reading / changing "me".
-//   GET   /api/groups/by-code/:code   anyone   group preview for the join screen and the poster
-//   POST  /api/groups                 anyone   { name, type, city, create_anyway? } -> new group + join code
-//   POST  /api/join                   anyone   { code, nickname, lang } -> { token, user, group }
-//   GET   /api/me                     user     -> { user, group }
-//   PATCH /api/me                     user     { lang?, elder_mode? } -> { user, group }
-//   POST  /api/leave                  user     leave the group (blocked while accepted/active loan exists)
+// Resident group lookup, join (+ approval & dup-nickname guard), device transfer/restore,
+// profile (/api/me), group stats, and safe leaving.
 
 import crypto from 'node:crypto';
 import express from 'express';
-import { GROUP_TYPES, LANGUAGES } from '../config/constants.js';
+import { LANGUAGES } from '../config/constants.js';
 import { query, withTransaction } from '../db/pool.js';
-import { requireUser } from '../middleware/auth.js';
+import { requireResidentAnyStatus, requireUser } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
 import { createMessage, declinePendingLoans, getMe } from '../services/loans.js';
+import { consumeTransferCode, createTransferCode } from '../services/transfer.js';
 
 const router = express.Router();
 
-// Join codes exclude I, L, O, 0, and 1 to avoid ambiguity when reading from a printed poster.
-const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-
 const lookupLimiter = createRateLimiter({ windowMs: 60_000, max: 60 });
-const createGroupLimiter = createRateLimiter({ windowMs: 60 * 60_000, max: 10 });
 const joinLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: 20 });
+const restoreLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: 10 });
+const transferLimiter = createRateLimiter({
+  windowMs: 60 * 60_000,
+  max: 10,
+  keyFn: (req) => `transfer:${req.user?.id ?? req.ip}`,
+});
 
 async function findGroupByCode(code, client = null) {
   const cleanCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
@@ -36,63 +34,20 @@ router.get('/groups/by-code/:code', lookupLimiter, async (req, res) => {
     return res.status(404).json({ error: 'Group not found' });
   }
   const countRes = await query(
-    'SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND left_at IS NULL',
+    "SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND left_at IS NULL AND status = 'approved'",
     [group.id]
   );
-  res.json({ name: group.name, type: group.type, city: group.city, memberCount: countRes.rows[0].count });
-});
-
-async function newJoinCode(client = null) {
-  let code;
-  do {
-    let chars = '';
-    while (chars.length < 8) chars += CODE_CHARS[crypto.randomInt(CODE_CHARS.length)];
-    code = `${chars.slice(0, 4)}-${chars.slice(4)}`;
-  } while (await findGroupByCode(code, client));
-  return code;
-}
-
-// NFKC normalizes full-width Japanese characters (e.g. "３丁目" -> "3丁目") for duplicate checks.
-function simplified(text) {
-  return text.normalize('NFKC').toLowerCase().replace(/\s/g, '');
-}
-
-async function findSimilarGroup(name, city) {
-  const res = await query('SELECT name, city FROM groups');
-  return res.rows.find(
-    (group) => simplified(group.city) === simplified(city) && simplified(group.name) === simplified(name)
-  );
-}
-
-function trimmed(value) {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-router.post('/groups', createGroupLimiter, async (req, res) => {
-  const { type, create_anyway } = req.body ?? {};
-  const name = trimmed(req.body?.name);
-  const city = trimmed(req.body?.city);
-
-  if (name.length < 1 || name.length > 60 || city.length < 1 || city.length > 40) {
-    return res.status(400).json({ error: 'The name must be 1 to 60 characters, the city 1 to 40' });
-  }
-  if (!GROUP_TYPES.includes(type)) {
-    return res.status(400).json({ error: "type must be 'building' or 'block'" });
-  }
-
-  // Return only the similar group's name, never its code.
-  const similar = await findSimilarGroup(name, city);
-  if (similar && create_anyway !== true) {
-    return res.status(409).json({ error: 'There is a similar group in this city', existing_name: similar.name });
-  }
-
-  const code = await newJoinCode();
-  await query('INSERT INTO groups (code, name, type, city) VALUES ($1, $2, $3, $4)', [code, name, type, city]);
-  res.status(201).json({ code, name, type, city });
+  res.json({
+    name: group.name,
+    type: group.type,
+    city: group.city,
+    require_approval: Boolean(group.require_approval),
+    memberCount: countRes.rows[0].count,
+  });
 });
 
 router.post('/join', joinLimiter, async (req, res) => {
-  const { code, nickname, lang } = req.body ?? {};
+  const { code, nickname, lang, manager_note } = req.body ?? {};
 
   const group = await findGroupByCode(code);
   if (!group) {
@@ -105,23 +60,28 @@ router.post('/join', joinLimiter, async (req, res) => {
   if (!LANGUAGES.includes(lang)) {
     return res.status(400).json({ error: 'Unknown language' });
   }
-
-  const dupNick = await query(
-    `SELECT id FROM users
-     WHERE group_id = $1 AND left_at IS NULL AND LOWER(BTRIM(nickname)) = LOWER($2)
-     LIMIT 1`,
-    [group.id, cleanNickname]
-  );
-  if (dupNick.rows.length > 0) {
-    return res.status(409).json({ error: 'That nickname is already used in this neighborhood' });
+  let cleanNote = null;
+  if (manager_note !== undefined && manager_note !== null) {
+    if (typeof manager_note !== 'string') {
+      return res.status(400).json({ error: 'manager_note must be text' });
+    }
+    const trimmedNote = manager_note.trim();
+    if (trimmedNote.length > 40) {
+      return res.status(400).json({ error: 'manager_note must be at most 40 characters' });
+    }
+    cleanNote = trimmedNote || null;
   }
 
+  const initialStatus = group.require_approval ? 'pending' : 'approved';
   const token = crypto.randomUUID();
+
   let insertRes;
   try {
     insertRes = await query(
-      'INSERT INTO users (group_id, nickname, lang, token) VALUES ($1, $2, $3, $4) RETURNING id',
-      [group.id, cleanNickname, lang, token]
+      `INSERT INTO users (group_id, nickname, lang, token, status, manager_note)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id`,
+      [group.id, cleanNickname, lang, token, initialStatus, cleanNote]
     );
   } catch (error) {
     if (error.code === '23505') {
@@ -133,14 +93,34 @@ router.post('/join', joinLimiter, async (req, res) => {
   res.status(201).json({ token, ...me });
 });
 
-router.get('/me', requireUser, async (req, res) => {
+router.post('/restore', restoreLimiter, async (req, res) => {
+  const code = req.body?.code;
+  if (typeof code !== 'string' || !code.trim()) {
+    return res.status(400).json({ error: 'Transfer code is required' });
+  }
+  const restored = await consumeTransferCode(code);
+  if (!restored) {
+    return res.status(404).json({ error: 'Transfer code is invalid or expired' });
+  }
+  res.json({ token: restored.token, user: restored.user, group: restored.group });
+});
+
+router.post('/me/transfer-code', requireUser, transferLimiter, async (req, res) => {
+  const codeInfo = await createTransferCode(req.user.id, { rotateToken: false });
+  res.status(201).json(codeInfo);
+});
+
+router.get('/me', requireResidentAnyStatus, async (req, res) => {
   res.json(await getMe(req.user.id));
 });
 
 router.get('/group/stats', requireUser, async (req, res) => {
   const groupId = req.user.group_id;
   const [membersRes, itemsRes, loansRes] = await Promise.all([
-    query('SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND left_at IS NULL', [groupId]),
+    query(
+      "SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND left_at IS NULL AND status = 'approved'",
+      [groupId]
+    ),
     query('SELECT COUNT(*)::int AS count FROM items WHERE group_id = $1 AND removed_at IS NULL', [groupId]),
     query(
       `SELECT COUNT(*)::int AS completed_loans,
@@ -161,7 +141,7 @@ router.get('/group/stats', requireUser, async (req, res) => {
   });
 });
 
-router.patch('/me', requireUser, async (req, res) => {
+router.patch('/me', requireResidentAnyStatus, async (req, res) => {
   const { lang, elder_mode } = req.body ?? {};
 
   if (lang !== undefined && !LANGUAGES.includes(lang)) {
@@ -180,7 +160,7 @@ router.patch('/me', requireUser, async (req, res) => {
   res.json(await getMe(req.user.id));
 });
 
-router.post('/leave', requireUser, async (req, res) => {
+router.post('/leave', requireResidentAnyStatus, async (req, res) => {
   const myId = req.user.id;
   const blocked = await withTransaction(async (client) => {
     const openLoan = await query(

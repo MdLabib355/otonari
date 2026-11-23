@@ -115,8 +115,16 @@ describe('Slice 3: End-to-end API integration tests (T01-T38)', () => {
     assert.deepEqual(missing.data, { error: 'Not found' });
   });
 
-  it('T03-T09: group creation, NFKC duplicate warning, lookup, join, and /api/me', async () => {
+  it('T03-T09: group creation (manager auth), NFKC duplicate warning, lookup, join, and /api/me', async () => {
+    // Unauthenticated group creation must fail 401
+    assert.equal(
+      (await req('POST', '/api/groups', { body: { name: 'NoAuth Apt', type: 'building', city: 'Nagasaki' } })).status,
+      401
+    );
+    const mgr = (await req('POST', '/api/demo/manager-login')).data;
+
     const created = await req('POST', '/api/groups', {
+      token: mgr.token,
       body: { name: 'Dejima Mansion', type: 'building', city: 'Nagasaki' },
     });
     assert.equal(created.status, 201);
@@ -124,6 +132,7 @@ describe('Slice 3: End-to-end API integration tests (T01-T38)', () => {
 
     // Duplicate warning must not leak join code.
     const dup = await req('POST', '/api/groups', {
+      token: mgr.token,
       body: { name: 'dejima   mansion', type: 'building', city: 'NAGASAKI' },
     });
     assert.equal(dup.status, 409);
@@ -131,6 +140,7 @@ describe('Slice 3: End-to-end API integration tests (T01-T38)', () => {
     assert.equal(dup.data.code, undefined);
 
     const dupForced = await req('POST', '/api/groups', {
+      token: mgr.token,
       body: { name: 'dejima mansion', type: 'building', city: 'Nagasaki', create_anyway: true },
     });
     assert.equal(dupForced.status, 201);
@@ -482,10 +492,12 @@ describe('Slice 3: End-to-end API integration tests (T01-T38)', () => {
     assert.equal((await req('GET', '/uploads/not-a-uuid.jpg')).status, 400);
 
     // Rate limiting active when DISABLE_RATE_LIMIT is off (POST /api/groups limit = 10/hr)
+    const mgr = (await req('POST', '/api/demo/manager-login')).data;
     process.env.DISABLE_RATE_LIMIT = 'false';
     let got429 = false;
     for (let i = 0; i < 12; i += 1) {
       const r = await req('POST', '/api/groups', {
+        token: mgr.token,
         body: { name: `RateTest ${i}`, type: 'building', city: 'Nagasaki' },
       });
       if (r.status === 429) {

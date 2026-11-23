@@ -4,12 +4,32 @@ import { query } from './pool.js';
 
 export async function initDatabase() {
   await query(`
+    CREATE TABLE IF NOT EXISTS managers (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      is_demo BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_managers_email_lower ON managers (LOWER(email));
+
+    CREATE TABLE IF NOT EXISTS manager_sessions (
+      token TEXT PRIMARY KEY,
+      manager_id INTEGER NOT NULL REFERENCES managers(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days')
+    );
+    CREATE INDEX IF NOT EXISTS idx_manager_sessions_manager ON manager_sessions (manager_id);
+
     CREATE TABLE IF NOT EXISTS groups (
       id SERIAL PRIMARY KEY,
       code TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       type TEXT NOT NULL CHECK (type IN ('building', 'block')),
-      city TEXT NOT NULL
+      city TEXT NOT NULL,
+      manager_id INTEGER REFERENCES managers(id),
+      require_approval BOOLEAN NOT NULL DEFAULT FALSE
     );
 
     CREATE TABLE IF NOT EXISTS users (
@@ -20,8 +40,18 @@ export async function initDatabase() {
       elder_mode BOOLEAN NOT NULL DEFAULT FALSE,
       token TEXT UNIQUE NOT NULL,
       is_demo BOOLEAN NOT NULL DEFAULT FALSE,
+      status TEXT NOT NULL DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'rejected')),
+      manager_note TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       left_at TIMESTAMPTZ
+    );
+
+    CREATE TABLE IF NOT EXISTS transfer_codes (
+      code TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      rotate_token BOOLEAN NOT NULL DEFAULT FALSE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ
     );
 
     CREATE TABLE IF NOT EXISTS items (
@@ -69,16 +99,25 @@ export async function initDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE groups ADD COLUMN IF NOT EXISTS manager_id INTEGER REFERENCES managers(id);
+    ALTER TABLE groups ADD COLUMN IF NOT EXISTS require_approval BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'approved';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS manager_note TEXT;
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_url TEXT;
     ALTER TABLE items ADD COLUMN IF NOT EXISTS paused BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE loans ADD COLUMN IF NOT EXISTS last_pinged_at TIMESTAMPTZ;
     ALTER TABLE loans ADD COLUMN IF NOT EXISTS issue_photo TEXT;
+
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check;
+    ALTER TABLE users ADD CONSTRAINT users_status_check
+      CHECK (status IN ('pending', 'approved', 'rejected'));
+
     ALTER TABLE loans DROP CONSTRAINT IF EXISTS loans_status_check;
     ALTER TABLE loans ADD CONSTRAINT loans_status_check
       CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled', 'expired', 'active', 'returned'));
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_active_nickname
-      ON users (group_id, LOWER(BTRIM(nickname))) WHERE left_at IS NULL;
+      ON users (group_id, LOWER(BTRIM(nickname))) WHERE left_at IS NULL AND status <> 'rejected';
     CREATE INDEX IF NOT EXISTS idx_items_group_active ON items(group_id) WHERE removed_at IS NULL;
     CREATE INDEX IF NOT EXISTS idx_items_owner_active ON items(owner_id) WHERE removed_at IS NULL;
     CREATE INDEX IF NOT EXISTS idx_loans_item_status ON loans(item_id, status);
@@ -94,8 +133,11 @@ export async function resetDatabase() {
     DROP TABLE IF EXISTS messages CASCADE;
     DROP TABLE IF EXISTS loans CASCADE;
     DROP TABLE IF EXISTS items CASCADE;
+    DROP TABLE IF EXISTS transfer_codes CASCADE;
     DROP TABLE IF EXISTS users CASCADE;
     DROP TABLE IF EXISTS groups CASCADE;
+    DROP TABLE IF EXISTS manager_sessions CASCADE;
+    DROP TABLE IF EXISTS managers CASCADE;
   `);
   await initDatabase();
 }

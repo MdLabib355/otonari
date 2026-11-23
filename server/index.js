@@ -17,6 +17,7 @@ import groupRoutes from './routes/groups.js';
 import inboxRoutes from './routes/inbox.js';
 import itemRoutes from './routes/items.js';
 import loanRoutes from './routes/loans.js';
+import managerRoutes from './routes/manager.js';
 
 const clientDist = path.join(import.meta.dirname, '..', 'client', 'dist');
 
@@ -41,6 +42,7 @@ export function createApp() {
   });
 
   app.use('/api', groupRoutes);
+  app.use('/api', managerRoutes);
   app.use('/api', itemRoutes);
   app.use('/api', loanRoutes);
   app.use('/api', inboxRoutes);

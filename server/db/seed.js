@@ -10,6 +10,7 @@ import dotenv from 'dotenv';
 import { closeDatabase, query, withTransaction } from './pool.js';
 import { resetDatabase } from './schema.js';
 import { createMessage } from '../services/loans.js';
+import { hashPassword } from '../services/passwords.js';
 import { deletePhotos } from '../services/photos.js';
 
 const GROUPS = [
@@ -107,11 +108,21 @@ function japanTime(daysAgo, hour, minute = 0) {
 
 async function insertGroupsUsersAndItems(empty, client) {
   const userIds = {};
+  // Seed one demo building manager with a random non-guessable password (accessed via DEMO_MODE quick-login).
+  const demoPasswordHash = await hashPassword(crypto.randomBytes(24).toString('hex'));
+  const mgrRes = await query(
+    `INSERT INTO managers (name, email, password_hash, is_demo)
+     VALUES ('Sakura Heights Manager', 'manager@sakura.nagasaki.jp', $1, TRUE)
+     RETURNING id`,
+    [demoPasswordHash],
+    client
+  );
+  const demoManagerId = mgrRes.rows[0].id;
 
   for (const group of GROUPS) {
     const groupRes = await query(
-      'INSERT INTO groups (code, name, type, city) VALUES ($1, $2, $3, $4) RETURNING id',
-      [group.code, group.name, group.type, group.city],
+      'INSERT INTO groups (code, name, type, city, manager_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [group.code, group.name, group.type, group.city, demoManagerId],
       client
     );
     const groupId = groupRes.rows[0].id;

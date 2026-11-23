@@ -82,6 +82,7 @@ export function publicUser(user) {
     nickname: user.nickname,
     lang: user.lang,
     elder_mode: Boolean(user.elder_mode),
+    status: user.status ?? 'approved',
   };
 }
 
