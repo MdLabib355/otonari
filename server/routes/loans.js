@@ -5,6 +5,10 @@
 //   POST /api/loans/:id/accept        lender        pending → accepted (item reserved)
 //   POST /api/loans/:id/decline       lender        { reason: 'default' | 'busy' } pending → declined
 //   POST /api/loans/:id/cancel        borrower      pending → cancelled
+//   POST /api/loans/:id/handover      lender        photo (multipart) → the item's condition before
+//   POST /api/loans/:id/received      borrower      accepted + handover photo → active (item lent)
+//   POST /api/loans/:id/return        borrower      photo (multipart) → the item's condition after
+//   POST /api/loans/:id/return-confirmed  lender    active + return photo → returned (item available)
 //   POST /api/loans/:id/quick-reply   participant   { phrase_key } one of the five fixed quick replies
 // Every step also sends the matching phrase to the other person (CLAUDE.md section 6).
 
@@ -12,6 +16,7 @@ import express from 'express';
 import { DURATIONS, QUICK_REPLY_KEYS } from '../allowedKeys.js';
 import { requireUser } from '../auth.js';
 import { createMessage, db, declinePendingLoans, findOpenLoan } from '../db.js';
+import { receivePhoto, savePhoto } from '../photos.js';
 
 const router = express.Router();
 const DAY = 24 * 60 * 60 * 1000;
@@ -81,6 +86,10 @@ function loanRole(role) {
 
 function setStatus(loanId, status) {
   db.prepare('UPDATE loans SET status = ? WHERE id = ?').run(status, loanId);
+}
+
+function setItemStatus(itemId, status) {
+  db.prepare('UPDATE items SET status = ? WHERE id = ?').run(status, itemId);
 }
 
 router.get('/loans', requireUser, (req, res) => {
@@ -161,7 +170,7 @@ router.post('/loans/:id/accept', requireUser, loanRole('lender'), (req, res) => 
 
   const accept = db.transaction(() => {
     setStatus(loan.id, 'accepted');
-    db.prepare("UPDATE items SET status = 'reserved' WHERE id = ?").run(loan.item_id);
+    setItemStatus(loan.item_id, 'reserved');
     createMessage(loan, loan.lender_id, loan.borrower_id, 'accept');
     declinePendingLoans(loan.item_id, loan.id);
   });
@@ -200,6 +209,71 @@ router.post('/loans/:id/cancel', requireUser, loanRole('borrower'), (req, res) =
     createMessage(loan, loan.borrower_id, loan.lender_id, 'cancel');
   });
   cancel();
+  res.json(loanDetails(loan.id, req.user.id));
+});
+
+// Handover, part 1: the lender's condition photo. (Uploads can be slow, so the loan is loaded and
+// checked AFTER the photo has arrived: its status may have changed in the meantime.)
+router.post('/loans/:id/handover', requireUser, receivePhoto, loanRole('lender'), (req, res) => {
+  const loan = req.loan;
+  if (loan.status !== 'accepted' || loan.handover_photo) {
+    return res.status(409).json({ error: 'The handover photo is taken once, after accepting' });
+  }
+
+  const photo = savePhoto(req.file);
+  const handOver = db.transaction(() => {
+    db.prepare('UPDATE loans SET handover_photo = ? WHERE id = ?').run(photo, loan.id);
+    createMessage(loan, loan.lender_id, loan.borrower_id, 'handoverPhoto');
+  });
+  handOver();
+  res.json(loanDetails(loan.id, req.user.id));
+});
+
+// Handover, part 2: the borrower has the item. Now it is really lent.
+router.post('/loans/:id/received', requireUser, loanRole('borrower'), (req, res) => {
+  const loan = req.loan;
+  if (loan.status !== 'accepted' || !loan.handover_photo) {
+    return res.status(409).json({ error: 'Only possible after the handover photo' });
+  }
+
+  const receive = db.transaction(() => {
+    setStatus(loan.id, 'active');
+    setItemStatus(loan.item_id, 'lent');
+    createMessage(loan, loan.borrower_id, loan.lender_id, 'received');
+  });
+  receive();
+  res.json(loanDetails(loan.id, req.user.id));
+});
+
+// Return, part 1: the borrower's photo of the item they bring back.
+router.post('/loans/:id/return', requireUser, receivePhoto, loanRole('borrower'), (req, res) => {
+  const loan = req.loan;
+  if (loan.status !== 'active' || loan.return_photo) {
+    return res.status(409).json({ error: 'The return photo is taken once, while borrowing' });
+  }
+
+  const photo = savePhoto(req.file);
+  const giveBack = db.transaction(() => {
+    db.prepare('UPDATE loans SET return_photo = ? WHERE id = ?').run(photo, loan.id);
+    createMessage(loan, loan.borrower_id, loan.lender_id, 'returned');
+  });
+  giveBack();
+  res.json(loanDetails(loan.id, req.user.id));
+});
+
+// Return, part 2: the lender has it back, and it can be borrowed again.
+router.post('/loans/:id/return-confirmed', requireUser, loanRole('lender'), (req, res) => {
+  const loan = req.loan;
+  if (loan.status !== 'active' || !loan.return_photo) {
+    return res.status(409).json({ error: 'Only possible after the return photo' });
+  }
+
+  const confirmReturn = db.transaction(() => {
+    setStatus(loan.id, 'returned');
+    setItemStatus(loan.item_id, 'available');
+    createMessage(loan, loan.lender_id, loan.borrower_id, 'returnConfirmed');
+  });
+  confirmReturn();
   res.json(loanDetails(loan.id, req.user.id));
 });
 

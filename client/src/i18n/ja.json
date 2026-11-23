@@ -85,6 +85,8 @@
     "loan.cancel": "お願いを取り消す",
     "loan.handoverStep": "お渡しする前に、物の写真を撮ってください",
     "loan.takePhoto": "写真を撮る",
+    "loan.sendPhoto": "写真を送る",
+    "loan.photoRefused": "この写真は送信できません。5MB以下のJPEGまたはPNGの写真をご利用ください。",
     "loan.waitHandover": "受け渡しの際に{name}が物の状態の写真を撮ります。",
     "loan.confirmReceived": "受け取りました",
     "loan.returnStep": "お返しする時に、物の写真を撮ってください",

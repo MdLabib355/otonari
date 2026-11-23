@@ -85,6 +85,8 @@
     "loan.cancel": "Cancel request",
     "loan.handoverStep": "Take a photo of the item before handing it over",
     "loan.takePhoto": "Take photo",
+    "loan.sendPhoto": "Send photo",
+    "loan.photoRefused": "This photo can't be sent. Please use a JPEG or PNG photo of up to 5 MB.",
     "loan.waitHandover": "{name} will take a condition photo at handover.",
     "loan.confirmReceived": "I received it",
     "loan.returnStep": "Take a photo of the item when you return it",

@@ -85,6 +85,8 @@
     "loan.cancel": "অনুরোধ বাতিল করুন",
     "loan.handoverStep": "দেওয়ার আগে জিনিসটির একটি ছবি তুলুন",
     "loan.takePhoto": "ছবি তুলুন",
+    "loan.sendPhoto": "ছবি পাঠান",
+    "loan.photoRefused": "এই ছবিটি পাঠানো যাচ্ছে না। সর্বোচ্চ ৫ MB আকারের JPEG বা PNG ছবি ব্যবহার করুন।",
     "loan.waitHandover": "হস্তান্তরের সময় {name} জিনিসটির অবস্থার ছবি তুলবেন।",
     "loan.confirmReceived": "আমি পেয়েছি",
     "loan.returnStep": "ফেরত দেওয়ার সময় জিনিসটির একটি ছবি তুলুন",

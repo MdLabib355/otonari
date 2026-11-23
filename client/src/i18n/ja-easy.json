@@ -24,6 +24,8 @@
     "loan.accept": "はい",
     "loan.decline": "いいえ",
     "loan.takePhoto": "しゃしんを とる",
+    "loan.sendPhoto": "しゃしんを おくる",
+    "loan.photoRefused": "この しゃしんは おくれません。5MB までの JPEG か PNG の しゃしんを つかって ください。",
     "loan.confirmReceived": "もらいました",
     "loan.confirmReturn": "もどりました",
     "loan.showOriginal": "あいての がめんを みる",
