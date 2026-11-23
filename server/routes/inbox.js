@@ -11,10 +11,16 @@
 import express from 'express';
 import { query, withTransaction } from '../db/pool.js';
 import { requireResidentAnyStatus, requireUser } from '../middleware/auth.js';
+import { createRateLimiter } from '../middleware/rateLimit.js';
 import { subscribeUser } from '../services/events.js';
 import { getVapidPublicKey, removeSubscription, saveSubscription } from '../services/push.js';
 
 const router = express.Router();
+const pushSubLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 20,
+  keyFn: (req) => `push:${req.user?.id ?? req.ip}`,
+});
 
 router.get('/inbox', requireUser, async (req, res) => {
   const result = await query(
@@ -119,7 +125,7 @@ router.get('/push/vapid-key', requireUser, async (req, res) => {
   res.json({ publicKey });
 });
 
-router.post('/push/subscribe', requireUser, async (req, res) => {
+router.post('/push/subscribe', requireUser, pushSubLimiter, async (req, res) => {
   const ok = await saveSubscription(req.user.id, req.body);
   if (!ok) {
     return res.status(400).json({ error: 'Valid push subscription (endpoint + keys.p256dh + keys.auth) required' });

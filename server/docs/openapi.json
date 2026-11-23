@@ -117,7 +117,8 @@
         ],
         "responses": {
           "200": { "description": "Image binary with X-Content-Type-Options: nosniff" },
-          "404": { "description": "Not found or invalid UUID filename" }
+          "400": { "description": "Invalid filename or blocked path traversal" },
+          "404": { "description": "Photo not found" }
         }
       }
     },

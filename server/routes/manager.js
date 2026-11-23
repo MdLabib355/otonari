@@ -17,6 +17,9 @@ const router = express.Router();
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Constant-work dummy hash used when an unknown email is submitted so login latency does not leak account existence.
+const DUMMY_PASSWORD_HASH =
+  '00000000000000000000000000000000:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
 
 const registerLimiter = createRateLimiter({ windowMs: 60 * 60_000, max: 10 });
 const loginLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: 15 });
@@ -40,15 +43,15 @@ function simplified(text) {
 }
 
 async function newJoinCode(excludeCode = null, client = null) {
-  let code;
-  do {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
     let chars = '';
     while (chars.length < 8) chars += CODE_CHARS[crypto.randomInt(CODE_CHARS.length)];
-    code = `${chars.slice(0, 4)}-${chars.slice(4)}`;
+    const code = `${chars.slice(0, 4)}-${chars.slice(4)}`;
     if (code === excludeCode) continue;
     const exists = await query('SELECT id FROM groups WHERE code = $1', [code], client);
     if (exists.rows.length === 0) return code;
-  } while (true);
+  }
+  throw new Error('Could not generate a unique join code');
 }
 
 async function createManagerSession(managerId, client = null) {
@@ -126,7 +129,8 @@ router.post('/manager/login', loginLimiter, async (req, res) => {
 
   const managerRes = await query('SELECT * FROM managers WHERE LOWER(email) = $1', [email]);
   const manager = managerRes.rows[0];
-  if (!manager || !(await verifyPassword(password, manager.password_hash))) {
+  const valid = await verifyPassword(password, manager ? manager.password_hash : DUMMY_PASSWORD_HASH);
+  if (!manager || !valid) {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
 
@@ -363,6 +367,8 @@ router.post('/manager/groups/:id/members/:userId/remove', requireManager, requir
       await createMessage(loan, userId, loan.lender_id, 'cancel', client);
     }
 
+    await query('DELETE FROM push_subscriptions WHERE user_id = $1', [userId], client);
+    await query('DELETE FROM transfer_codes WHERE user_id = $1 AND used_at IS NULL', [userId], client);
     await query('UPDATE users SET left_at = NOW() WHERE id = $1', [userId], client);
     return { status: 204 };
   });

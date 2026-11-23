@@ -11,6 +11,7 @@ import { closeDatabase, query } from './db/pool.js';
 import { initDatabase } from './db/schema.js';
 import { seedDatabase } from './db/seed.js';
 import { errorHandler, securityHeaders } from './middleware/security.js';
+import { disconnectAll } from './services/events.js';
 import { servePhoto } from './services/photos.js';
 import { startReminders, stopReminders } from './services/reminders.js';
 import demoRoutes from './routes/demo.js';
@@ -100,6 +101,10 @@ if (isMain) {
 
   const shutdown = async () => {
     stopReminders();
+    disconnectAll();
+    const forceExit = setTimeout(() => process.exit(1), 5000);
+    forceExit.unref?.();
+    server.closeIdleConnections?.();
     server.close(async () => {
       await closeDatabase();
       process.exit(0);

@@ -4,9 +4,10 @@
 import crypto from 'node:crypto';
 import express from 'express';
 import { LANGUAGES } from '../config/constants.js';
-import { query, withTransaction } from '../db/pool.js';
+import { afterCommit, query, withTransaction } from '../db/pool.js';
 import { requireResidentAnyStatus, requireUser } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
+import { disconnectUser } from '../services/events.js';
 import { createMessage, declinePendingLoans, getMe } from '../services/loans.js';
 import { consumeTransferCode, createTransferCode } from '../services/transfer.js';
 
@@ -196,7 +197,10 @@ router.post('/leave', requireResidentAnyStatus, async (req, res) => {
       await createMessage(loan, myId, loan.lender_id, 'cancel', client);
     }
 
+    await query('DELETE FROM push_subscriptions WHERE user_id = $1', [myId], client);
+    await query('DELETE FROM transfer_codes WHERE user_id = $1 AND used_at IS NULL', [myId], client);
     await query('UPDATE users SET left_at = NOW() WHERE id = $1', [myId], client);
+    afterCommit(client, () => disconnectUser(myId));
     return false;
   });
 

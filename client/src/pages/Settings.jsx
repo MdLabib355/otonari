@@ -134,6 +134,11 @@ export default function Settings() {
     setLeaving(true);
     try {
       await api.post('/api/leave');
+      if (pushSupported) {
+        const reg = await navigator.serviceWorker.ready.catch(() => null);
+        const sub = await reg?.pushManager?.getSubscription().catch(() => null);
+        if (sub) await sub.unsubscribe().catch(() => {});
+      }
       logout();
     } catch (error) {
       setLeaveProblem(error.status === 409 ? 'settings.leaveBlocked' : 'common.error');

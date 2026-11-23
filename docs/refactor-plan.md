@@ -14,7 +14,7 @@ Aligned with `../Hackathon_Participant_Guide (2).pdf`:
 | Deadline | `Tue, Nov 24, 23:59 BST` (hard cutoff; repo snapshot at deadline) | All slices committed, tested, and verified on `v2` prior to deadline. |
 | Evaluation points | Problem definition & theme fit, Technical skill, Completeness, Originality, Proposal clarity | Adds PostgreSQL, Docker + persistent volumes, server-side EXIF stripping, rate limiting, and `T01–T41` automated integration tests to strengthen Technical Skill and Completeness. |
 | Repository rules | Public repo, no committed secrets, `.env` in `.gitignore`, repo matches proposal | Zero hardcoded credentials/secrets; `.env` gitignored; `README.md` & `CLAUDE.md` kept strictly synchronized with code. |
-| AI disclosure (Rule #2) | State in proposal where and how AI tools were used | Documented transparently in `README.md` and `BUILD_PROMPTS.md`. |
+| AI disclosure (Rule #2) | State in proposal where and how AI tools were used | Documented transparently in `README.md` and `docs/SPEC.md`. |
 | Submission artifacts | `[TeamName]_Proposal.pdf` (≤3 pages, English) + YouTube Unlisted video (≤3 min, English) | External deliverables tracked in team checklist outside code. |
 
 ---
@@ -194,7 +194,9 @@ Each slice is independently implemented, reviewed, verified by automated tests, 
 4. **Slice 3 — Async API Routes, Hardening, Ping, Exact Dates & Due-Loans + Full API Tests:** Migrate `groups.js`, `items.js`, `loans.js`, `inbox.js`, `demo.js`, `index.js`, add `rateLimit.js`, verify `server/test/api.test.js` (`T01–T38`).
 5. **Slice 4 — Frontend v2 Upgrades & 4-Language i18n + Parity Tests:** Update React pages/components/CSS and all 4 i18n JSON files, add `server/test/i18n.test.js` (`T39`), verify `npm test && npm run build`.
 6. **Slice 5 — Docker, Persistent Volumes & Railway Packaging + Container Persistence Test:** Add `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `railway.json`; verify `docker compose up --build` and persistence of DB rows + uploaded photos across `docker compose restart app` (`T40–T41`).
-7. **Slice 6 — Documentation Synchronization & Final Audit:** Update `README.md`, `CLAUDE.md`, `BUILD_PROMPTS.md`, `server/.env.example`; run final full test + build verification.
+7. **Slice 6 — Documentation Synchronization & Final Audit:** Update `README.md`, `CLAUDE.md`, `server/.env.example`; run final full test + build verification.
+
+> **v3 Update:** Subsequent v3 upgrades (modular `server/` architecture, Building Manager auth & approval/moderation, Device Transfer & Lost-Phone Restore, 3-layer Notification Center + SSE + Web Push pipeline, OpenAPI 3.0.3 at `/api/docs`, and GitHub Actions CI) are specified in [docs/SPEC.md](SPEC.md).
 
 ---
 

@@ -109,6 +109,19 @@ export function publicUser(user) {
 export async function getMe(userId, client = null) {
   const userRes = await query('SELECT * FROM users WHERE id = $1', [userId], client);
   const user = userRes.rows[0];
-  const groupRes = await query('SELECT * FROM groups WHERE id = $1', [user.group_id], client);
-  return { user: publicUser(user), group: groupRes.rows[0] };
+  const groupRes = await query(
+    'SELECT id, code, name, type, city, require_approval FROM groups WHERE id = $1',
+    [user.group_id],
+    client
+  );
+  const row = groupRes.rows[0];
+  const group = {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    city: row.city,
+    require_approval: Boolean(row.require_approval),
+    ...(user.status === 'approved' ? { code: row.code } : {}),
+  };
+  return { user: publicUser(user), group };
 }

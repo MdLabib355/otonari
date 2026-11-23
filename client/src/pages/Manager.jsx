@@ -20,8 +20,8 @@ export default function Manager() {
   const [loading, setLoading] = useState(Boolean(getManagerToken()));
   const [selectedGroupId, setSelectedGroupId] = useState(null);
 
-  async function loadAccount() {
-    setLoading(true);
+  async function loadAccount({ silent = false } = {}) {
+    if (!silent) setLoading(true);
     try {
       const data = await managerApi.get('/api/manager/me');
       setAccount(data);
@@ -29,10 +29,12 @@ export default function Manager() {
         data.groups.some((g) => g.id === prev) ? prev : (data.groups[0]?.id ?? null)
       );
     } catch (error) {
-      if (error.status === 401) clearManagerToken();
-      setAccount(null);
+      if (error.status === 401) {
+        clearManagerToken();
+        setAccount(null);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -56,7 +58,7 @@ export default function Manager() {
     setSelectedGroupId(null);
   }
 
-  if (loading) {
+  if (loading && !account) {
     return (
       <section>
         <h1>{t(lang, 'manager.title')}</h1>
@@ -112,14 +114,14 @@ export default function Manager() {
           key={activeGroup.id}
           group={activeGroup}
           lang={lang}
-          onGroupChanged={loadAccount}
+          onGroupChanged={() => loadAccount({ silent: true })}
         />
       )}
 
       <CreateGroupForm
         lang={lang}
         onCreated={async (created) => {
-          await loadAccount();
+          await loadAccount({ silent: true });
           setSelectedGroupId(created.id);
         }}
       />
@@ -150,7 +152,7 @@ function ManagerAuth({ lang, onSignedIn }) {
     try {
       const path = mode === 'register' ? '/api/manager/register' : '/api/manager/login';
       const body = mode === 'register' ? { name: name.trim(), email: email.trim(), password } : { email: email.trim(), password };
-      const result = await api.post(path, body);
+      const result = await managerApi.post(path, body);
       await onSignedIn(result);
     } catch (error) {
       setErrorText(error.message || t(lang, 'common.error'));
@@ -162,7 +164,7 @@ function ManagerAuth({ lang, onSignedIn }) {
     setBusy(true);
     setErrorText(null);
     try {
-      const result = await api.post('/api/demo/manager-login');
+      const result = await managerApi.post('/api/demo/manager-login');
       await onSignedIn(result);
     } catch (error) {
       setErrorText(error.message || t(lang, 'common.error'));

@@ -49,6 +49,7 @@ export async function withTransaction(fn) {
   const client = await getPool().connect();
   client._afterCommit = [];
   let committed = false;
+  let rollbackErr;
   try {
     await client.query('BEGIN');
     const result = await fn(client);
@@ -56,12 +57,16 @@ export async function withTransaction(fn) {
     committed = true;
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (rbErr) {
+      rollbackErr = rbErr;
+    }
     throw error;
   } finally {
     const callbacks = client._afterCommit;
     delete client._afterCommit;
-    client.release();
+    client.release(rollbackErr);
     if (committed && callbacks.length > 0) {
       for (const cb of callbacks) {
         Promise.resolve().then(cb).catch((err) => console.error('Post-commit hook failed:', err));

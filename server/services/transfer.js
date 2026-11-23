@@ -67,6 +67,8 @@ export async function consumeTransferCode(rawCode) {
     if (row.rotate_token) {
       token = crypto.randomUUID();
       await query('UPDATE users SET token = $1 WHERE id = $2', [token, user.id], client);
+      // Revoke Web Push endpoints bound to the lost device so private loan alerts stop immediately.
+      await query('DELETE FROM push_subscriptions WHERE user_id = $1', [user.id], client);
       afterCommit(client, () => disconnectUser(user.id));
     }
 

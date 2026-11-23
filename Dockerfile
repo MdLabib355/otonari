@@ -14,6 +14,7 @@ COPY server/package.json server/package-lock.json ./server/
 RUN npm ci --omit=dev --prefix server
 
 COPY server/ ./server/
+COPY client/src/i18n ./client/src/i18n
 COPY --from=client-builder /app/client/dist ./client/dist
 
 RUN mkdir -p /data/uploads && chown -R node:node /app /data

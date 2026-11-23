@@ -208,14 +208,15 @@ router.get('/loans/:id', requireUser, loanRole('participant'), async (req, res) 
 
 router.post('/loans/:id/accept', requireUser, loanRole('lender'), async (req, res) => {
   const outcome = await withTransaction(async (client) => {
+    // Lock item before loan to match DELETE /api/items/:id and POST /api/leave lock ordering (prevents AB/BA deadlocks).
+    const item = (
+      await query('SELECT status, removed_at FROM items WHERE id = $1 FOR UPDATE', [req.loan.item_id], client)
+    ).rows[0];
     const loan = (await query('SELECT * FROM loans WHERE id = $1 FOR UPDATE', [req.loan.id], client)).rows[0];
     if (loan.status !== 'pending') {
       return { status: 409, error: 'Only a waiting request can be accepted' };
     }
-    const item = (
-      await query('SELECT status, removed_at FROM items WHERE id = $1 FOR UPDATE', [loan.item_id], client)
-    ).rows[0];
-    if (item.status !== 'available' || item.removed_at) {
+    if (!item || item.status !== 'available' || item.removed_at) {
       return { status: 409, error: 'The item is not available' };
     }
 
@@ -258,6 +259,8 @@ router.post('/loans/:id/decline', requireUser, loanRole('lender'), async (req, r
 // can be cancelled by either participant, releasing the item back to 'available'.
 router.post('/loans/:id/cancel', requireUser, loanRole('participant'), async (req, res) => {
   const outcome = await withTransaction(async (client) => {
+    // Lock item before loan to prevent AB/BA deadlocks with item deletion/leave.
+    await query('SELECT id FROM items WHERE id = $1 FOR UPDATE', [req.loan.item_id], client);
     const loan = (await query('SELECT * FROM loans WHERE id = $1 FOR UPDATE', [req.loan.id], client)).rows[0];
     const iAmBorrower = loan.borrower_id === req.user.id;
 
@@ -287,7 +290,7 @@ router.post('/loans/:id/cancel', requireUser, loanRole('participant'), async (re
   res.json(await loanDetails(req.loan.id, req.user.id));
 });
 
-router.post('/loans/:id/handover', requireUser, receivePhoto, loanRole('lender'), async (req, res) => {
+router.post('/loans/:id/handover', requireUser, loanRole('lender'), quickReplyLimiter, receivePhoto, async (req, res) => {
   if (req.loan.status !== 'accepted' || req.loan.handover_photo) {
     return res.status(409).json({ error: 'The handover photo is taken once, after accepting' });
   }
@@ -332,7 +335,7 @@ router.post('/loans/:id/received', requireUser, loanRole('borrower'), async (req
   res.json(await loanDetails(req.loan.id, req.user.id));
 });
 
-router.post('/loans/:id/return', requireUser, receivePhoto, loanRole('borrower'), async (req, res) => {
+router.post('/loans/:id/return', requireUser, loanRole('borrower'), quickReplyLimiter, receivePhoto, async (req, res) => {
   if (req.loan.status !== 'active' || req.loan.return_photo) {
     return res.status(409).json({ error: 'The return photo is taken once, while borrowing' });
   }
@@ -427,9 +430,9 @@ router.post('/loans/:id/quick-reply', requireUser, quickReplyLimiter, loanRole('
 router.post(
   '/loans/:id/issue',
   requireUser,
+  loanRole('participant'),
   quickReplyLimiter,
   receiveOptionalPhoto,
-  loanRole('participant'),
   async (req, res) => {
     const issueKey = req.body?.issue_key;
     if (!ISSUE_KEYS.includes(issueKey)) {

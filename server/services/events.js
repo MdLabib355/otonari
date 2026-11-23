@@ -84,6 +84,21 @@ export function disconnectUser(userId) {
   }
 }
 
+export function disconnectAll() {
+  for (const userId of [...subscribers.keys()]) {
+    const set = subscribers.get(userId);
+    if (!set) continue;
+    for (const entry of [...set]) {
+      removeClient(userId, entry);
+      try {
+        entry.res.end();
+      } catch {
+        // Ignore already-closed stream
+      }
+    }
+  }
+}
+
 export function activeStreamCount(userId) {
   return subscribers.get(userId)?.size ?? 0;
 }
