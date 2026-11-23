@@ -1,20 +1,17 @@
-// Login check: "Authorization: Bearer <token>" → req.user (the full row from the users table).
-// There are no passwords: the random token from /api/join IS the identity.
-//
-// Add it to each route that needs a user:  router.get('/me', requireUser, (req, res) => ...)
-// (Not with router.use(requireUser): all routers are mounted at /api, so that would also
-// block the public routes in the routers mounted after it.)
+// Login check: "Authorization: Bearer <token>" -> req.user (full row from users).
+// No passwords: the random UUID token from /api/join IS the identity.
 
-import { db } from './db.js';
+import { query } from './db.js';
 
-export function requireUser(req, res, next) {
+export async function requireUser(req, res, next) {
   const header = req.get('Authorization') ?? '';
   const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : '';
-  const user = token
-    ? db.prepare('SELECT * FROM users WHERE token = ? AND left_at IS NULL').get(token)
-    : undefined;
+  if (!token) {
+    return res.status(401).json({ error: 'Not logged in' });
+  }
 
-  // No token, an unknown one (e.g. after `npm run seed`), or they left: the client should go to /join.
+  const result = await query('SELECT * FROM users WHERE token = $1 AND left_at IS NULL', [token]);
+  const user = result.rows[0];
   if (!user) {
     return res.status(401).json({ error: 'Not logged in' });
   }

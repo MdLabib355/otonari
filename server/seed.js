@@ -1,17 +1,15 @@
-// Resets the database and deletes the old photos. Run from the project root:
-//   npm run seed         fills it with the Nagasaki demo data (CLAUDE.md section 9)
-//   npm run seed:empty   only the two groups: for a demo with real people, who all join themselves
-// Safe to run any time, even while `npm run dev` is running: it always starts from empty tables.
-// Everyone gets a new token, so open browser windows will be sent back to the join page.
+// Resets the database and deletes old uploaded photos.
+// Run from project root:
+//   npm run seed         fills it with Nagasaki demo data
+//   npm run seed:empty   only the two groups (no demo users, items, or loans)
 
 import crypto from 'node:crypto';
-import { createMessage, db, resetDatabase } from './db.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+import { closeDatabase, createMessage, query, resetDatabase, withTransaction } from './db.js';
 import { deletePhotos } from './photos.js';
 
-const EMPTY = process.argv.includes('--empty'); // npm run seed:empty
-
-// Rahim is NOT here on purpose: he joins live during the demo.
-// Items are [item_key, max_days, spot], plus true for "trusted neighbors only".
 const GROUPS = [
   {
     code: 'SAKURA-2611',
@@ -22,7 +20,7 @@ const GROUPS = [
       {
         nickname: 'Sato',
         lang: 'ja',
-        elder: 1,
+        elder: true,
         items: [
           ['futon_dryer', 3, 'entrance'],
           ['takoyaki_maker', 2, 'entrance'],
@@ -32,7 +30,7 @@ const GROUPS = [
       {
         nickname: 'Tanaka',
         lang: 'ja',
-        elder: 0,
+        elder: false,
         items: [
           ['projector', 2, 'mailbox', true],
           ['power_drill', 1, 'mailbox'],
@@ -42,7 +40,7 @@ const GROUPS = [
       {
         nickname: 'Yamamoto',
         lang: 'ja',
-        elder: 0,
+        elder: false,
         items: [
           ['hot_plate', 2, 'entrance'],
           ['donabe', 2, 'entrance'],
@@ -51,7 +49,7 @@ const GROUPS = [
       {
         nickname: 'Maria',
         lang: 'en',
-        elder: 0,
+        elder: false,
         items: [
           ['suitcase', 7, 'entrance'],
           ['camping_tent', 3, 'bike_parking'],
@@ -60,7 +58,7 @@ const GROUPS = [
       {
         nickname: 'Ayesha',
         lang: 'bn',
-        elder: 0,
+        elder: false,
         items: [
           ['bluetooth_speaker', 2, 'mailbox'],
           ['rice_cooker_large', 2, 'entrance'],
@@ -77,7 +75,7 @@ const GROUPS = [
       {
         nickname: 'Inoue',
         lang: 'ja',
-        elder: 1,
+        elder: true,
         items: [
           ['lawn_mower', 1, 'notice_board'],
           ['hedge_trimmer', 1, 'notice_board'],
@@ -86,74 +84,81 @@ const GROUPS = [
       {
         nickname: 'Kobayashi',
         lang: 'ja',
-        elder: 0,
+        elder: false,
         items: [['high_pressure_washer', 1, 'notice_board']],
       },
     ],
   },
 ];
 
-// ISO time (UTC) for "N days ago at hh:mm in Japan". Japan is always UTC+9 (no summer time).
+// ISO time (UTC) for "N days ago at hh:mm in Japan" (UTC+9, no daylight saving time).
 function japanTime(daysAgo, hour, minute = 0) {
-  const japanNow = new Date(Date.now() + 9 * 60 * 60 * 1000); // its UTC fields show Japan's date
+  const japanNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const utc = Date.UTC(
     japanNow.getUTCFullYear(),
     japanNow.getUTCMonth(),
     japanNow.getUTCDate() - daysAgo,
-    hour - 9, // hh:mm in Japan is (hh - 9):mm in UTC (Date.UTC handles going below 0)
+    hour - 9,
     minute
   );
   return new Date(utc).toISOString();
 }
 
-function insertGroupsUsersAndItems() {
-  const userIds = {}; // nickname → id, needed for the loan below
+async function insertGroupsUsersAndItems(empty, client) {
+  const userIds = {};
 
   for (const group of GROUPS) {
-    const groupId = db
-      .prepare('INSERT INTO groups (code, name, type, city) VALUES (?, ?, ?, ?)')
-      .run(group.code, group.name, group.type, group.city).lastInsertRowid;
-    if (EMPTY) continue; // nobody has joined yet
+    const groupRes = await query(
+      'INSERT INTO groups (code, name, type, city) VALUES ($1, $2, $3, $4) RETURNING id',
+      [group.code, group.name, group.type, group.city],
+      client
+    );
+    const groupId = groupRes.rows[0].id;
+    if (empty) continue;
 
     for (const user of group.users) {
-      // They joined a month ago (the returned loan below is from last week).
-      const userId = db
-        .prepare(
-          `INSERT INTO users (group_id, nickname, lang, elder_mode, token, is_demo, created_at)
-           VALUES (?, ?, ?, ?, ?, 1, datetime('now', '-30 days'))`
-        )
-        .run(groupId, user.nickname, user.lang, user.elder, crypto.randomUUID()).lastInsertRowid;
+      const userRes = await query(
+        `INSERT INTO users (group_id, nickname, lang, elder_mode, token, is_demo, created_at)
+         VALUES ($1, $2, $3, $4, $5, TRUE, NOW() - INTERVAL '30 days')
+         RETURNING id`,
+        [groupId, user.nickname, user.lang, user.elder, crypto.randomUUID()],
+        client
+      );
+      const userId = userRes.rows[0].id;
       userIds[user.nickname] = userId;
 
       for (const [itemKey, maxDays, spot, trustedOnly] of user.items) {
-        db.prepare(
-          'INSERT INTO items (owner_id, group_id, item_key, max_days, spot, trusted_only) VALUES (?, ?, ?, ?, ?, ?)'
-        ).run(userId, groupId, itemKey, maxDays, spot, trustedOnly ? 1 : 0);
+        await query(
+          `INSERT INTO items (owner_id, group_id, item_key, max_days, spot, trusted_only)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userId, groupId, itemKey, maxDays, spot, Boolean(trustedOnly)],
+          client
+        );
       }
     }
   }
   return userIds;
 }
 
-// One finished loan, so the history isn't empty: Maria borrowed Tanaka's projector last week
-// (evening handover, 2 days). The seed has no photo files, so there is no 'handoverPhoto' message.
-function insertReturnedLoan(mariaId, tanakaId) {
-  const projector = db
-    .prepare("SELECT * FROM items WHERE owner_id = ? AND item_key = 'projector'")
-    .get(tanakaId);
+async function insertReturnedLoan(mariaId, tanakaId, client) {
+  const projectorRes = await query(
+    "SELECT * FROM items WHERE owner_id = $1 AND item_key = 'projector' LIMIT 1",
+    [tanakaId],
+    client
+  );
+  const projector = projectorRes.rows[0];
   const requestedAt = japanTime(9, 19, 30);
-  const returnedAt = japanTime(6, 17, 55); // five minutes before it was due: on time
+  const returnedAt = japanTime(6, 17, 55); // 5 minutes before due: on time
 
-  const loanId = db
-    .prepare(
-      `INSERT INTO loans (item_id, borrower_id, lender_id, start_at, end_at, status, returned_at, created_at)
-       VALUES (?, ?, ?, ?, ?, 'returned', ?, datetime(?))`
-    )
-    .run(projector.id, mariaId, tanakaId, japanTime(8, 18), japanTime(6, 18), returnedAt, requestedAt)
-    .lastInsertRowid;
-  const loan = db.prepare('SELECT * FROM loans WHERE id = ?').get(loanId);
+  const loanRes = await query(
+    `INSERT INTO loans (item_id, borrower_id, lender_id, start_at, end_at, status, returned_at, created_at)
+     VALUES ($1, $2, $3, $4, $5, 'returned', $6, $7)
+     RETURNING *`,
+    [projector.id, mariaId, tanakaId, japanTime(8, 18), japanTime(6, 18), returnedAt, requestedAt],
+    client
+  );
+  const loan = loanRes.rows[0];
 
-  // [from, to, phrase_key, when]
   const conversation = [
     [mariaId, tanakaId, 'request', requestedAt],
     [tanakaId, mariaId, 'accept', japanTime(9, 20, 5)],
@@ -163,31 +168,46 @@ function insertReturnedLoan(mariaId, tanakaId) {
     [mariaId, tanakaId, 'qr.thanks', japanTime(6, 18, 7)],
   ];
   for (const [fromId, toId, phraseKey, when] of conversation) {
-    const messageId = createMessage(loan, fromId, toId, phraseKey);
-    // Old messages: put them at their real time and mark them read, so no "new message" banner.
-    db.prepare('UPDATE messages SET created_at = datetime(?), read_at = datetime(?) WHERE id = ?')
-      .run(when, when, messageId);
+    const messageId = await createMessage(loan, fromId, toId, phraseKey, client);
+    await query('UPDATE messages SET created_at = $1, read_at = $1 WHERE id = $2', [when, messageId], client);
   }
 }
 
-// All or nothing: if anything fails, the database is left as it was.
-const seed = db.transaction(() => {
-  resetDatabase();
-  const userIds = insertGroupsUsersAndItems();
-  if (!EMPTY) insertReturnedLoan(userIds.Maria, userIds.Tanaka);
-});
-seed();
-deletePhotos(); // they belonged to the old loans
+export async function seedDatabase({ empty = false, quiet = false } = {}) {
+  await resetDatabase();
+  await withTransaction(async (client) => {
+    const userIds = await insertGroupsUsersAndItems(empty, client);
+    if (!empty) {
+      await insertReturnedLoan(userIds.Maria, userIds.Tanaka, client);
+    }
+  });
+  await deletePhotos();
 
-// Short summary (the user ids are handy for POST /api/demo/login).
-console.log(EMPTY ? 'Seeded two empty groups:' : 'Seeded the Nagasaki demo data:');
-for (const group of db.prepare('SELECT * FROM groups ORDER BY id').all()) {
-  const members = db.prepare('SELECT id, nickname FROM users WHERE group_id = ? ORDER BY id').all(group.id);
-  const items = db.prepare('SELECT COUNT(*) AS count FROM items WHERE group_id = ?').get(group.id);
-  const names = members.map((member) => `${member.nickname} #${member.id}`).join(', ');
-  console.log(`  ${group.name} (${group.code}): ${names || 'nobody yet'} | ${items.count} items`);
+  if (quiet) return;
+
+  console.log(empty ? 'Seeded two empty groups:' : 'Seeded the Nagasaki demo data:');
+  const groupsRes = await query('SELECT * FROM groups ORDER BY id');
+  for (const group of groupsRes.rows) {
+    const membersRes = await query('SELECT id, nickname FROM users WHERE group_id = $1 ORDER BY id', [group.id]);
+    const itemsRes = await query('SELECT COUNT(*)::int AS count FROM items WHERE group_id = $1', [group.id]);
+    const names = membersRes.rows.map((m) => `${m.nickname} #${m.id}`).join(', ');
+    console.log(`  ${group.name} (${group.code}): ${names || 'nobody yet'} | ${itemsRes.rows[0].count} items`);
+  }
+  if (!empty) {
+    const messagesRes = await query('SELECT COUNT(*)::int AS count FROM messages');
+    console.log(
+      `  1 returned loan (Maria borrowed Tanaka's projector) with ${messagesRes.rows[0].count} messages`
+    );
+  }
 }
-if (!EMPTY) {
-  const messages = db.prepare('SELECT COUNT(*) AS count FROM messages').get();
-  console.log(`  1 returned loan (Maria borrowed Tanaka's projector) with ${messages.count} messages`);
+
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+  dotenv.config({ path: path.join(import.meta.dirname, '.env'), quiet: true });
+  const empty = process.argv.includes('--empty');
+  try {
+    await seedDatabase({ empty });
+  } finally {
+    await closeDatabase();
+  }
 }

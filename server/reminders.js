@@ -1,44 +1,62 @@
-// Automatic polite reminders, so the lender never has to ask (CLAUDE.md section 6).
+// Automatic polite reminders, so the lender never has to chase an overdue item.
 // Every 30 seconds, for each active loan without a return photo:
-//   24 hours or less to go  → 'sys.dueSoon' to the borrower
-//   overdue                 → 'sys.overdue' to the borrower, and 'sys.overdueLender' ("we reminded
-//                             them for you") to the lender
-// reminded_soon_at / reminded_overdue_at remember what was sent, so nothing is ever sent twice,
-// not even after a server restart.
+//   <= 24 hours left (not overdue) -> 'sys.dueSoon' to borrower
+//   overdue                        -> 'sys.overdue' to borrower, and 'sys.overdueLender' to lender
+// reminded_soon_at / reminded_overdue_at guarantee idempotency across server restarts.
 
-import { createMessage, db } from './db.js';
+import { createMessage, query, withTransaction } from './db.js';
 
 const CHECK_EVERY_MS = 30_000;
-const DAY = 24 * 60 * 60 * 1000;
-const FROM_SYSTEM = null; // reminders have no sender
+const DAY_MS = 24 * 60 * 60 * 1000;
+const FROM_SYSTEM = null;
 
-function remind(loan) {
+let intervalId = null;
+
+async function remindLoan(loan, client) {
   const timeLeft = Date.parse(loan.end_at) - Date.now();
 
-  if (timeLeft > 0 && timeLeft <= DAY && !loan.reminded_soon_at) {
-    db.prepare("UPDATE loans SET reminded_soon_at = datetime('now') WHERE id = ?").run(loan.id);
-    createMessage(loan, FROM_SYSTEM, loan.borrower_id, 'sys.dueSoon');
+  if (timeLeft > 0 && timeLeft <= DAY_MS && !loan.reminded_soon_at) {
+    await query('UPDATE loans SET reminded_soon_at = NOW() WHERE id = $1', [loan.id], client);
+    await createMessage(loan, FROM_SYSTEM, loan.borrower_id, 'sys.dueSoon', client);
   }
   if (timeLeft < 0 && !loan.reminded_overdue_at) {
-    db.prepare("UPDATE loans SET reminded_overdue_at = datetime('now') WHERE id = ?").run(loan.id);
-    createMessage(loan, FROM_SYSTEM, loan.borrower_id, 'sys.overdue');
-    createMessage(loan, FROM_SYSTEM, loan.lender_id, 'sys.overdueLender');
+    await query('UPDATE loans SET reminded_overdue_at = NOW() WHERE id = $1', [loan.id], client);
+    await createMessage(loan, FROM_SYSTEM, loan.borrower_id, 'sys.overdue', client);
+    await createMessage(loan, FROM_SYSTEM, loan.lender_id, 'sys.overdueLender', client);
   }
 }
 
-// One transaction: a reminder and its "already sent" time are saved together, or not at all.
-// With a return photo the borrower has done their part (only "I got it back" is missing): no reminders.
-export const checkReminders = db.transaction(() => {
-  db.prepare("SELECT * FROM loans WHERE status = 'active' AND return_photo IS NULL").all().forEach(remind);
-});
+export async function checkReminders() {
+  return withTransaction(async (client) => {
+    const res = await query(
+      `SELECT * FROM loans
+       WHERE status = 'active' AND return_photo IS NULL
+       FOR UPDATE SKIP LOCKED`,
+      [],
+      client
+    );
+    for (const loan of res.rows) {
+      await remindLoan(loan, client);
+    }
+  });
+}
 
 export function startReminders() {
-  setInterval(() => {
+  stopReminders();
+  const run = async () => {
     try {
-      checkReminders();
+      await checkReminders();
     } catch (error) {
-      // E.g. the database is busy for a moment: don't stop the server, the next check tries again.
       console.error('Reminder check failed:', error);
     }
-  }, CHECK_EVERY_MS);
+  };
+  intervalId = setInterval(run, CHECK_EVERY_MS);
+  intervalId.unref?.();
+}
+
+export function stopReminders() {
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
 }
