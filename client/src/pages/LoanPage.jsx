@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import PhotoCapture from '../components/PhotoCapture.jsx';
@@ -48,6 +48,12 @@ function Loan({ loanId }) {
     loadLoan();
     markRead(unreadIds);
   }, [unreadIds.join(',')]);
+
+  // The newest message comes into view: when the page opens, and whenever another one arrives.
+  const messageList = useRef(null);
+  useEffect(() => {
+    messageList.current?.lastElementChild?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [details?.messages.length]);
 
   // Every button on this page: send the action, then show the updated loan from the answer.
   async function act(action, body) {
@@ -100,7 +106,7 @@ function Loan({ loanId }) {
         <p className="notice">{t(lang, 'borrow.sent', { name: displayName(lang, state.sentTo) })}</p>
       )}
 
-      <ol className="messages">
+      <ol className="messages" ref={messageList}>
         {messages.map((message) => (
           <PhraseBubble key={message.id} message={message} lang={lang} myId={user.id} other={other} />
         ))}
@@ -177,16 +183,19 @@ function PendingActions({ loanId, iAmLender, trust, lang, busy, act }) {
   );
 }
 
-// Only on the very first request a lender ever gets: don't worry about the language.
+// Only on the first request a lender ever gets from someone who uses another language: don't worry.
 function FirstRequestTip({ loanId, lang }) {
   const [isFirst, setIsFirst] = useState(false);
 
   useEffect(() => {
     api
       .get('/api/loans')
-      .then(({ lending }) => setIsFirst(lending.at(-1)?.id === loanId)) // newest first, so the last is the first
+      .then(({ lending }) => {
+        const otherLanguage = lending.filter((loan) => loan.other_lang !== lang);
+        setIsFirst(otherLanguage.at(-1)?.id === loanId); // newest first, so the last one is the first
+      })
       .catch(() => setIsFirst(false));
-  }, [loanId]);
+  }, [loanId, lang]);
 
   return isFirst && <TipCard lang={lang} tipKey="forLender" />;
 }

@@ -68,6 +68,11 @@ export default function App() {
     document.documentElement.lang = lang === 'ja-easy' ? 'ja' : lang;
   }, [me, lang]);
 
+  // Every page starts at the top. (Otherwise it opens where the previous page was scrolled to.)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
   // After /api/join or the demo login: remember the token and who we are.
   function login({ token, user, group }) {
     saveToken(token);

@@ -85,7 +85,13 @@ export default function PhotoCapture({ lang, busy, onSend }) {
       {refused && <p className="error">{t(lang, 'loan.photoRefused')}</p>}
       {photo && (
         <>
-          <img className="photo-preview" src={photo.url} alt="" />
+          {/* Scrolls to the middle of the screen, so the photo and "Send photo" below it are both visible. */}
+          <img
+            className="photo-preview"
+            src={photo.url}
+            alt=""
+            onLoad={(event) => event.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+          />
           <button type="button" className="button-primary" disabled={busy} onClick={() => onSend(photo.file)}>
             {t(lang, 'loan.sendPhoto')}
           </button>

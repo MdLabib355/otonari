@@ -842,7 +842,9 @@ section > h1,
 }
 
 .photo-preview {
-  width: 100%;
+  align-self: center;
+  max-width: 100%;
+  max-height: 45vh; /* leaves room for "Send photo" */
   border-radius: var(--radius);
 }
 
@@ -1149,6 +1151,22 @@ body.elder .banner-buttons {
 body.elder .banner-buttons > * {
   flex: auto;
   justify-content: center;
+}
+
+/* ---------- Very narrow phones (e.g. 320 px) ---------- */
+
+/* A long badge or word continues on the next line instead of sticking out of its card. */
+@media (max-width: 359px) {
+  .item-card,
+  .catalog-item,
+  .loan-card,
+  .item-header {
+    overflow-wrap: anywhere;
+  }
+
+  .badge {
+    white-space: normal;
+  }
 }
 
 /* ---------- Printing: the poster on one A4 page ---------- */

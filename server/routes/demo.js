@@ -60,11 +60,12 @@ router.post('/demo/fast-forward/:loanId', (req, res) => {
   // (At least a day: this also repairs a loan whose start was left behind by an older fast-forward.)
   const length = Math.max(Date.parse(loan.end_at) - Date.parse(loan.start_at), 24 * HOUR);
   const end = Date.now() + DUE_IN[to];
-  db.prepare('UPDATE loans SET start_at = ?, end_at = ? WHERE id = ?').run(
-    new Date(end - length).toISOString(),
-    new Date(end).toISOString(),
-    loan.id
-  );
+  const startAt = new Date(end - length).toISOString();
+  const endAt = new Date(end).toISOString();
+  db.prepare('UPDATE loans SET start_at = ?, end_at = ? WHERE id = ?').run(startAt, endAt, loan.id);
+  // The dates in its messages move too, or the reminder would contradict the request above it.
+  db.prepare("UPDATE messages SET params = json_set(params, '$.start', ?, '$.end', ?) WHERE loan_id = ?")
+    .run(startAt, endAt, loan.id);
   checkReminders(); // right now, instead of at the next 30-second check
   res.status(204).end();
 });

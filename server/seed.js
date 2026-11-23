@@ -1,10 +1,14 @@
-// Resets the database and fills it with the Nagasaki demo data (CLAUDE.md section 9).
-// Run from the project root:  npm run seed
+// Resets the database and deletes the old photos. Run from the project root:
+//   npm run seed         fills it with the Nagasaki demo data (CLAUDE.md section 9)
+//   npm run seed:empty   only the two groups: for a demo with real people, who all join themselves
 // Safe to run any time, even while `npm run dev` is running: it always starts from empty tables.
 // Everyone gets a new token, so open browser windows will be sent back to the join page.
 
 import crypto from 'node:crypto';
 import { createMessage, db, resetDatabase } from './db.js';
+import { deletePhotos } from './photos.js';
+
+const EMPTY = process.argv.includes('--empty'); // npm run seed:empty
 
 // Rahim is NOT here on purpose: he joins live during the demo.
 // Items are [item_key, max_days, spot], plus true for "trusted neighbors only".
@@ -109,6 +113,7 @@ function insertGroupsUsersAndItems() {
     const groupId = db
       .prepare('INSERT INTO groups (code, name, type, city) VALUES (?, ?, ?, ?)')
       .run(group.code, group.name, group.type, group.city).lastInsertRowid;
+    if (EMPTY) continue; // nobody has joined yet
 
     for (const user of group.users) {
       // They joined a month ago (the returned loan below is from last week).
@@ -169,17 +174,20 @@ function insertReturnedLoan(mariaId, tanakaId) {
 const seed = db.transaction(() => {
   resetDatabase();
   const userIds = insertGroupsUsersAndItems();
-  insertReturnedLoan(userIds.Maria, userIds.Tanaka);
+  if (!EMPTY) insertReturnedLoan(userIds.Maria, userIds.Tanaka);
 });
 seed();
+deletePhotos(); // they belonged to the old loans
 
 // Short summary (the user ids are handy for POST /api/demo/login).
-console.log('Seeded the Nagasaki demo data:');
+console.log(EMPTY ? 'Seeded two empty groups:' : 'Seeded the Nagasaki demo data:');
 for (const group of db.prepare('SELECT * FROM groups ORDER BY id').all()) {
   const members = db.prepare('SELECT id, nickname FROM users WHERE group_id = ? ORDER BY id').all(group.id);
   const items = db.prepare('SELECT COUNT(*) AS count FROM items WHERE group_id = ?').get(group.id);
   const names = members.map((member) => `${member.nickname} #${member.id}`).join(', ');
-  console.log(`  ${group.name} (${group.code}): ${names} | ${items.count} items`);
+  console.log(`  ${group.name} (${group.code}): ${names || 'nobody yet'} | ${items.count} items`);
 }
-const messages = db.prepare('SELECT COUNT(*) AS count FROM messages').get();
-console.log(`  1 returned loan (Maria borrowed Tanaka's projector) with ${messages.count} messages`);
+if (!EMPTY) {
+  const messages = db.prepare('SELECT COUNT(*) AS count FROM messages').get();
+  console.log(`  1 returned loan (Maria borrowed Tanaka's projector) with ${messages.count} messages`);
+}

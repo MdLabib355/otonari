@@ -126,8 +126,9 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 otonari/
 ├── CLAUDE.md
 ├── README.md
-├── package.json            # root: "dev", "seed", "build", "start" scripts (concurrently)
+├── package.json            # root: "dev", "seed", "seed:empty", "build", "start" scripts (concurrently)
 ├── .gitignore              # node_modules, .env, server/otonari.db, server/uploads/*, client/dist
+├── docs/screenshots/       # the pictures in README.md
 ├── client/
 │   ├── index.html
 │   ├── vite.config.js      # react plugin, PWA plugin, proxy /api and /uploads → :3001
@@ -173,6 +174,7 @@ otonari/
     ├── routes/
     │   ├── groups.js  items.js  loans.js  inbox.js  demo.js
     ├── uploads/.gitkeep
+    ├── .npmrc              # ignore-scripts: better-sqlite3 has ready-made binaries, npm must not compile it
     └── .env.example        # PORT=3001  DEMO_MODE=true
 ```
 
@@ -303,7 +305,7 @@ and `left_at` is set: the token no longer works, and they are no longer counted 
 | `POST /api/inbox/read` `{ids}` | user | mark read | – |
 | `GET /api/demo/users` | DEMO_MODE only | seeded users (for "continue as") | – |
 | `POST /api/demo/login` `{user_id}` | DEMO_MODE only | returns that user's token | – |
-| `POST /api/demo/fast-forward/:loanId` `{to:'dueSoon'\|'overdue'}` | DEMO_MODE only | moves `end_at` to now+12h or now−1h and `start_at` along with it (same loan length), then runs the reminder check immediately | reminders |
+| `POST /api/demo/fast-forward/:loanId` `{to:'dueSoon'\|'overdue'}` | DEMO_MODE only | moves `end_at` to now+12h or now−1h and `start_at` along with it (same loan length), also in that loan's messages, then runs the reminder check immediately | reminders |
 
 ### Message params (keep it uniform)
 Every message the server creates for a loan uses the same params object, so any phrase can use any
@@ -388,6 +390,9 @@ Kobayashi (ja) high_pressure_washer (1, notice_board).
 All seeded users joined 30 days ago (`created_at`).
 
 Also seed one already-returned loan (Maria borrowed Tanaka's projector last week) so history isn't empty.
+
+`npm run seed:empty` resets the database and creates only the two groups (no users, items or loans), for a
+demo with real people. Both seeds also delete all photos in `server/uploads/` (`.gitkeep` stays).
 
 ---
 

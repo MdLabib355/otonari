@@ -40,9 +40,12 @@ function useVoice(speech) {
   return voice;
 }
 
-// Exactly 'bn-BD' if possible, otherwise any Bengali voice (e.g. 'bn-IN'). Android writes 'bn_BD'.
+// Voices with "Natural" or "Online" in their name sound best, so they come first; then any voice for
+// the language. Among those exactly 'bn-BD' if possible, otherwise e.g. 'bn-IN'. Android writes 'bn_BD'.
 function findVoice(speech) {
   const voices = window.speechSynthesis?.getVoices() ?? [];
   const sameLanguage = voices.filter((voice) => voice.lang.split(/[-_]/)[0] === speech.split('-')[0]);
-  return sameLanguage.find((voice) => voice.lang.replace('_', '-') === speech) ?? sameLanguage[0];
+  const natural = sameLanguage.filter((voice) => /Natural|Online/.test(voice.name));
+  const best = natural.length > 0 ? natural : sameLanguage;
+  return best.find((voice) => voice.lang.replace('_', '-') === speech) ?? best[0];
 }

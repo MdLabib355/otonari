@@ -9,6 +9,7 @@
     "postinstall": "npm install --prefix client && npm install --prefix server",
     "dev": "concurrently --names server,client --prefix-colors blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "seed": "node server/seed.js",
+    "seed:empty": "node server/seed.js --empty",
     "build": "npm run build --prefix client",
     "start": "node server/index.js"
   },

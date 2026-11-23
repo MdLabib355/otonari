@@ -42,3 +42,10 @@ export function savePhoto(file) {
   fs.writeFileSync(path.join(uploadsDir, name), file.buffer);
   return `/uploads/${name}`;
 }
+
+// Deletes all photos (used by seed.js). .gitkeep stays: it keeps the empty folder in git.
+export function deletePhotos() {
+  for (const name of fs.readdirSync(uploadsDir)) {
+    if (name !== '.gitkeep') fs.unlinkSync(path.join(uploadsDir, name));
+  }
+}
