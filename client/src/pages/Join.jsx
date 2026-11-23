@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import ChipGroup from '../components/ChipGroup.jsx';
+import NewGroup from '../components/NewGroup.jsx';
 import { LANGUAGES } from '../data/catalog.js';
 import { meta, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
@@ -160,6 +161,8 @@ export default function Join() {
           {t(lang, 'join.button')}
         </button>
       </form>
+
+      <NewGroup lang={lang} />
 
       {visibleDemoUsers.length > 0 && (
         <section className="demo">

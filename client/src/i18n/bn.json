@@ -16,6 +16,17 @@
     "join.button": "যোগ দিন",
     "join.demoTitle": "ডেমো: একজন প্রতিবেশী হিসেবে চালিয়ে যান",
 
+    "newGroup.link": "আপনার ভবন বা এলাকার জন্য Otonari চালু করুন",
+    "newGroup.hint": "ভবনের ম্যানেজার বা এলাকার সমিতির প্রধানের জন্য।",
+    "newGroup.name": "ভবন বা এলাকার নাম",
+    "newGroup.type": "ধরন",
+    "newGroup.city": "শহর",
+    "newGroup.create": "গ্রুপ তৈরি করুন",
+    "newGroup.duplicate": "{city}-এ {name} নামে একটি গ্রুপ আগে থেকেই আছে। নতুন গ্রুপ তৈরি করার আগে নোটিশ বোর্ডে সেটির পোস্টার খুঁজে দেখুন।",
+    "newGroup.createAnyway": "তবুও তৈরি করুন",
+    "newGroup.done": "{group} তৈরি হয়েছে। এর যোগদান কোড:",
+    "newGroup.poster": "পোস্টার খুলুন",
+
     "groupType.building": "ভবন",
     "groupType.block": "এলাকা",
 

@@ -46,5 +46,7 @@ export const QUICK_REPLY_KEYS = ['qr.onMyWay', 'qr.atSpot', 'qr.late', 'qr.noPro
 
 export const LANGUAGES = ['en', 'ja', 'ja-easy', 'bn'];
 
+export const GROUP_TYPES = ['building', 'block'];
+
 // Loan lengths in days (an item's max_days must be one of these).
 export const DURATIONS = [1, 2, 3, 7];

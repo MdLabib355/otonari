@@ -16,6 +16,17 @@
     "join.button": "参加する",
     "join.demoTitle": "デモ:住民として続ける",
 
+    "newGroup.link": "建物・町内でおとなりを始める",
+    "newGroup.hint": "建物の管理人の方、町内会・自治会の役員の方向けです。",
+    "newGroup.name": "建物・町内の名前",
+    "newGroup.type": "種類",
+    "newGroup.city": "市区町村",
+    "newGroup.create": "グループを作成する",
+    "newGroup.duplicate": "{city}には「{name}」というグループがすでにあります。新しく作成する前に、掲示板のポスターをご確認ください。",
+    "newGroup.createAnyway": "それでも作成する",
+    "newGroup.done": "「{group}」を作成しました。参加コードは次のとおりです。",
+    "newGroup.poster": "ポスターを開く",
+
     "groupType.building": "建物",
     "groupType.block": "町内",
 

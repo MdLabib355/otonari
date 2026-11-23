@@ -266,6 +266,35 @@ h2 {
   font-size: 0.85em;
 }
 
+/* ---------- Start a new neighborhood (on the join page) ---------- */
+
+.new-group {
+  margin-top: 24px;
+}
+
+/* Looks like a link, but is as easy to tap as a button. */
+.text-button {
+  min-height: var(--tap);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* A join code in big letters */
+.big-code {
+  margin: 12px 0 20px;
+  color: var(--accent);
+  font-size: 2.2em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+  text-align: center;
+}
+
 /* ---------- Shared: text styles, buttons, badges ---------- */
 
 .subtitle {
@@ -282,6 +311,19 @@ h2 {
   padding: 24px 0;
   color: var(--muted);
   text-align: center;
+}
+
+/* Texts with a nickname or a group name in them: a very long one breaks instead of sticking out. */
+section > h1,
+.subtitle,
+.group-preview,
+.new-group,
+.demo-user,
+.muted,
+.notice,
+.bubble,
+.banner-text {
+  overflow-wrap: anywhere;
 }
 
 .section-title {
@@ -786,8 +828,154 @@ h2 {
   cursor: pointer;
 }
 
+/* ---------- Settings ---------- */
+
+/* The whole row is the tap target, not only the small switch. */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: var(--tap);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.switch-row .hint {
+  display: block;
+  margin-top: 2px;
+}
+
+/* A checkbox that looks like a switch. Sizes are in em, so it grows with elder mode. */
+.switch {
+  position: relative;
+  flex: none;
+  width: 3.2em;
+  height: 1.9em;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--muted);
+  appearance: none;
+  cursor: pointer;
+}
+
+.switch::before {
+  position: absolute;
+  top: 0.2em;
+  left: 0.2em;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: #fff;
+  content: "";
+}
+
+.switch:checked {
+  background: var(--accent);
+}
+
+.switch:checked::before {
+  left: 1.5em;
+}
+
+/* A link that looks like a button */
+.button-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
+}
+
+.button-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
+}
+
 /* Temporary: marks pages that are not built yet. */
 .placeholder {
   color: var(--muted);
   font-family: ui-monospace, Consolas, monospace;
+}
+
+/* ---------- Elder mode (<body class="elder">) ---------- */
+
+/* Text sizes are in em and tap targets use --tap, so these two values scale almost everything. */
+body.elder {
+  --tap: 64px;
+  font-size: 22px;
+  overflow-wrap: anywhere; /* safety net: on a very narrow phone a long word breaks, but never sticks out */
+}
+
+/* More space: easier to read, and neighboring buttons are not tapped by accident. */
+body.elder .page {
+  padding: 24px 16px;
+}
+
+body.elder .field,
+body.elder .step,
+body.elder .quick-replies {
+  margin-bottom: 36px;
+}
+
+body.elder .label {
+  margin-bottom: 12px;
+}
+
+body.elder .chip-group,
+body.elder .chip-stack,
+body.elder .actions,
+body.elder .item-grid,
+body.elder .catalog-grid,
+body.elder .messages,
+body.elder .demo-buttons {
+  gap: 16px;
+}
+
+body.elder .my-item,
+body.elder .loan-card {
+  margin-bottom: 16px;
+  padding: 18px;
+}
+
+body.elder .bubble {
+  padding: 14px 18px;
+}
+
+body.elder .chip {
+  padding: 10px 20px;
+}
+
+/* Big words need more width: fewer columns, and buttons below the text instead of beside it. */
+body.elder .item-grid {
+  grid-template-columns: repeat(auto-fill, minmax(8em, 1fr));
+}
+
+body.elder .catalog-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.elder .item-header,
+body.elder .my-item,
+body.elder .banner {
+  flex-wrap: wrap;
+}
+
+body.elder .my-item-text {
+  flex-basis: 8em; /* if the badge doesn't fit beside that, it moves to the next line */
+}
+
+body.elder .my-item .button-secondary,
+body.elder .banner-open {
+  justify-content: center;
+  width: 100%;
+}
+
+body.elder .badge {
+  white-space: normal;
 }

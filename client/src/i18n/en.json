@@ -16,6 +16,17 @@
     "join.button": "Join",
     "join.demoTitle": "Demo: continue as a neighbor",
 
+    "newGroup.link": "Set up Otonari for your building or block",
+    "newGroup.hint": "For building managers and neighborhood association leaders.",
+    "newGroup.name": "Name of the building or block",
+    "newGroup.type": "Type",
+    "newGroup.city": "City",
+    "newGroup.create": "Create the group",
+    "newGroup.duplicate": "A group called {name} already exists in {city}. Look for its poster on your notice board before creating a new one.",
+    "newGroup.createAnyway": "Create anyway",
+    "newGroup.done": "{group} is ready. Its join code:",
+    "newGroup.poster": "Open the poster",
+
     "groupType.building": "Building",
     "groupType.block": "Block",
 

@@ -86,8 +86,8 @@ export default function App() {
     page = <p>{t(lang, 'common.loading')}</p>;
   } else if (loadFailed) {
     page = <p className="error">{t(lang, 'common.error')}</p>;
-  } else if (!me && pathname !== '/join') {
-    // No token yet (not a member): every page except /join sends you to /join.
+  } else if (!me && pathname !== '/join' && pathname !== '/poster') {
+    // No token yet (not a member): only the join page, and a poster opened by its code.
     page = <Navigate to="/join" replace />;
   } else {
     page = (

@@ -1,16 +1,21 @@
-// Joining a neighborhood group, and reading / changing "me".
-//   GET   /api/groups/by-code/:code   anyone   group preview for the join screen
-//   POST  /api/join                   anyone   { code, nickname, lang } → { token, user, group }
+// Starting and joining a neighborhood group, and reading / changing "me".
+//   GET   /api/groups/by-code/:code   anyone   group preview for the join screen and the poster
+//   POST  /api/groups                 anyone   { name, type, city, create_anyway? } → the new group with
+//                                              its join code (the creator does NOT become a member)
+//   POST  /api/join                  anyone   { code, nickname, lang } → { token, user, group }
 //   GET   /api/me                     user     → { user, group }
 //   PATCH /api/me                     user     { lang?, elder_mode? } → { user, group }
 
 import crypto from 'node:crypto';
 import express from 'express';
-import { LANGUAGES } from '../allowedKeys.js';
+import { GROUP_TYPES, LANGUAGES } from '../allowedKeys.js';
 import { requireUser } from '../auth.js';
 import { db, getMe } from '../db.js';
 
 const router = express.Router();
+
+// Join codes have no I, L, O, 0 or 1: those are easily mixed up when typing a code from a poster.
+const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 // Codes are printed in capitals on the poster; accept "sakura-2611" too.
 function findGroupByCode(code) {
@@ -25,6 +30,59 @@ router.get('/groups/by-code/:code', (req, res) => {
   }
   const { count } = db.prepare('SELECT COUNT(*) AS count FROM users WHERE group_id = ?').get(group.id);
   res.json({ name: group.name, type: group.type, city: group.city, memberCount: count });
+});
+
+// A random join code like 'K7PW-3XQD' that no other group has.
+function newJoinCode() {
+  let code;
+  do {
+    let chars = '';
+    while (chars.length < 8) chars += CODE_CHARS[crypto.randomInt(CODE_CHARS.length)];
+    code = `${chars.slice(0, 4)}-${chars.slice(4)}`;
+  } while (findGroupByCode(code));
+  return code;
+}
+
+// For comparing names: "Sakura Heights" and "SAKURAHEIGHTS" count as the same.
+// (NFKC does the same for Japanese full-width typing: "３丁目" and "3丁目".)
+function simplified(text) {
+  return text.normalize('NFKC').toLowerCase().replace(/\s/g, '');
+}
+
+function findSimilarGroup(name, city) {
+  const groups = db.prepare('SELECT name, city FROM groups').all();
+  return groups.find(
+    (group) => simplified(group.city) === simplified(city) && simplified(group.name) === simplified(name)
+  );
+}
+
+// Anything that isn't text (missing, a number, ...) counts as empty.
+function trimmed(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+// Start a new neighborhood: for a building manager or a neighborhood association leader.
+router.post('/groups', (req, res) => {
+  const { type, create_anyway } = req.body ?? {};
+  const name = trimmed(req.body?.name);
+  const city = trimmed(req.body?.city);
+
+  if (name.length < 1 || name.length > 60 || city.length < 1 || city.length > 40) {
+    return res.status(400).json({ error: 'The name must be 1 to 60 characters, the city 1 to 40' });
+  }
+  if (!GROUP_TYPES.includes(type)) {
+    return res.status(400).json({ error: "type must be 'building' or 'block'" });
+  }
+
+  // Tell only the name of the similar group, never its code: codes are for people who see the poster.
+  const similar = findSimilarGroup(name, city);
+  if (similar && create_anyway !== true) {
+    return res.status(409).json({ error: 'There is a similar group in this city', existing_name: similar.name });
+  }
+
+  const code = newJoinCode();
+  db.prepare('INSERT INTO groups (code, name, type, city) VALUES (?, ?, ?, ?)').run(code, name, type, city);
+  res.status(201).json({ code, name, type, city });
 });
 
 // No account, no password, no email: the new random token is the user's identity

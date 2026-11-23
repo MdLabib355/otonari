@@ -42,6 +42,11 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
 - Join a **neighborhood group** (type `building` or `block`) with a **join code** (from the QR poster).
   No account, no password, no email. User picks nickname + language. Identity is a random token
   stored in `localStorage`.
+- **Start a new neighborhood**: the Join page has a link "Set up Otonari for your building or block", for a
+  building manager or neighborhood association leader. They enter a group name, type and city, and get a
+  random join code (`XXXX-XXXX`) and a button to the group's poster. The creator does not become a member.
+  If a group with a similar name exists in the same city, they are asked to look for its poster first
+  ("Create anyway" is possible). Another group's code is never shown.
 - Add items to share by picking from the **fixed item catalog** (`client/src/data/catalog.js`),
   choosing max loan days and a **handover spot** (never a home address or room number).
 - Browse the shelf: all items in my group, with emoji icon, item name (in my language), owner nickname,
@@ -76,7 +81,8 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
   Tips come from the `tips` section of the language files.
 - **QR join poster**: printable page `/poster` with the group name, join code and a QR code linking to
   `/join?code=XXXX`, text in Japanese + English + Bengali. Also serves as our security layer:
-  only people who can physically see the notice board get the code.
+  only people who can physically see the notice board get the code. `/poster` shows my own group;
+  `/poster?code=XXXX-XXXX` shows that group without being a member.
 - **PWA**: installable (manifest + service worker via `vite-plugin-pwa`).
 
 ### NOT in scope (roadmap only — do not build)
@@ -243,11 +249,12 @@ Removed items can never be requested.
 
 ---
 
-## 6. API (all JSON, all under `/api`, all require `Authorization: Bearer <token>` except join + demo)
+## 6. API (all JSON, all under `/api`, all require `Authorization: Bearer <token>` except groups + join + demo)
 
 | Method & path | Who | Does | Message created |
 |---|---|---|---|
 | `GET /api/groups/by-code/:code` | anyone | group preview `{name,type,city,memberCount}` | – |
+| `POST /api/groups` `{name,type,city,create_anyway?}` | anyone | creates a group with a random, unique join code → `{code,name,type,city}`; creates no user. `409 {error,existing_name}` if the same city has a group with the same name (ignoring case and spaces), unless `create_anyway` is `true` | – |
 | `POST /api/join` `{code,nickname,lang}` | anyone | creates user → `{token,user,group}` | – |
 | `GET /api/me` / `PATCH /api/me` `{lang,elder_mode}` | user | read/update me | – |
 | `GET /api/shelf` | user | items in my group + owner nickname + status | – |

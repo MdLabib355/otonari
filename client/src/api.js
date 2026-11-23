@@ -2,7 +2,7 @@
 //  - adds "Authorization: Bearer <token>" when we have one. The token comes from /api/join and is
 //    kept in localStorage: it is the user's whole identity (no accounts, no passwords).
 //  - sends JSON (or FormData, for photos) and returns the JSON answer.
-//  - throws an Error with .status when the server says no (e.g. 400, 403, 404).
+//  - throws an Error with .status (e.g. 400, 403, 404) and .data (the JSON answer) when the server says no.
 //
 //    const me = await api.get('/api/me');
 //    const result = await api.post('/api/join', { code, nickname, lang });
@@ -49,6 +49,7 @@ async function request(method, path, body) {
   if (!response.ok) {
     const error = new Error(data?.error ?? `Request failed (${response.status})`);
     error.status = response.status;
+    error.data = data;
     throw error;
   }
   return data;
