@@ -22,7 +22,8 @@ lend and borrow rarely-used household items, **without any language barrier**.
 language**, and Japanese is always polite (keigo). Translations are pre-written by humans and stored in
 JSON files. No AI, no translation API, no API keys.
 
-The only free text a user ever types is their **nickname** (max 20 chars).
+The only free text a user ever types is their **nickname** (max 20 chars), plus the **group name** and
+**city** when starting a new neighborhood (max 60 and 40 chars). Messages never contain free text.
 
 ### Supported languages
 | code | language | file |
@@ -126,6 +127,8 @@ otonari/
 │       ├── main.jsx
 │       ├── App.jsx         # routes + bottom nav + notification banner
 │       ├── api.js          # fetch wrapper; adds "Authorization: Bearer <token>"
+│       ├── UserContext.js  # useUser(): me, my group, my language and my inbox, for every page
+│       ├── useInbox.js     # my unread messages (banner, Loans badge, loan page)
 │       ├── styles.css
 │       ├── i18n/
 │       │   ├── index.js    # t(), renderPhrase(), formatDate(), useLang()
@@ -138,6 +141,7 @@ otonari/
 │       │   ├── SpeakButton.jsx
 │       │   ├── TipCard.jsx
 │       │   ├── ChipGroup.jsx      # big tappable chips
+│       │   ├── NewGroup.jsx       # start a new neighborhood (on the Join page)
 │       │   └── PhotoCapture.jsx   # <input type="file" accept="image/*" capture="environment">
 │       └── pages/
 │           ├── Join.jsx        # /join (reads ?code=)
@@ -152,6 +156,8 @@ otonari/
     ├── index.js            # express app, middleware, mounts routes, starts reminder job
     ├── db.js               # opens SQLite, creates tables, small helper functions
     ├── auth.js             # middleware: token → req.user
+    ├── allowedKeys.js      # the keys and values the server accepts (copied from catalog.js)
+    ├── photos.js           # photo upload: images only, max 5 MB, random file name
     ├── seed.js             # resets DB and inserts demo data
     ├── reminders.js        # setInterval(checkReminders, 30_000)
     ├── routes/
