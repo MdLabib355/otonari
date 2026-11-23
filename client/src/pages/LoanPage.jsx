@@ -112,6 +112,7 @@ function Loan({ loanId }) {
       {loan.status === 'accepted' && <HandoverStep {...step} />}
       {loan.status === 'active' && <ReturnStep {...step} />}
       {QUICK_REPLY_STATUSES.includes(loan.status) && <QuickReplies item={item} lang={lang} busy={busy} act={act} />}
+      {loan.status === 'active' && <DemoButtons loanId={loan.id} lang={lang} onDone={loadLoan} />}
     </section>
   );
 }
@@ -225,6 +226,40 @@ function ReturnStep({ loan, iAmLender, otherName, lang, busy, act, sendPhoto }) 
     <div className="step">
       <button type="button" className="button-primary" disabled={busy} onClick={() => act('return-confirmed')}>
         {t(lang, 'loan.confirmReturn')}
+      </button>
+    </div>
+  );
+}
+
+// Demo mode only: jump to the moments when reminders are sent, instead of waiting for days.
+function DemoButtons({ loanId, lang, onDone }) {
+  const [demoMode, setDemoMode] = useState(false);
+
+  // The demo routes only exist in demo mode, so an answer means it is on (like on the join page).
+  useEffect(() => {
+    api
+      .get('/api/demo/users')
+      .then(() => setDemoMode(true))
+      .catch(() => setDemoMode(false));
+  }, []);
+
+  async function fastForward(to) {
+    try {
+      await api.post(`/api/demo/fast-forward/${loanId}`, { to });
+    } catch {
+      // E.g. the item was returned in the meantime: reloading the loan shows what happened.
+    }
+    onDone();
+  }
+
+  if (!demoMode) return null;
+  return (
+    <div className="demo-buttons">
+      <button type="button" onClick={() => fastForward('dueSoon')}>
+        {t(lang, 'loan.demoDueSoon')}
+      </button>
+      <button type="button" onClick={() => fastForward('overdue')}>
+        {t(lang, 'loan.demoOverdue')}
       </button>
     </div>
   );

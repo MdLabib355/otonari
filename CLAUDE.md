@@ -268,7 +268,7 @@ Removed items can never be requested.
 | `POST /api/inbox/read` `{ids}` | user | mark read | – |
 | `GET /api/demo/users` | DEMO_MODE only | seeded users (for "continue as") | – |
 | `POST /api/demo/login` `{user_id}` | DEMO_MODE only | returns that user's token | – |
-| `POST /api/demo/fast-forward/:loanId` `{to:'dueSoon'\|'overdue'}` | DEMO_MODE only | moves `end_at` to now+12h or now−1h, then runs the reminder check immediately | reminders |
+| `POST /api/demo/fast-forward/:loanId` `{to:'dueSoon'\|'overdue'}` | DEMO_MODE only | moves `end_at` to now+12h or now−1h and `start_at` along with it (same loan length), then runs the reminder check immediately | reminders |
 
 ### Message params (keep it uniform)
 Every message the server creates for a loan uses the same params object, so any phrase can use any
@@ -284,8 +284,9 @@ Write one helper `createMessage(loan, fromUserId, toUserId, phraseKey)` in `serv
   (keep a copy of allowed keys in `server/allowedKeys.js` — just arrays of strings).
 - Photo upload: images only, max 5 MB, random filename.
 - Demo routes are mounted only when `process.env.DEMO_MODE === 'true'`.
-- Reminder job (`reminders.js`): every 30 s, for `active` loans:
-  - `end_at - now <= 24h` and `reminded_soon_at IS NULL` → `sys.dueSoon` to borrower, set timestamp.
+- Reminder job (`reminders.js`): every 30 s, for `active` loans without a return photo:
+  - `end_at > now`, `end_at - now <= 24h` and `reminded_soon_at IS NULL` → `sys.dueSoon` to borrower,
+    set timestamp.
   - `end_at < now` and `reminded_overdue_at IS NULL` → `sys.overdue` to borrower **and**
     `sys.overdueLender` to lender, set timestamp.
   - Params: `{ item, end, spot, name }` where `name` = the *other* person's nickname for each recipient.

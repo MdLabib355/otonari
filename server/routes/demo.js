@@ -2,11 +2,16 @@
 // because the login route hands out any user's token.
 //   GET  /api/demo/users   everyone you can "continue as", with their group
 //   POST /api/demo/login   { user_id } → { token, user, group }  (same shape as /api/join)
+//   POST /api/demo/fast-forward/:loanId   { to: 'dueSoon' | 'overdue' } → moves the dates of an
+//                          active loan, so nobody has to wait days to see the reminders
 
 import express from 'express';
 import { db, getMe, publicUser } from '../db.js';
+import { checkReminders } from '../reminders.js';
 
 const router = express.Router();
+const HOUR = 60 * 60 * 1000;
+const DUE_IN = { dueSoon: 12 * HOUR, overdue: -1 * HOUR }; // the new due time, from now
 
 router.get('/demo/users', (req, res) => {
   const users = db
@@ -35,6 +40,32 @@ router.post('/demo/login', (req, res) => {
     return res.status(404).json({ error: 'User not found' });
   }
   res.json({ token: user.token, ...getMe(user.id) });
+});
+
+router.post('/demo/fast-forward/:loanId', (req, res) => {
+  const to = req.body?.to;
+  if (to !== 'dueSoon' && to !== 'overdue') {
+    return res.status(400).json({ error: "to must be 'dueSoon' or 'overdue'" });
+  }
+  const loan = db.prepare('SELECT id, status, start_at, end_at FROM loans WHERE id = ?').get(req.params.loanId);
+  if (!loan) {
+    return res.status(404).json({ error: 'Loan not found' });
+  }
+  if (loan.status !== 'active') {
+    return res.status(409).json({ error: 'Only an active loan can be fast-forwarded' });
+  }
+
+  // The start moves along with the end, so the loan keeps its length and never starts after it ends.
+  // (At least a day: this also repairs a loan whose start was left behind by an older fast-forward.)
+  const length = Math.max(Date.parse(loan.end_at) - Date.parse(loan.start_at), 24 * HOUR);
+  const end = Date.now() + DUE_IN[to];
+  db.prepare('UPDATE loans SET start_at = ?, end_at = ? WHERE id = ?').run(
+    new Date(end - length).toISOString(),
+    new Date(end).toISOString(),
+    loan.id
+  );
+  checkReminders(); // right now, instead of at the next 30-second check
+  res.status(204).end();
 });
 
 export default router;

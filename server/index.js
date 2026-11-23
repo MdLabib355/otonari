@@ -9,6 +9,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import { db } from './db.js';
+import { startReminders } from './reminders.js';
 import demoRoutes from './routes/demo.js';
 import groupRoutes from './routes/groups.js';
 import inboxRoutes from './routes/inbox.js';
@@ -87,6 +88,7 @@ app.listen(PORT, (error) => {
   }
   const demo = process.env.DEMO_MODE === 'true' ? 'on' : 'off';
   console.log(`Otonari server running on http://localhost:${PORT} (demo mode: ${demo})`);
+  startReminders();
 
   const { count } = db.prepare('SELECT COUNT(*) AS count FROM groups').get();
   if (count === 0) {

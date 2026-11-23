@@ -768,6 +768,24 @@ h2 {
   margin-bottom: 16px;
 }
 
+/* Demo mode only: deliberately small and grey, they are not part of the real app. */
+.demo-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.demo-buttons button {
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--quiet);
+  color: var(--muted);
+  font-size: 0.8em;
+  cursor: pointer;
+}
+
 /* Temporary: marks pages that are not built yet. */
 .placeholder {
   color: var(--muted);
