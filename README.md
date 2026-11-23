@@ -59,6 +59,8 @@ cp server/.env.example server/.env
 npm run seed
 ```
 
+(The server does this by itself when it starts with an empty database.)
+
 **3. Run it**
 
 While developing, with automatic reload:
@@ -90,7 +92,19 @@ To install the app, choose "Install app" in the browser's menu ("Add to Home Scr
 | `npm run build` | Builds the client. Run it again after every change. |
 | `npm start` | Runs the server with the built client on port 3001. |
 
-Settings in `server/.env`: `PORT`, and `DEMO_MODE`. With `DEMO_MODE=true`, the join page offers "continue as a neighbor" and an active loan has fast-forward buttons for the reminders. **Set `DEMO_MODE=false` for a demo with real people**; otherwise anyone can continue as anyone else.
+Settings in `server/.env`: `PORT`, and `DEMO_MODE`. With `DEMO_MODE=true`, an active loan has fast-forward buttons for the reminders, and the join page offers "continue as a neighbor": only for the demo neighbors from `npm run seed`, never for people who joined with a code. `DEMO_MODE=false` hides both.
+
+## Deploy on Render
+
+Otonari runs on [Render](https://render.com) as one free Web Service (Node). Create it from this repository with these settings:
+
+| Setting | Value |
+|---|---|
+| Build Command | `npm run render-build` |
+| Start Command | `npm start` |
+| Environment variables | `NODE_VERSION` = `22` and `DEMO_MODE` = `true` |
+
+The address is HTTPS, so phones can install the app. The free plan sleeps after 15 minutes without visitors, and it resets the database and all photos whenever it restarts. The server then starts again with the demo data: everybody who had joined has to join again, and neighborhoods that people started themselves are gone. Anyone can act as the demo neighbors, so this is for demos, not for real lending.
 
 ## Tech stack
 

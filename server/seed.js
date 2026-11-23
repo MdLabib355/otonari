@@ -119,8 +119,8 @@ function insertGroupsUsersAndItems() {
       // They joined a month ago (the returned loan below is from last week).
       const userId = db
         .prepare(
-          `INSERT INTO users (group_id, nickname, lang, elder_mode, token, created_at)
-           VALUES (?, ?, ?, ?, ?, datetime('now', '-30 days'))`
+          `INSERT INTO users (group_id, nickname, lang, elder_mode, token, is_demo, created_at)
+           VALUES (?, ?, ?, ?, ?, 1, datetime('now', '-30 days'))`
         )
         .run(groupId, user.nickname, user.lang, user.elder, crypto.randomUUID()).lastInsertRowid;
       userIds[user.nickname] = userId;

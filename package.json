@@ -11,6 +11,7 @@
     "seed": "node server/seed.js",
     "seed:empty": "node server/seed.js --empty",
     "build": "npm run build --prefix client",
+    "render-build": "npm install --include=dev && npm run build",
     "start": "node server/index.js"
   },
   "devDependencies": {

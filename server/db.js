@@ -31,6 +31,7 @@ export function createTables() {
       lang TEXT NOT NULL CHECK (lang IN ('en','ja','ja-easy','bn')),
       elder_mode INTEGER NOT NULL DEFAULT 0,
       token TEXT UNIQUE NOT NULL,         -- crypto.randomUUID()
+      is_demo INTEGER NOT NULL DEFAULT 0, -- 1 = seeded demo neighbor: anyone may "continue as" them in demo mode
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       left_at TEXT                        -- set when they leave (their token stops working); NULL = member
     );
@@ -90,6 +91,7 @@ function addMissingColumn(table, column, type) {
 }
 
 addMissingColumn('users', 'left_at', 'TEXT');
+addMissingColumn('users', 'is_demo', 'INTEGER NOT NULL DEFAULT 0');
 addMissingColumn('items', 'removed_at', 'TEXT');
 addMissingColumn('items', 'trusted_only', 'INTEGER NOT NULL DEFAULT 0');
 addMissingColumn('loans', 'returned_at', 'TEXT');

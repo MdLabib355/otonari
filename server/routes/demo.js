@@ -1,6 +1,7 @@
-// Demo-only routes. server/index.js mounts them ONLY when DEMO_MODE=true (in server/.env),
-// because the login route hands out any user's token.
-//   GET  /api/demo/users   everyone you can "continue as", with their group
+// Demo-only routes. server/index.js mounts them ONLY when DEMO_MODE=true.
+// "Continue as" hands out tokens, so it works only for the seeded demo neighbors (is_demo), never for
+// people who joined with a code.
+//   GET  /api/demo/users   the demo neighbors you can "continue as", with their group
 //   POST /api/demo/login   { user_id } → { token, user, group }  (same shape as /api/join)
 //   POST /api/demo/fast-forward/:loanId   { to: 'dueSoon' | 'overdue' } → moves the dates of an
 //                          active loan, so nobody has to wait days to see the reminders
@@ -18,7 +19,7 @@ router.get('/demo/users', (req, res) => {
     .prepare(
       `SELECT users.*, groups.name AS group_name, groups.code AS group_code
        FROM users JOIN groups ON groups.id = users.group_id
-       WHERE users.left_at IS NULL
+       WHERE users.is_demo = 1 AND users.left_at IS NULL
        ORDER BY users.group_id, users.id`
     )
     .all();
@@ -39,6 +40,9 @@ router.post('/demo/login', (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ? AND left_at IS NULL').get(userId);
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
+  }
+  if (user.is_demo !== 1) {
+    return res.status(403).json({ error: 'You can only continue as a demo neighbor' });
   }
   res.json({ token: user.token, ...getMe(user.id) });
 });

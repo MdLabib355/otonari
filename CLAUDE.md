@@ -119,6 +119,9 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
   ignores `node_modules`, `uploads/` and the database files, so database writes, seeding and photo uploads
   never restart it. (Not `node --watch`: on Windows it restarts when files are merely read.)
 - **For the demo, always use `npm run build` + `npm start` (no file watcher).**
+- **Deploy** (Render.com, one free Node web service): build `npm run render-build`, start `npm start`,
+  environment `NODE_VERSION=22` and `DEMO_MODE=true` (Render sets `PORT`). The free plan loses the database
+  and the photos on every restart, so a server that starts without any groups runs the normal seed.
 - **No API keys or secrets exist in this project.** `.env` holds only `PORT` and `DEMO_MODE`.
   `.env` is in `.gitignore`; commit `.env.example`.
 
@@ -130,7 +133,7 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 otonari/
 ├── CLAUDE.md
 ├── README.md
-├── package.json            # root: "dev", "seed", "seed:empty", "build", "start" scripts (concurrently)
+├── package.json            # root: "dev", "seed", "seed:empty", "build", "render-build", "start" scripts
 ├── .gitignore              # node_modules, .env, server/otonari.db, server/uploads/*, client/dist
 ├── docs/screenshots/       # the pictures in README.md
 ├── client/
@@ -206,6 +209,7 @@ CREATE TABLE users (
   lang TEXT NOT NULL CHECK (lang IN ('en','ja','ja-easy','bn')),
   elder_mode INTEGER NOT NULL DEFAULT 0,
   token TEXT UNIQUE NOT NULL,         -- crypto.randomUUID()
+  is_demo INTEGER NOT NULL DEFAULT 0, -- 1 = seeded demo neighbor: anyone may "continue as" them in demo mode
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   left_at TEXT                        -- set when they leave (their token stops working); NULL = member
 );
@@ -309,8 +313,8 @@ and `left_at` is set: the token no longer works, and they are no longer counted 
 | `POST /api/loans/:id/quick-reply` `{phrase_key}` | participant | only keys in QUICK_REPLIES | that phrase → other side |
 | `GET /api/inbox` | user | unread messages to me (with loan + item info; a `request` also has `borrower_trust`) | – |
 | `POST /api/inbox/read` `{ids}` | user | mark read | – |
-| `GET /api/demo/users` | DEMO_MODE only | seeded users (for "continue as") | – |
-| `POST /api/demo/login` `{user_id}` | DEMO_MODE only | returns that user's token | – |
+| `GET /api/demo/users` | DEMO_MODE only | seeded users (`is_demo`, for "continue as") | – |
+| `POST /api/demo/login` `{user_id}` | DEMO_MODE only | returns that user's token; `403` unless the user is seeded (`is_demo`) | – |
 | `POST /api/demo/fast-forward/:loanId` `{to:'dueSoon'\|'overdue'}` | DEMO_MODE only | moves `end_at` to now+12h or now−1h and `start_at` along with it (same loan length), also in that loan's messages, then runs the reminder check immediately | reminders |
 
 ### Message params (keep it uniform)
@@ -326,7 +330,8 @@ Write one helper `createMessage(loan, fromUserId, toUserId, phraseKey)` in `serv
 - Validate `phrase_key` against a whitelist; validate `item_key`/`spot` against the catalog
   (keep a copy of allowed keys in `server/allowedKeys.js` — just arrays of strings).
 - Photo upload: images only, max 5 MB, random filename.
-- Demo routes are mounted only when `process.env.DEMO_MODE === 'true'`.
+- Demo routes are mounted only when `process.env.DEMO_MODE === 'true'`. "Continue as" works only for the seeded
+  users (`is_demo`), never for people who joined with a code.
 - Reminder job (`reminders.js`): every 30 s, for `active` loans without a return photo:
   - `end_at > now`, `end_at - now <= 24h` and `reminded_soon_at IS NULL` → `sys.dueSoon` to borrower,
     set timestamp.
@@ -393,7 +398,7 @@ Seeded users in Sakura Heights (Rahim is NOT seeded — he joins live in the dem
 Hamaguchi-machi block: Inoue (ja, elder) lawn_mower (1, notice_board), hedge_trimmer (1, notice_board);
 Kobayashi (ja) high_pressure_washer (1, notice_board).
 
-All seeded users joined 30 days ago (`created_at`).
+All seeded users joined 30 days ago (`created_at`) and have `is_demo = 1`.
 
 Also seed one already-returned loan (Maria borrowed Tanaka's projector last week) so history isn't empty.
 

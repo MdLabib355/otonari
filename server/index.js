@@ -27,6 +27,7 @@ const uploadsDir = path.join(import.meta.dirname, 'uploads');
 const clientDist = path.join(import.meta.dirname, '..', 'client', 'dist');
 
 const app = express();
+app.set('trust proxy', 1); // on Render, every request comes through one proxy
 app.use(cors());
 app.use(express.json());
 
@@ -79,6 +80,13 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: status >= 500 ? 'Server error' : err.message });
 });
 
+// An empty database (e.g. after a fresh deploy) gets the demo data, exactly like `npm run seed`.
+const { count } = db.prepare('SELECT COUNT(*) AS count FROM groups').get();
+if (count === 0) {
+  console.log('The database is empty, so it gets the demo data.');
+  await import('./seed.js'); // importing it runs it
+}
+
 // Express 5 also calls this function when the server can NOT start (e.g. the port is taken).
 app.listen(PORT, (error) => {
   if (error) {
@@ -89,9 +97,4 @@ app.listen(PORT, (error) => {
   const demo = process.env.DEMO_MODE === 'true' ? 'on' : 'off';
   console.log(`Otonari server running on http://localhost:${PORT} (demo mode: ${demo})`);
   startReminders();
-
-  const { count } = db.prepare('SELECT COUNT(*) AS count FROM groups').get();
-  if (count === 0) {
-    console.log('The database is empty. Run "npm run seed" to add the demo neighborhoods.');
-  }
 });
