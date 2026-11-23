@@ -19,6 +19,6 @@ function lookForUpdates(registration) {
 // (The name of the script is different in every version.)
 async function reloadIfOutdated() {
   const newestPage = await (await fetch('/index.html')).text();
-  const myScript = document.querySelector('script[src^="/assets/"]').getAttribute('src');
-  if (!newestPage.includes(myScript)) window.location.reload();
+  const myScript = document.querySelector('script[src^="/assets/"]')?.getAttribute('src');
+  if (myScript && !newestPage.includes(myScript)) window.location.reload();
 }

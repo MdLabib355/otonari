@@ -1,26 +1,27 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import ChipGroup from '../components/ChipGroup.jsx';
+import { shrinkPhoto } from '../components/PhotoCapture.jsx';
 import { CATEGORIES, DURATIONS, ITEMS, SPOTS, findItem } from '../data/catalog.js';
 import { categoryName, itemName, spotName, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
-// Spot names are lowercase because they sit inside sentences ("at the building entrance").
-// On a chip they look better with a capital letter (no effect on Japanese or Bengali).
 function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// My items: what I lend, plus the "Add an item" form (pick from the fixed catalog, never typed).
+// My items: what I lend, plus the "Add an item" form (fixed catalog + optional real photo).
 export default function MyItems() {
   const { lang } = useUser();
-  const [items, setItems] = useState(null); // null = still loading
+  const [items, setItems] = useState(null);
   const [failed, setFailed] = useState(false);
-  // The form starts with sensible defaults, so often picking the item is the only choice needed.
   const [itemKey, setItemKey] = useState(null);
   const [maxDays, setMaxDays] = useState(3);
   const [spot, setSpot] = useState('entrance');
   const [trustedOnly, setTrustedOnly] = useState(false);
+  const [itemPhoto, setItemPhoto] = useState(null); // { file, url }
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoRefused, setPhotoRefused] = useState(false);
   const [busy, setBusy] = useState(false);
 
   function loadItems() {
@@ -34,15 +35,51 @@ export default function MyItems() {
     loadItems();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (itemPhoto) URL.revokeObjectURL(itemPhoto.url);
+    };
+  }, [itemPhoto]);
+
+  async function pickPhoto(event) {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setItemPhoto(null);
+    setPhotoRefused(false);
+    setPhotoBusy(true);
+    try {
+      const jpeg = await shrinkPhoto(file);
+      setItemPhoto({ file: jpeg, url: URL.createObjectURL(jpeg) });
+    } catch {
+      setPhotoRefused(true);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   async function addItem() {
     setBusy(true);
     setFailed(false);
     try {
-      await api.post('/api/items', { item_key: itemKey, max_days: maxDays, spot, trusted_only: trustedOnly });
+      if (itemPhoto) {
+        const form = new FormData();
+        form.append('item_key', itemKey);
+        form.append('max_days', String(maxDays));
+        form.append('spot', spot);
+        form.append('trusted_only', String(trustedOnly));
+        form.append('photo', itemPhoto.file, 'item.jpg');
+        await api.post('/api/items', form);
+      } else {
+        await api.post('/api/items', { item_key: itemKey, max_days: maxDays, spot, trusted_only: trustedOnly });
+      }
       setItemKey(null);
-      setTrustedOnly(false); // off by default, for every new item
+      setTrustedOnly(false);
+      setItemPhoto(null);
+      setPhotoRefused(false);
       loadItems();
-      window.scrollTo({ top: 0, behavior: 'smooth' }); // the new item appears in the list at the top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
       setFailed(true);
     } finally {
@@ -55,7 +92,6 @@ export default function MyItems() {
     try {
       await api.delete(`/api/items/${id}`);
     } catch (error) {
-      // 409: it was reserved or lent in the meantime; reloading shows that.
       if (error.status !== 409) setFailed(true);
     }
     loadItems();
@@ -136,12 +172,39 @@ export default function MyItems() {
       </div>
 
       <div className="field">
+        <p className="label">{t(lang, 'myItems.photoOptional')}</p>
+        <div className="actions">
+          <label className="photo-button button-secondary">
+            <span aria-hidden="true">📷</span> {t(lang, 'loan.takePhoto')}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="visually-hidden"
+              disabled={busy || photoBusy}
+              onChange={pickPhoto}
+            />
+          </label>
+          {photoBusy && <p className="hint">{t(lang, 'common.loading')}</p>}
+          {photoRefused && <p className="error">{t(lang, 'loan.photoRefused')}</p>}
+          {itemPhoto && (
+            <>
+              <img className="photo-preview" src={itemPhoto.url} alt="" />
+              <button type="button" className="button-secondary" disabled={busy} onClick={() => setItemPhoto(null)}>
+                {t(lang, 'myItems.photoRemove')}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="field">
         <TrustedSwitch lang={lang} checked={trustedOnly} onChange={setTrustedOnly} />
         <p className="hint">{t(lang, 'trust.explain')}</p>
         <p className="hint">{t(lang, 'trust.hint')}</p>
       </div>
 
-      <button type="button" className="button-primary" disabled={!itemKey || busy} onClick={addItem}>
+      <button type="button" className="button-primary" disabled={!itemKey || busy || photoBusy} onClick={addItem}>
         {itemKey && `${findItem(itemKey).emoji} `}
         {t(lang, 'myItems.save')}
       </button>
@@ -149,7 +212,6 @@ export default function MyItems() {
   );
 }
 
-// "Trusted neighbors only": for one item, when adding it and later in the list.
 function TrustedSwitch({ lang, checked, onChange }) {
   return (
     <label className="switch-row">
@@ -165,16 +227,19 @@ function TrustedSwitch({ lang, checked, onChange }) {
   );
 }
 
-// One of my items. It can't be removed while it is reserved or lent.
 function MyItemRow({ item, lang, onRemove, onTrustedOnly }) {
   const canRemove = item.status === 'available';
   const days = item.max_days === 1 ? t(lang, 'item.maxDay') : t(lang, 'item.maxDays', { n: item.max_days });
 
   return (
     <li className="my-item">
-      <span className="item-emoji" aria-hidden="true">
-        {findItem(item.item_key)?.emoji}
-      </span>
+      {item.photo_url ? (
+        <img className="my-item-thumb" src={item.photo_url} alt="" loading="lazy" />
+      ) : (
+        <span className="item-emoji" aria-hidden="true">
+          {findItem(item.item_key)?.emoji}
+        </span>
+      )}
       <div className="my-item-text">
         <strong>{itemName(lang, item.item_key)}</strong>
         <span className="muted">

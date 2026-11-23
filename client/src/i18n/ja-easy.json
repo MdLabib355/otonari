@@ -44,6 +44,7 @@
     "shelf.mine": "あなたの もの",
     "shelf.from": "{name}の もの",
     "shelf.allCategories": "ぜんぶ",
+    "shelf.addFirst": "ものを だす",
 
     "item.maxDays": "{n}にち まで",
     "item.maxDay": "1にち まで",
@@ -53,6 +54,7 @@
     "borrow.today": "きょう",
     "borrow.tomorrow": "あした",
     "borrow.dayAfter": "あさって",
+    "borrow.pickDate": "ひづけを えらぶ（14にち さきまで）",
     "borrow.morning": "あさ",
     "borrow.afternoon": "ひる",
     "borrow.evening": "ゆうがた",
@@ -81,6 +83,8 @@
     "myItems.pick": "ものを えらぶ",
     "myItems.maxDays": "なんにち まで かせますか？",
     "myItems.spot": "どこで わたしますか？",
+    "myItems.photoOptional": "ものの しゃしん（なくても いいです）",
+    "myItems.photoRemove": "しゃしんを けす",
     "myItems.save": "たなに おく",
     "myItems.remove": "けす",
     "myItems.cantRemove": "よやく ありや、いま かしている ものは けせません。",
@@ -104,6 +108,10 @@
     "loan.decline": "いいえ",
     "loan.declineBusy": "いいえ（その ひは つかいます）",
     "loan.cancel": "おねがいを やめる",
+    "loan.cancelAccepted": "うけわたしを やめる",
+    "loan.pingNeedBack": "はやめに かえして と おねがい する",
+    "loan.pingOverdue": "ていねいに おしらせを おくる",
+    "loan.pingCooldown": "さっき おしらせを おくりました。すこし まってから やって ください。",
     "loan.handoverStep": "わたす まえに、ものの しゃしんを とって ください",
     "loan.takePhoto": "しゃしんを とる",
     "loan.sendPhoto": "しゃしんを おくる",
@@ -126,6 +134,10 @@
     "banner.new": "{name}から メッセージが きました",
     "banner.reminder": "おしらせ",
     "banner.open": "ひらく",
+    "banner.dueSoon": "{item}を {end}までに かえして ください",
+    "banner.overdue": "きげんを すぎました：{item}を {name}に かえして ください",
+    "banner.returnNow": "かえす",
+    "banner.moreDue": "あと {n}つ",
 
     "settings.title": "せってい",
     "settings.language": "ことば",
@@ -216,7 +228,9 @@
 
     "sys.dueSoon": "おしらせ：{end}までに {spot}で {item}を かえして ください。",
     "sys.overdue": "おしらせ：{item}を かえす ひ（{end}）が すぎました。できるだけ はやく {name}に かえして ください。",
-    "sys.overdueLender": "おしらせ：{name}に「{item}を かえして ください」と ていねいに おしらせ しました。あなたから いわなくても だいじょうぶです。"
+    "sys.overdueLender": "おしらせ：{name}に「{item}を かえして ください」と ていねいに おしらせ しました。あなたから いわなくても だいじょうぶです。",
+    "pingNeedBack": "ごめんなさい。{name}が もうすぐ {item}を つかいます。じかんが ある ときに {spot}で かえして くれますか？",
+    "pingOverdue": "いそがしい ところ ごめんなさい。{name}の {item}を かえす ひ（{end}）が すぎました。{spot}で かえして ください。"
   },
 
   "tips": {

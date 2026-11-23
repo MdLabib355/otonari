@@ -27,7 +27,14 @@ export default function Shelf() {
 
       {failed && <p className="error">{t(lang, 'common.error')}</p>}
       {!items && !failed && <p>{t(lang, 'common.loading')}</p>}
-      {items?.length === 0 && <p className="empty">{t(lang, 'shelf.empty')}</p>}
+      {items?.length === 0 && (
+        <div className="empty-state">
+          <p className="empty">{t(lang, 'shelf.empty')}</p>
+          <Link to="/my-items" className="button-primary button-link">
+            {t(lang, 'shelf.addFirst')}
+          </Link>
+        </div>
+      )}
       {items?.length > 0 && (
         <ShelfGrid items={items} category={category} setCategory={setCategory} myId={user.id} lang={lang} />
       )}
@@ -38,7 +45,6 @@ export default function Shelf() {
 function ShelfGrid({ items, category, setCategory, myId, lang }) {
   const categoryOf = (item) => findItem(item.item_key)?.category;
 
-  // Only offer the categories that actually have something on the shelf.
   const categoryOptions = [
     { value: 'all', label: t(lang, 'shelf.allCategories') },
     ...CATEGORIES.filter((key) => items.some((item) => categoryOf(item) === key)).map((key) => ({
@@ -60,14 +66,17 @@ function ShelfGrid({ items, category, setCategory, myId, lang }) {
   );
 }
 
-// One card on the shelf. Tapping it opens the item page.
 function ItemCard({ item, mine, lang }) {
-  const badge = mine ? 'mine' : item.status; // available | reserved | lent | mine
+  const badge = mine ? 'mine' : item.status;
   return (
     <Link to={`/item/${item.id}`} className="item-card">
-      <span className="item-emoji" aria-hidden="true">
-        {findItem(item.item_key)?.emoji}
-      </span>
+      {item.photo_url ? (
+        <img className="item-thumb" src={item.photo_url} alt="" loading="lazy" />
+      ) : (
+        <span className="item-emoji" aria-hidden="true">
+          {findItem(item.item_key)?.emoji}
+        </span>
+      )}
       <strong>{itemName(lang, item.item_key)}</strong>
       {!mine && (
         <span className="muted">{t(lang, 'shelf.from', { name: displayName(lang, item.owner_nickname) })}</span>

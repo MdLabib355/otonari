@@ -44,6 +44,7 @@
     "shelf.mine": "Yours",
     "shelf.from": "from {name}",
     "shelf.allCategories": "All",
+    "shelf.addFirst": "Share an item",
 
     "item.maxDays": "Up to {n} days",
     "item.maxDay": "Up to 1 day",
@@ -53,6 +54,7 @@
     "borrow.today": "Today",
     "borrow.tomorrow": "Tomorrow",
     "borrow.dayAfter": "Day after",
+    "borrow.pickDate": "Pick a date (up to 14 days ahead)",
     "borrow.morning": "Morning",
     "borrow.afternoon": "Afternoon",
     "borrow.evening": "Evening",
@@ -81,6 +83,8 @@
     "myItems.pick": "Pick an item",
     "myItems.maxDays": "Lend for up to",
     "myItems.spot": "Hand it over at",
+    "myItems.photoOptional": "Item photo (optional)",
+    "myItems.photoRemove": "Remove photo",
     "myItems.save": "Put it on the shelf",
     "myItems.remove": "Remove",
     "myItems.cantRemove": "You can't remove an item while it is reserved or lent.",
@@ -104,6 +108,10 @@
     "loan.decline": "No",
     "loan.declineBusy": "No — I need it those days",
     "loan.cancel": "Cancel request",
+    "loan.cancelAccepted": "Cancel handover",
+    "loan.pingNeedBack": "Ask to return soon",
+    "loan.pingOverdue": "Send polite reminder",
+    "loan.pingCooldown": "Reminder already sent recently. Please try again later.",
     "loan.handoverStep": "Take a photo of the item before handing it over",
     "loan.takePhoto": "Take photo",
     "loan.sendPhoto": "Send photo",
@@ -126,6 +134,10 @@
     "banner.new": "New message from {name}",
     "banner.reminder": "Reminder",
     "banner.open": "Open",
+    "banner.dueSoon": "Return {item} by {end}",
+    "banner.overdue": "Overdue: return {item} to {name}",
+    "banner.returnNow": "Return",
+    "banner.moreDue": "+{n} more",
 
     "settings.title": "Settings",
     "settings.language": "Language",
@@ -216,7 +228,9 @@
 
     "sys.dueSoon": "Reminder: please return the {item} by {end} at the {spot}.",
     "sys.overdue": "Reminder: the {item} was due back by {end}. Please return it to {name} as soon as you can.",
-    "sys.overdueLender": "We've sent {name} a polite reminder about your {item}, so you don't have to."
+    "sys.overdueLender": "We've sent {name} a polite reminder about your {item}, so you don't have to.",
+    "pingNeedBack": "Sorry to bother you — {name} will need the {item} back soon. Could you return it at the {spot} when convenient?",
+    "pingOverdue": "Friendly reminder from {name}: the {item} was due back by {end}. Could you please return it at the {spot} soon?"
   },
 
   "tips": {

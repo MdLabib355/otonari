@@ -42,7 +42,7 @@ export default function App() {
   const [me, setMe] = useState(null); // { user, group } of the logged-in neighbor
   const [loading, setLoading] = useState(Boolean(getToken()));
   const [loadFailed, setLoadFailed] = useState(false);
-  const { inbox, refreshInbox, markRead, clearInbox } = useInbox(); // unread messages to me
+  const { inbox, dueLoans, refreshInbox, markRead, clearInbox } = useInbox(); // unread messages + due loans
   const { pathname } = useLocation();
 
   // On start: if we have a token, ask the server who we are.
@@ -111,7 +111,18 @@ export default function App() {
   }
 
   const showNav = me && pathname !== '/join';
-  const shared = { user: me?.user, group: me?.group, lang, login, logout, setMe, inbox, refreshInbox, markRead };
+  const shared = {
+    user: me?.user,
+    group: me?.group,
+    lang,
+    login,
+    logout,
+    setMe,
+    inbox,
+    dueLoans,
+    refreshInbox,
+    markRead,
+  };
 
   return (
     <UserContext.Provider value={shared}>

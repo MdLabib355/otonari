@@ -8,7 +8,7 @@ const JPEG_QUALITY = 0.8;
 // limit, and they can contain the GPS position of someone's home; the new JPEG has neither problem.
 // Portrait photos stay upright: the browser turns an <img> the way the camera was held (EXIF
 // orientation), and the canvas copies it like that.
-async function shrink(file) {
+export async function shrinkPhoto(file) {
   const url = URL.createObjectURL(file);
   try {
     const image = new Image();
@@ -58,7 +58,7 @@ export default function PhotoCapture({ lang, busy, onSend }) {
     setRefused(false);
     setPreparing(true);
     try {
-      const jpeg = await shrink(file);
+      const jpeg = await shrinkPhoto(file);
       setPhoto({ file: jpeg, url: URL.createObjectURL(jpeg) });
     } catch {
       setRefused(true);

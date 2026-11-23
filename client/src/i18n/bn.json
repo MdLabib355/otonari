@@ -44,6 +44,7 @@
     "shelf.mine": "আপনার জিনিস",
     "shelf.from": "{name}-এর জিনিস",
     "shelf.allCategories": "সব",
+    "shelf.addFirst": "একটি জিনিস শেয়ার করুন",
 
     "item.maxDays": "সর্বোচ্চ {n} দিন",
     "item.maxDay": "সর্বোচ্চ ১ দিন",
@@ -53,6 +54,7 @@
     "borrow.today": "আজ",
     "borrow.tomorrow": "আগামীকাল",
     "borrow.dayAfter": "পরশু",
+    "borrow.pickDate": "তারিখ বেছে নিন (সর্বোচ্চ ১৪ দিন আগে)",
     "borrow.morning": "সকাল",
     "borrow.afternoon": "দুপুর",
     "borrow.evening": "সন্ধ্যা",
@@ -81,6 +83,8 @@
     "myItems.pick": "একটি জিনিস বেছে নিন",
     "myItems.maxDays": "সর্বোচ্চ কত দিন",
     "myItems.spot": "দেওয়া-নেওয়ার স্থান",
+    "myItems.photoOptional": "জিনিসের ছবি (ঐচ্ছিক)",
+    "myItems.photoRemove": "ছবি সরান",
     "myItems.save": "শেলফে রাখুন",
     "myItems.remove": "সরিয়ে নিন",
     "myItems.cantRemove": "বুক করা বা ধার দেওয়া জিনিস সরানো যায় না।",
@@ -104,6 +108,10 @@
     "loan.decline": "না",
     "loan.declineBusy": "না — ওই দিনগুলোতে আমার দরকার",
     "loan.cancel": "অনুরোধ বাতিল করুন",
+    "loan.cancelAccepted": "দেওয়া-নেওয়া বাতিল করুন",
+    "loan.pingNeedBack": "শীঘ্রই ফেরত চাইতে বলুন",
+    "loan.pingOverdue": "ভদ্রভাবে মনে করিয়ে দিন",
+    "loan.pingCooldown": "একটু আগেই রিমাইন্ডার পাঠানো হয়েছে। অনুগ্রহ করে পরে আবার চেষ্টা করুন।",
     "loan.handoverStep": "দেওয়ার আগে জিনিসটির একটি ছবি তুলুন",
     "loan.takePhoto": "ছবি তুলুন",
     "loan.sendPhoto": "ছবি পাঠান",
@@ -126,6 +134,10 @@
     "banner.new": "{name}-এর কাছ থেকে নতুন বার্তা",
     "banner.reminder": "রিমাইন্ডার",
     "banner.open": "খুলুন",
+    "banner.dueSoon": "{end}-এর মধ্যে {item} ফেরত দিন",
+    "banner.overdue": "সময় পেরিয়ে গেছে: {name}-কে {item} ফেরত দিন",
+    "banner.returnNow": "ফেরত দিন",
+    "banner.moreDue": "আরও +{n}টি",
 
     "settings.title": "সেটিংস",
     "settings.language": "ভাষা",
@@ -216,7 +228,9 @@
 
     "sys.dueSoon": "রিমাইন্ডার: অনুগ্রহ করে {end}-এর মধ্যে {spot}-এ {item} ফেরত দিন।",
     "sys.overdue": "রিমাইন্ডার: {item} ফেরত দেওয়ার সময় ({end}) পেরিয়ে গেছে। যত দ্রুত সম্ভব {name}-কে ফেরত দিন।",
-    "sys.overdueLender": "আপনার {item} নিয়ে আমরা {name}-কে ভদ্রভাবে মনে করিয়ে দিয়েছি — আপনাকে আর বলতে হবে না।"
+    "sys.overdueLender": "আপনার {item} নিয়ে আমরা {name}-কে ভদ্রভাবে মনে করিয়ে দিয়েছি — আপনাকে আর বলতে হবে না।",
+    "pingNeedBack": "বিরক্ত করার জন্য দুঃখিত — {name}-এর শীঘ্রই {item} দরকার হবে। সুবিধামতো সময়ে {spot}-এ ফেরত দিতে পারবেন কি?",
+    "pingOverdue": "{name}-এর পক্ষ থেকে বিনীত রিমাইন্ডার: {item} ফেরত দেওয়ার সময় ({end}) পেরিয়ে গেছে। অনুগ্রহ করে শীঘ্রই {spot}-এ ফেরত দিন।"
   },
 
   "tips": {

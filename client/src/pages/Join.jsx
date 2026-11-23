@@ -31,6 +31,7 @@ export default function Join() {
   useEffect(() => {
     setPreview(null);
     setNotFound(false);
+    setFailed(false);
     if (!cleanCode) return;
 
     let cancelled = false; // ignore answers for a code that has changed since
@@ -52,10 +53,11 @@ export default function Join() {
     };
   }, [cleanCode]);
 
-  // The server only answers this when DEMO_MODE=true; otherwise it's a 404 and no demo buttons show.
+  // Fetch demo neighbors only when the server advertises demo_mode=true (avoids 404 noise in prod).
   useEffect(() => {
     api
-      .get('/api/demo/users')
+      .get('/api/health')
+      .then((health) => (health?.demo_mode ? api.get('/api/demo/users') : []))
       .then(setDemoUsers)
       .catch(() => setDemoUsers([]));
   }, []);

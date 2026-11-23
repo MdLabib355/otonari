@@ -7,33 +7,35 @@ import { DURATIONS, START_DAYS, TIME_SLOTS, findItem } from '../data/catalog.js'
 import { displayName, formatDate, formatHour, itemName, renderPhrase, spotName, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
-const DAY = 24 * 60 * 60 * 1000;
-const DAY_LABELS = { 0: 'borrow.today', 1: 'borrow.tomorrow', 2: 'borrow.dayAfter' }; // START_DAYS
+const DAY_MS = 24 * 60 * 60 * 1000;
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const MAX_FUTURE_DAYS = 14;
+const DAY_LABELS = { 0: 'borrow.today', 1: 'borrow.tomorrow', 2: 'borrow.dayAfter' };
 
-// ISO time for "N days from today at hh:00 in Japan". Japan is always UTC+9 (no summer time),
-// so this gives the same answer on a laptop in Bangladesh.
-function japanTime(daysFromToday, hour) {
-  const japanNow = new Date(Date.now() + 9 * 60 * 60 * 1000); // its UTC fields show the date in Japan
-  const utc = Date.UTC(
-    japanNow.getUTCFullYear(),
-    japanNow.getUTCMonth(),
-    japanNow.getUTCDate() + daysFromToday,
-    hour - 9 // hh:00 in Japan is (hh - 9):00 in UTC
-  );
-  return new Date(utc).toISOString();
+// YYYY-MM-DD in Japan time (UTC+9, no daylight saving time) for `daysFromToday`.
+function japanDateKey(daysFromToday) {
+  const japanDate = new Date(Date.now() + JST_OFFSET_MS + daysFromToday * DAY_MS);
+  const y = japanDate.getUTCFullYear();
+  const m = String(japanDate.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(japanDate.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
-// The time slots that can still be picked on that day (today's earlier slots are already over).
-function openSlots(dayOffset) {
-  return Object.keys(TIME_SLOTS).filter((slot) => Date.parse(japanTime(dayOffset, TIME_SLOTS[slot])) > Date.now());
+// ISO UTC string for a specific JST calendar date ("YYYY-MM-DD") at `hour:00` JST.
+function japanTimeForDate(dateKey, hour) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d, hour - 9)).toISOString();
 }
 
-// The item page: what it is, whose it is, and the tap-only borrow request.
+function openSlotsForDate(dateKey) {
+  return Object.keys(TIME_SLOTS).filter((slot) => Date.parse(japanTimeForDate(dateKey, TIME_SLOTS[slot])) > Date.now());
+}
+
 export default function ItemPage() {
   const { id } = useParams();
   const { user, lang } = useUser();
   const [item, setItem] = useState(null);
-  const [problem, setProblem] = useState(null); // 'missing' | 'failed'
+  const [problem, setProblem] = useState(null);
 
   function loadItem() {
     api
@@ -72,9 +74,13 @@ export default function ItemPage() {
     <section>
       {backLink}
       <header className="item-header">
-        <span className="item-header-emoji" aria-hidden="true">
-          {findItem(item.item_key)?.emoji}
-        </span>
+        {item.photo_url ? (
+          <img className="item-header-photo" src={item.photo_url} alt="" />
+        ) : (
+          <span className="item-header-emoji" aria-hidden="true">
+            {findItem(item.item_key)?.emoji}
+          </span>
+        )}
         <div>
           <h1>{itemName(lang, item.item_key)}</h1>
           <p className="muted">
@@ -92,7 +98,6 @@ export default function ItemPage() {
   );
 }
 
-// The request form, or the reason why I can't ask for this item.
 function AskForItem({ item, onRefused }) {
   const { lang } = useUser();
   if (item.status !== 'available') return <p className="notice">{t(lang, 'borrow.notAvailable')}</p>;
@@ -100,7 +105,6 @@ function AskForItem({ item, onRefused }) {
   return <BorrowForm item={item} onRefused={onRefused} />;
 }
 
-// I already have a pending or accepted request for this item: link to it instead of asking again.
 function AlreadyAsked({ item }) {
   const { lang } = useUser();
   const navigate = useNavigate();
@@ -114,23 +118,35 @@ function AlreadyAsked({ item }) {
   );
 }
 
-// Day, time and length are all chips (nothing to type), and the preview shows the exact sentence
-// the owner will receive, in the OWNER's language.
+// Tap-only quick chips (Today / Tomorrow / Day after) PLUS exact date picker up to 14 days ahead,
+// with live preview rendered in the LENDER's language.
 function BorrowForm({ item, onRefused }) {
   const { user, lang } = useUser();
   const navigate = useNavigate();
-  const [dayOffset, setDayOffset] = useState(1); // tomorrow
+
+  const todayKey = japanDateKey(0);
+  const minDateKey = openSlotsForDate(todayKey).length > 0 ? todayKey : japanDateKey(1);
+  const maxDateKey = japanDateKey(MAX_FUTURE_DAYS);
+
+  const [dateKey, setDateKey] = useState(japanDateKey(1)); // tomorrow by default
   const [slot, setSlot] = useState('morning');
   const [days, setDays] = useState(Math.min(3, item.max_days));
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  // Late in the evening "Today" has no time slots left, so it is not offered.
-  const dayOptions = START_DAYS.filter((offset) => openSlots(offset).length > 0).map((offset) => ({
-    value: offset,
-    label: t(lang, DAY_LABELS[offset]),
-  }));
-  const slotOptions = openSlots(dayOffset).map((name) => ({
+  const quickDayOptions = START_DAYS.map((offset) => ({
+    offset,
+    dateKey: japanDateKey(offset),
+  }))
+    .filter(({ dateKey: key }) => openSlotsForDate(key).length > 0)
+    .map(({ offset, dateKey: key }) => ({
+      value: key,
+      label: t(lang, DAY_LABELS[offset]),
+    }));
+
+  const availableSlots = openSlotsForDate(dateKey);
+  const activeSlot = availableSlots.includes(slot) ? slot : (availableSlots[0] ?? 'morning');
+  const slotOptions = availableSlots.map((name) => ({
     value: name,
     label: `${t(lang, `borrow.${name}`)} ${formatHour(lang, TIME_SLOTS[name])}`,
   }));
@@ -139,16 +155,15 @@ function BorrowForm({ item, onRefused }) {
     label: n === 1 ? t(lang, 'borrow.day') : t(lang, 'borrow.days', { n }),
   }));
 
-  function chooseDay(offset) {
-    setDayOffset(offset);
-    // Switching to today: if the chosen time is already over, take the next one that is still open.
-    const slots = openSlots(offset);
-    if (!slots.includes(slot)) setSlot(slots[0]);
+  function chooseDate(nextKey) {
+    if (!nextKey || nextKey < minDateKey || nextKey > maxDateKey) return;
+    setDateKey(nextKey);
+    const slots = openSlotsForDate(nextKey);
+    if (slots.length > 0 && !slots.includes(slot)) setSlot(slots[0]);
   }
 
-  const startAt = japanTime(dayOffset, TIME_SLOTS[slot]);
-  const endAt = new Date(Date.parse(startAt) + days * DAY).toISOString();
-  // Exactly the params the server stores with the 'request' message (name = me, seen by the owner).
+  const startAt = japanTimeForDate(dateKey, TIME_SLOTS[activeSlot]);
+  const endAt = new Date(Date.parse(startAt) + days * DAY_MS).toISOString();
   const params = { item: item.item_key, spot: item.spot, start: startAt, end: endAt, name: user.nickname };
 
   async function send() {
@@ -159,9 +174,6 @@ function BorrowForm({ item, onRefused }) {
       navigate(`/loan/${result.loan.id}`, { state: { sentTo: item.owner_nickname } });
     } catch (error) {
       setBusy(false);
-      // 409: someone else got it first, or I already asked (e.g. on another device).
-      // 403: the owner has just switched on "trusted neighbors only".
-      // Reloading the item shows the right note for all of them.
       if (error.status === 409 || error.status === 403) onRefused();
       else setFailed(true);
     }
@@ -174,8 +186,19 @@ function BorrowForm({ item, onRefused }) {
       <div className="field">
         <p className="label">{t(lang, 'borrow.when')}</p>
         <div className="chip-stack">
-          <ChipGroup label={t(lang, 'borrow.when')} options={dayOptions} value={dayOffset} onChange={chooseDay} />
-          <ChipGroup label={t(lang, 'borrow.when')} options={slotOptions} value={slot} onChange={setSlot} />
+          <ChipGroup label={t(lang, 'borrow.when')} options={quickDayOptions} value={dateKey} onChange={chooseDate} />
+          <label className="date-picker-row">
+            <span className="hint">{t(lang, 'borrow.pickDate')}</span>
+            <input
+              type="date"
+              className="text-input date-input"
+              value={dateKey}
+              min={minDateKey}
+              max={maxDateKey}
+              onChange={(event) => chooseDate(event.target.value)}
+            />
+          </label>
+          <ChipGroup label={t(lang, 'borrow.when')} options={slotOptions} value={activeSlot} onChange={setSlot} />
         </div>
       </div>
 
@@ -195,7 +218,7 @@ function BorrowForm({ item, onRefused }) {
       </div>
 
       {failed && <p className="error">{t(lang, 'common.error')}</p>}
-      <button type="button" className="button-primary" disabled={busy} onClick={send}>
+      <button type="button" className="button-primary" disabled={busy || availableSlots.length === 0} onClick={send}>
         {t(lang, 'borrow.send')}
       </button>
     </>

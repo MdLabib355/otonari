@@ -44,6 +44,7 @@
     "shelf.mine": "あなたの物",
     "shelf.from": "{name}の物",
     "shelf.allCategories": "すべて",
+    "shelf.addFirst": "物を登録する",
 
     "item.maxDays": "最大{n}日間",
     "item.maxDay": "最大1日",
@@ -53,6 +54,7 @@
     "borrow.today": "今日",
     "borrow.tomorrow": "明日",
     "borrow.dayAfter": "明後日",
+    "borrow.pickDate": "日付を選ぶ（14日先まで）",
     "borrow.morning": "朝",
     "borrow.afternoon": "昼",
     "borrow.evening": "夕方",
@@ -81,6 +83,8 @@
     "myItems.pick": "物を選ぶ",
     "myItems.maxDays": "貸出期間（最大）",
     "myItems.spot": "受け渡し場所",
+    "myItems.photoOptional": "物の写真（任意）",
+    "myItems.photoRemove": "写真を外す",
     "myItems.save": "共有棚に登録する",
     "myItems.remove": "取り下げる",
     "myItems.cantRemove": "予約中・貸出中の物は取り下げられません。",
@@ -104,6 +108,10 @@
     "loan.decline": "いいえ",
     "loan.declineBusy": "いいえ（その日は使います）",
     "loan.cancel": "お願いを取り消す",
+    "loan.cancelAccepted": "受け渡しをキャンセルする",
+    "loan.pingNeedBack": "早めの返却をお願いする",
+    "loan.pingOverdue": "丁寧にリマインドを送る",
+    "loan.pingCooldown": "先ほどリマインドを送りました。少し時間をおいてからお試しください。",
     "loan.handoverStep": "お渡しする前に、物の写真を撮ってください",
     "loan.takePhoto": "写真を撮る",
     "loan.sendPhoto": "写真を送る",
@@ -126,6 +134,10 @@
     "banner.new": "{name}からメッセージが届きました",
     "banner.reminder": "お知らせ",
     "banner.open": "開く",
+    "banner.dueSoon": "{item}の返却期限は{end}です",
+    "banner.overdue": "期限超過：{item}を{name}にお返しください",
+    "banner.returnNow": "返す",
+    "banner.moreDue": "ほか{n}件",
 
     "settings.title": "設定",
     "settings.language": "言語",
@@ -216,7 +228,9 @@
 
     "sys.dueSoon": "【お知らせ】{item}の返却予定は{end}です。{spot}でお返しください。",
     "sys.overdue": "【お知らせ】{item}の返却予定（{end}）を過ぎています。お手数ですが、なるべく早めに{name}にお返しください。",
-    "sys.overdueLender": "【お知らせ】{name}に{item}の返却について丁寧にお知らせしました。ご自身で催促される必要はありません。"
+    "sys.overdueLender": "【お知らせ】{name}に{item}の返却について丁寧にお知らせしました。ご自身で催促される必要はありません。",
+    "pingNeedBack": "お手数をおかけして申し訳ありません。{name}がまもなく{item}を使う予定があるため、ご都合のよい時に{spot}でお返しいただけますでしょうか。",
+    "pingOverdue": "お忙しいところ恐れ入りますが、{name}の{item}の返却予定（{end}）を過ぎております。お手数ですが、{spot}にてお返しいただけますでしょうか。"
   },
 
   "tips": {
