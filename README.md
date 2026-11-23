@@ -2,7 +2,7 @@
 
 **Borrow from next door, in your own language.**
 
-Otonari (お隣, "next door") is a web app that lets neighbors in the same building or block in Japan lend and borrow things they rarely use, like a futon dryer, a stepladder or a takoyaki maker. Nobody types a message: every message is a fixed phrase that each neighbor reads in their own language (English, Japanese, Easy Japanese or Bengali).
+Otonari (お隣, "next door") is an installable web app (PWA) that lets neighbors in the same building or block in Japan lend and borrow things they rarely use, like a futon dryer, a stepladder or a takoyaki maker. Nobody types a message: every message is a fixed phrase that each neighbor reads in their own language (English, Japanese, Easy Japanese or Bengali).
 
 **The connection we update (TSUNAGU: Update the Way We Connect).** Neighbors live a few meters apart but never ask each other for help, because of language, shyness, and 遠慮 (*enryo*): the Japanese reluctance to impose on others, or to chase an overdue item. Otonari repairs this broken link between foreign residents, who need things but can't ask, and elderly residents, who own useful things but rarely talk to their neighbors. Asking takes a few taps, both sides read polite words in their own language, and the app sends the awkward reminder, so nobody has to.
 
@@ -17,6 +17,7 @@ Otonari (お隣, "next door") is a web app that lets neighbors in the same build
 - **QR poster.** A printable A4 poster in Japanese, English and Bengali for the notice board.
 - **Start a new neighborhood.** A building manager or neighborhood association leader creates a group and prints its poster.
 - **Etiquette tips** at the right moment: before asking, at handover and at return.
+- **Installable.** Add it to the home screen like an app; it updates itself. Only the app's own files stay on the phone: loans, messages and photos always come from the server.
 
 ## Screenshots
 
@@ -79,6 +80,8 @@ Open <http://localhost:3001>, or `http://<IP address of this computer>:3001` on 
 
 Join with the code `SAKURA-2611` (Sakura Heights) or `HAMA-3CHOME` (Hamaguchi-machi 3-chome), or tap a name under "Demo: continue as a neighbor". To show two neighbors on one computer, open the second one in a private window. The 5-step demo script is in [CLAUDE.md](CLAUDE.md), section 10.
 
+To install the app, choose "Install app" in the browser's menu ("Add to Home Screen" on an iPhone). Browsers allow this only over HTTPS and on `localhost`: at `http://<IP address of this computer>:3001` the app works, but can't be installed. On an iPhone, install it first and join inside the installed app, because it doesn't share the login with the browser.
+
 | Command | What it does |
 |---|---|
 | `npm run seed` | Resets the database, deletes all photos, and adds the demo neighbors with their items. |
@@ -91,7 +94,7 @@ Settings in `server/.env`: `PORT`, and `DEMO_MODE`. With `DEMO_MODE=true`, the j
 
 ## Tech stack
 
-- **Client:** React 18, Vite, react-router-dom, plain JavaScript and plain CSS, `qrcode` for the poster
+- **Client:** React 18, Vite, react-router-dom, plain JavaScript and plain CSS, `qrcode` for the poster, `vite-plugin-pwa` to make it installable
 - **Server:** Node.js, Express, better-sqlite3, multer for photo uploads, cors, dotenv
 - **Database:** one SQLite file (`server/otonari.db`); photos in `server/uploads/`
 - **Development:** concurrently, nodemon
@@ -103,13 +106,14 @@ No TypeScript, CSS framework or state library: the code is meant to be read and 
 ```
 otonari/
 ├── client/                   the React app
+│   ├── public/               the app icons (drawn by make-icons.ps1)
 │   └── src/
 │       ├── pages/            one file per screen: Join, Shelf, ItemPage, MyItems, Loans, LoanPage, Settings, Poster
 │       ├── components/       Banner, PhraseBubble, SpeakButton, PhotoCapture, TrustLine, TipCard, ...
 │       ├── i18n/             en.json, ja.json, ja-easy.json, bn.json, and index.js, which renders the phrases
 │       ├── data/catalog.js   the items, handover spots, quick replies and loan lengths to choose from
 │       ├── App.jsx           routes, bottom navigation, new-message banner
-│       └── api.js, useInbox.js, UserContext.js, styles.css
+│       └── api.js, useInbox.js, UserContext.js, serviceWorker.js, styles.css
 ├── server/                   the Express API
 │   ├── index.js              starts the server (and serves the built client)
 │   ├── db.js                 database tables and small helpers

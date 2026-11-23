@@ -93,7 +93,11 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
   name "Otonari (おとなり)" and the web address to type (`<current origin>/join`). Also serves as our
   security layer: only people who can physically see the notice board get the code. `/poster` shows my
   own group; `/poster?code=XXXX-XXXX` shows that group without being a member.
-- **PWA**: installable (manifest + service worker via `vite-plugin-pwa`).
+- **PWA**: installable (manifest + service worker via `vite-plugin-pwa`). The service worker keeps only the
+  built app files. Pages, `/api` and `/uploads` always come from the network (the kept page is only for when
+  there is no connection), so every start shows the newest version; an app left open reloads itself after a
+  deploy. There is no service worker during `npm run dev`. (Browsers allow service workers only over HTTPS
+  and on localhost.)
 
 ### NOT in scope (roadmap only — do not build)
 Thank-you stamps, more languages, stronger verification (code rotation / management company),
@@ -132,9 +136,11 @@ otonari/
 ├── client/
 │   ├── index.html
 │   ├── vite.config.js      # react plugin, PWA plugin, proxy /api and /uploads → :3001
-│   ├── public/             # icons for PWA (icon-192.png, icon-512.png)
+│   ├── make-icons.ps1      # draws the icons in public/
+│   ├── public/             # icons for PWA (icon-192.png, icon-512.png, icon-maskable-512.png)
 │   └── src/
 │       ├── main.jsx
+│       ├── serviceWorker.js   # registers the service worker, reloads an open app after a deploy
 │       ├── App.jsx         # routes + bottom nav + notification banner
 │       ├── api.js          # fetch wrapper; adds "Authorization: Bearer <token>"
 │       ├── UserContext.js  # useUser(): me, my group, my language and my inbox, for every page
