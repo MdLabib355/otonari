@@ -1,16 +1,26 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
+import QRCode from 'qrcode';
 import { api } from '../api.js';
 import { t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
+// Every neighbor who walks past should be able to read the poster, so it always shows all three
+// languages. Only the Print button is in the language of the person using the app.
+const POSTER_LANGS = ['ja', 'en', 'bn'];
+
+// The QR code as an SVG picture: it stays sharp, however large it is printed.
+async function qrPicture(text) {
+  const svg = await QRCode.toString(text, { type: 'svg' });
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 // The join poster of my own group, or of the group in the address: /poster?code=XXXX-XXXX works
 // without being a member, so that whoever just created a group can open its poster.
-// Still simple: Step 10 adds the QR code, the three languages and printing.
 export default function Poster() {
   const { lang, group: myGroup } = useUser();
   const [searchParams] = useSearchParams();
-  const [poster, setPoster] = useState(null); // { code, name, type, city, memberCount }
+  const [poster, setPoster] = useState(null); // { code, joinUrl, qrCode, name, type, city, memberCount }
   const [problem, setProblem] = useState(null); // the text to show instead
 
   const code = (searchParams.get('code') || myGroup?.code || '').trim().toUpperCase();
@@ -19,9 +29,11 @@ export default function Poster() {
     if (!code) return;
     setPoster(null);
     setProblem(null);
+    // Phones will open the address this page has right now, so don't print a poster from localhost.
+    const joinUrl = `${window.location.origin}/join?code=${encodeURIComponent(code)}`;
     api
       .get(`/api/groups/by-code/${encodeURIComponent(code)}`)
-      .then((group) => setPoster({ code, ...group }))
+      .then(async (group) => setPoster({ code, joinUrl, qrCode: await qrPicture(joinUrl), ...group }))
       .catch((error) => setProblem(error.status === 404 ? 'join.groupNotFound' : 'common.error'));
   }, [code]);
 
@@ -31,9 +43,35 @@ export default function Poster() {
 
   return (
     <section>
-      <h1>{t(lang, 'poster.title')}</h1>
-      <p className="subtitle">{t(lang, 'join.groupFound', { group: poster.name, city: poster.city })}</p>
-      <p className="big-code">{poster.code}</p>
+      <button type="button" className="button-primary print-button" onClick={() => window.print()}>
+        {t(lang, 'poster.print')}
+      </button>
+
+      <div className="poster">
+        <h1>
+          {POSTER_LANGS.map((posterLang) => (
+            <span key={posterLang} lang={posterLang}>
+              {t(posterLang, 'poster.title')}
+            </span>
+          ))}
+        </h1>
+
+        <p className="poster-group">
+          <strong>{poster.name}</strong>
+          <span className="muted">{poster.city}</span>
+        </p>
+        <img className="poster-qr" src={poster.qrCode} alt={poster.joinUrl} />
+        <p className="big-code">{poster.code}</p>
+
+        <div className="poster-texts">
+          {POSTER_LANGS.map((posterLang) => (
+            <div key={posterLang} lang={posterLang}>
+              <p>{t(posterLang, 'poster.body', { group: poster.name })}</p>
+              <p>{t(posterLang, 'poster.code', { code: poster.code })}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
