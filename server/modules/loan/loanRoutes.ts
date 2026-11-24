@@ -18,8 +18,8 @@ import {
 import { requireMember } from '../../core/auth.ts';
 import { check, read, write } from '../../core/http.ts';
 import { loanRole } from './loanRole.ts';
-import { storePhoto } from './photoFiles.ts';
-import { receivePhoto } from './receivePhoto.ts';
+import { storePhoto } from '../../core/photoFiles.ts';
+import { receivePhoto } from '../../core/receivePhoto.ts';
 
 const router = express.Router();
 

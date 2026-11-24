@@ -2,6 +2,22 @@
   "meta": { "lang": "ja-easy", "name": "やさしい にほんご", "locale": "ja-JP", "speech": "ja-JP" },
 
   "ui": {
+    "auth.forgot": "パスワードを わすれた",
+    "auth.resetTitle": "あたらしい パスワード",
+    "profile.title": "プロフィール",
+    "profile.edit": "プロフィールを かえる",
+    "profile.save": "ほぞん",
+    "profile.choosePhoto": "しゃしんを えらぶ",
+    "profile.removePhoto": "しゃしんを けす",
+    "profile.password": "パスワード",
+    "profile.currentPassword": "いまの パスワード",
+    "profile.newPassword": "あたらしい パスワード",
+    "profile.changePassword": "パスワードを かえる",
+    "profile.passwordChanged": "パスワードを かえました。ほかの スマホは ログアウト しました。",
+    "profile.wrongPassword": "いまの パスワードが ちがいます。または かえられません。",
+    "profile.googleOnly": "Googleで ログイン します。パスワードは ありません。",
+    "profile.noPassword": "パスワードが ありません。ログアウト して「パスワードを わすれた」を おして ください。",
+
     "auth.codeTitle": "6つの すうじを いれる",
     "auth.codeSentTo": "コードを おくりました:",
     "auth.codeHelp": "コードは 10ぷん つかえます。メールが ない ときは、めいわくメールを みて ください。",

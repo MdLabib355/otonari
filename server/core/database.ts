@@ -89,6 +89,7 @@ export async function createTables() {
       group_id INTEGER REFERENCES groups(id),
       joined_at TIMESTAMPTZ,
       nickname TEXT NOT NULL DEFAULT '',
+      avatar TEXT, -- profile photo, like handover_photo; NULL = none
       lang TEXT NOT NULL CHECK (lang IN ('en','ja','ja-easy','bn')),
       elder_mode BOOLEAN NOT NULL DEFAULT false,
       is_demo BOOLEAN NOT NULL DEFAULT false,
@@ -219,6 +220,7 @@ export async function createTables() {
 export async function addNewColumns() {
   await query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS google_only BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS member_status TEXT NOT NULL DEFAULT 'active';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS muted_until TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS trust_override TEXT;

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import type { AuthConfig, Login } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
 import { api } from '../../core/api.ts';
@@ -19,6 +20,7 @@ interface Props {
 // With an email address: with the password, or without one (a code is sent to the address).
 export default function LoginForm({ config, onLogin, onCodeStep }: Props) {
   const { lang } = useUser();
+  const { search } = useLocation(); // keeps ?code=... of a poster
   const [way, setWay] = useState<Way>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -109,6 +111,13 @@ export default function LoginForm({ config, onLogin, onCodeStep }: Props) {
           autoComplete="current-password"
           maxLength={128}
         />
+      )}
+      {way === 'password' && config.email_code && (
+        <p>
+          <Link to={{ pathname: '/forgot-password', search }} className="back-link">
+            {t(lang, 'auth.forgot')}
+          </Link>
+        </p>
       )}
       {problem && <p className="error">{t(lang, problem)}</p>}
       <div className="actions">

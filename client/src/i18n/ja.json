@@ -2,6 +2,22 @@
   "meta": { "lang": "ja", "name": "日本語", "locale": "ja-JP", "speech": "ja-JP" },
 
   "ui": {
+    "auth.forgot": "パスワードをお忘れですか?",
+    "auth.resetTitle": "新しいパスワードを設定",
+    "profile.title": "プロフィール",
+    "profile.edit": "プロフィールを編集",
+    "profile.save": "保存",
+    "profile.choosePhoto": "写真を選ぶ",
+    "profile.removePhoto": "写真を削除",
+    "profile.password": "パスワード",
+    "profile.currentPassword": "現在のパスワード",
+    "profile.newPassword": "新しいパスワード",
+    "profile.changePassword": "パスワードを変更",
+    "profile.passwordChanged": "パスワードを変更しました。他の端末はログアウトされました。",
+    "profile.wrongPassword": "現在のパスワードが違うか、このアカウントでは変更できません。",
+    "profile.googleOnly": "Googleでログインしているため、パスワードはありません。",
+    "profile.noPassword": "パスワードが未設定です。設定するには、ログアウトして「パスワードをお忘れですか?」を押してください。",
+
     "auth.codeTitle": "6桁のコードを入力",
     "auth.codeSentTo": "コードの送信先:",
     "auth.codeHelp": "コードは10分間有効です。受信トレイに見当たらない場合は、迷惑メールフォルダをご確認ください。",

@@ -3,14 +3,23 @@ import { Link, useLocation } from 'react-router-dom';
 import type { AuthConfig } from '../../../../shared/types.ts';
 import { api } from '../../core/api.ts';
 import { useUser } from '../../core/UserContext.ts';
-import { t } from '../../i18n/index.ts';
+import { t, type UiKey } from '../../i18n/index.ts';
 import GoogleButton from './GoogleButton.tsx';
 import LoginForm from './LoginForm.tsx';
 import RegisterForm from './RegisterForm.tsx';
 
-// Log in (/login) and Register (/register): with Google, or with an email address.
+type Mode = 'login' | 'register' | 'reset';
+
+const TITLES: Record<Mode, UiKey> = {
+  login: 'auth.loginTitle',
+  register: 'auth.registerTitle',
+  reset: 'auth.resetTitle',
+};
+
+// Log in (/login) and Register (/register): with Google, or with an email address. And "Forgot password?"
+// (/forgot-password), only with an email address.
 // Somebody who scanned a poster (?code=...) goes on to its group afterwards, see App.tsx.
-export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
+export default function AuthPage({ mode }: { mode: Mode }) {
   const { lang, login } = useUser();
   const { search } = useLocation(); // keeps ?code=... when switching between the two pages
   const [config, setConfig] = useState<AuthConfig | null>(null);
@@ -29,14 +38,15 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   }, [mode]);
 
   // Without Google there is nothing to choose.
-  const showForm = withEmail || (config !== null && !config.google_client_id);
+  const google = mode === 'reset' ? null : config?.google_client_id;
+  const showForm = withEmail || (config !== null && !google);
 
   return (
     <section className="narrow-page surface-card">
-      {!codeStep && <h1>{t(lang, mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}</h1>}
+      {!codeStep && <h1>{t(lang, TITLES[mode])}</h1>}
       {!codeStep && search.includes('code=') && <p className="notice">{t(lang, 'auth.thenJoin')}</p>}
 
-      {!codeStep && config?.google_client_id && <GoogleButton clientId={config.google_client_id} onLogin={login} />}
+      {!codeStep && google && <GoogleButton clientId={google} onLogin={login} />}
       {config && !showForm && (
         <button type="button" className="button-primary" onClick={() => setWithEmail(true)}>
           {t(lang, 'auth.continueEmail')}
@@ -45,8 +55,8 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       {config && showForm && mode === 'login' && (
         <LoginForm config={config} onLogin={login} onCodeStep={setCodeStep} />
       )}
-      {config && showForm && mode === 'register' && (
-        <RegisterForm config={config} onLogin={login} onCodeStep={setCodeStep} />
+      {config && showForm && mode !== 'login' && (
+        <RegisterForm key={mode} purpose={mode} config={config} onLogin={login} onCodeStep={setCodeStep} />
       )}
 
       {!codeStep && (

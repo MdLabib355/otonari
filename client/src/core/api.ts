@@ -13,7 +13,7 @@
 const API_BASE = '/api/v1';
 
 // Pages that also work without being logged in.
-const VISITOR_PAGES = ['/register', '/login', '/poster'];
+const VISITOR_PAGES = ['/register', '/login', '/forgot-password', '/poster'];
 
 const TOKEN_KEY = 'otonari-token';
 

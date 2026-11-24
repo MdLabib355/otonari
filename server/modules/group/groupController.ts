@@ -49,7 +49,8 @@ export async function startGroup(req: Request) {
 }
 
 export async function showMembers(req: Request) {
-  return reply(200, (await listMembers(req.groupId)).map(memberView));
+  const members = await listMembers(req.groupId);
+  return reply(200, await Promise.all(members.map(memberView)));
 }
 
 export async function removeMember(req: Request) {

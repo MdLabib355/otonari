@@ -109,6 +109,9 @@ export default function SuperAdminShell({
             </>
           )}
           <span className="ga-badge ga-badge-indigo">{user.nickname || user.email}</span>
+          <Link to="/profile" className="ga-btn">
+            Profile
+          </Link>
           <Link to={user.group_id ? '/' : '/join'} className="ga-btn">
             {user.group_id ? 'Neighbor App' : 'Join a Group'}
           </Link>

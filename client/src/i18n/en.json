@@ -2,6 +2,22 @@
   "meta": { "lang": "en", "name": "English", "locale": "en-US", "speech": "en-US" },
 
   "ui": {
+    "auth.forgot": "Forgot password?",
+    "auth.resetTitle": "Choose a new password",
+    "profile.title": "Your profile",
+    "profile.edit": "Edit profile",
+    "profile.save": "Save",
+    "profile.choosePhoto": "Choose a photo",
+    "profile.removePhoto": "Remove the photo",
+    "profile.password": "Password",
+    "profile.currentPassword": "Current password",
+    "profile.newPassword": "New password",
+    "profile.changePassword": "Change the password",
+    "profile.passwordChanged": "Your password has been changed. Your other devices are logged out.",
+    "profile.wrongPassword": "The current password is wrong, or this account cannot change it.",
+    "profile.googleOnly": "You log in with Google, so there is no password here.",
+    "profile.noPassword": "You have no password yet. To set one, log out and tap “Forgot password?”.",
+
     "auth.codeTitle": "Enter the 6-digit code",
     "auth.codeSentTo": "We sent a code to",
     "auth.codeHelp": "The code works for 10 minutes. If you don't see the email in your inbox, check your spam folder.",

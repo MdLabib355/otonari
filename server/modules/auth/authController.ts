@@ -13,6 +13,7 @@ import { forgetAttempts, tooMany } from '../../core/limiter.ts';
 import { DEMO_MODE, GOOGLE_CLIENT_ID, MAILBOX_URL } from '../../core/settings.ts';
 import type { UserRow } from '../../types.ts';
 import {
+  changePassword,
   confirmEmail,
   createUser,
   findUserByEmail,
@@ -26,13 +27,18 @@ import { readGoogleToken } from './google.ts';
 import { canSendEmail, sendCode } from './mailer.ts';
 import { hashSecret, matchesHash } from './password.ts';
 import { createTicket, useTicket } from './registrationModel.ts';
-import { createSession, deleteSession, deleteSessionsOf } from './sessionModel.ts';
+import { createSession, deleteOtherSessions, deleteSession, deleteSessionsOf } from './sessionModel.ts';
 
 const TOO_MANY = refuse(429, 'Too many attempts, please wait a few minutes');
 // One email = one account. Who registered with Google logs in with Google.
 const USE_GOOGLE = reply(409, { error: 'This account logs in with Google', use_google: true });
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 128;
+const BAD_PASSWORD = refuse(400, `The password must be ${MIN_PASSWORD} to ${MAX_PASSWORD} characters`);
+
+function isNewPassword(value: unknown): value is string {
+  return typeof value === 'string' && value.length >= MIN_PASSWORD && value.length <= MAX_PASSWORD;
+}
 
 // The login page shows only what this server can do.
 export function showConfig() {
@@ -66,9 +72,7 @@ async function logIn(user: UserRow): Promise<Answer> {
 export async function register(req: Request) {
   if (tooMany(`register ${req.ip}`, 20, 60)) return TOO_MANY;
   const password: unknown = req.body?.password;
-  if (typeof password !== 'string' || password.length < MIN_PASSWORD || password.length > MAX_PASSWORD) {
-    return refuse(400, `The password must be ${MIN_PASSWORD} to ${MAX_PASSWORD} characters`);
-  }
+  if (!isNewPassword(password)) return BAD_PASSWORD;
 
   const passwordHash = await hashSecret(password);
   return transaction(async () => {
@@ -103,11 +107,12 @@ export async function login(req: Request) {
   return logIn(user);
 }
 
-// Sends a code. For registering (step 1) there must be no account yet, for logging in there must be one.
+// Sends a code. For registering (step 1) there must be no account yet; for logging in or a new password there
+// must be one.
 export async function requestCode(req: Request) {
   if (!canSendEmail) return refuse(503, 'This server cannot send emails');
   const purpose: unknown = req.body?.purpose;
-  if (!isOneOf(['register', 'login'], purpose)) return refuse(400, "purpose must be 'register' or 'login'");
+  if (!isOneOf(['register', 'login', 'reset'], purpose)) return refuse(400, "purpose: 'register', 'login' or 'reset'");
   const email = toEmail(req.body?.email);
   if (!email) return refuse(400, 'Not an email address');
   if (tooMany(`code ${email}`, 5, 60) || tooMany(`code ${req.ip}`, 20, 60)) return TOO_MANY;
@@ -143,14 +148,65 @@ async function acceptCode(req: Request): Promise<{ email: string } | Answer> {
   return { email };
 }
 
-// Registering, step 2: the code proves the email address.
+// Registering or a new password, step 2: the code proves the email address. (Both get the same kind of ticket:
+// with an account it can only change the password, without one it can only register.)
 export async function verifyCode(req: Request) {
   const result = await acceptCode(req);
   if (!('email' in result)) return result;
-  const refusal = refuseExisting(await findUserByEmail(result.email));
+  const user = await findUserByEmail(result.email);
+  const refusal = req.body?.purpose === 'reset' ? refuseReset(user) : refuseExisting(user);
   if (refusal) return refusal;
   const answer: RegistrationTicket = { ticket: await createTicket(result.email) };
   return reply(200, answer);
+}
+
+function refuseReset(user: UserRow | undefined): Answer | null {
+  if (!user) return refuse(404, 'There is no account with this email');
+  if (user.google_only) return USE_GOOGLE;
+  if (user.is_demo) return refuse(403, 'The password of demo accounts cannot be changed');
+  return user.deactivated_at ? refuse(403, 'This account is deactivated') : null;
+}
+
+// Forgot password, step 3. All devices are logged out: maybe somebody else knew the old password.
+export async function resetPassword(req: Request) {
+  if (tooMany(`reset ${req.ip}`, 20, 60)) return TOO_MANY;
+  const password: unknown = req.body?.password;
+  if (!isNewPassword(password)) return BAD_PASSWORD;
+
+  const passwordHash = await hashSecret(password);
+  return transaction(async () => {
+    const email = await useTicket(toText(req.body?.ticket));
+    if (!email) return refuse(401, 'Please prove your email address again');
+    const user = await findUserByEmail(email);
+    const refusal = refuseReset(user);
+    if (refusal || !user) return refusal ?? refuse(404, 'There is no account with this email');
+    await provedEmail(user);
+    await changePassword(user.id, passwordHash);
+    await deleteSessionsOf(user.id);
+    return logIn(await getUser(user.id));
+  });
+}
+
+// On the profile page: the old password is needed. The other devices are logged out.
+export async function changeMyPassword(req: Request) {
+  const { user } = req;
+  const { current_password, password }: Record<string, unknown> = req.body ?? {};
+  if (tooMany(`change ${user.id}`, 10, 15)) return TOO_MANY;
+  if (user.is_demo) return refuse(403, 'The password of demo accounts cannot be changed');
+  if (user.google_only) return USE_GOOGLE;
+  if (!isNewPassword(password)) return BAD_PASSWORD;
+
+  const current = typeof current_password === 'string' ? current_password.slice(0, MAX_PASSWORD + 1) : '';
+  // Not 401: that would log the person out.
+  if (!(await matchesHash(current, user.password_hash))) return refuse(403, 'Wrong password');
+
+  const passwordHash = await hashSecret(password);
+  await transaction(async () => {
+    await changePassword(user.id, passwordHash);
+    await deleteOtherSessions(user.id, tokenOf(req));
+  });
+  forgetAttempts(`change ${user.id}`);
+  return reply(204);
 }
 
 // Logging in without a password.

@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
-import { BlockIcon, BuildingIcon, UserIcon } from '../components/Icons.tsx';
+import Avatar from '../components/Avatar.tsx';
+import { BlockIcon, BuildingIcon } from '../components/Icons.tsx';
 import { useMember } from '../core/UserContext.ts';
 import Banner from '../features/message/Banner.tsx';
 import NotificationBell from '../features/message/NotificationBell.tsx';
@@ -39,8 +40,8 @@ export default function Header({ adminAlertCount = 0 }: { adminAlertCount?: numb
           </nav>
 
           <div className="header-right">
-            <Link to="/settings" className="header-user-pill" title={t(lang, 'nav.settings')}>
-              <UserIcon className="icon-sm" />
+            <Link to="/profile" className="header-user-pill" title={t(lang, 'profile.title')}>
+              <Avatar url={user.avatar} />
               <span>{displayName(lang, user.nickname)}</span>
             </Link>
             <NotificationBell />

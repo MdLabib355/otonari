@@ -106,11 +106,14 @@ export default function Settings() {
           <div className="field">
             <p className="label">{t(lang, 'settings.account')}</p>
             <p className="muted">
-              {user.email} · {t(lang, `role.${user.role}`)}
+              {user.nickname} · {user.email} · {t(lang, `role.${user.role}`)}
             </p>
           </div>
 
           <div className="actions">
+            <Link to="/profile" className="button-secondary button-link">
+              {t(lang, 'profile.edit')}
+            </Link>
             {user.role !== 'user' && (
               <Link to="/group-admin" className="button-secondary button-link">
                 {t(lang, 'admin.manageGroup')}

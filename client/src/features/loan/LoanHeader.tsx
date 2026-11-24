@@ -1,4 +1,5 @@
 import type { Lang, Loan, LoanItem, Person } from '../../../../shared/types.ts';
+import Avatar from '../../components/Avatar.tsx';
 import { findItem } from '../../data/catalog.ts';
 import LoanStepper from './LoanStepper.tsx';
 import { displayName, formatDate, itemName, t } from '../../i18n/index.ts';
@@ -19,7 +20,10 @@ export default function LoanHeader({ loan, item, other, lang }: Props) {
         </span>
         <div>
           <h1>{itemName(lang, item.item_key)}</h1>
-          <p className="muted">{t(lang, 'loans.with', { name: displayName(lang, other.nickname) })}</p>
+          <p className="muted inline-icon-text">
+            <Avatar url={other.avatar ?? null} />
+            {t(lang, 'loans.with', { name: displayName(lang, other.nickname) })}
+          </p>
         </div>
       </header>
       <p className="loan-facts">

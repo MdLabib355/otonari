@@ -21,7 +21,7 @@ export async function findUserByGoogle(sub: string): Promise<UserRow | undefined
 }
 
 export async function getPerson(userId: number): Promise<Person> {
-  return found(await queryOne<Person>('SELECT id, nickname, lang FROM users WHERE id = $1', [userId]));
+  return found(await queryOne<Person>('SELECT id, nickname, lang, avatar FROM users WHERE id = $1', [userId]));
 }
 
 interface NewUser {
@@ -63,6 +63,19 @@ export async function setPassword(userId: number, passwordHash: string) {
     'UPDATE users SET password_hash = $1, email_verified = true, google_only = false, deactivated_at = NULL WHERE id = $2',
     [passwordHash, userId]
   );
+}
+
+// Chosen by the person themselves.
+export async function changePassword(userId: number, passwordHash: string) {
+  await query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, userId]);
+}
+
+export async function setNickname(userId: number, nickname: string) {
+  await query('UPDATE users SET nickname = $1 WHERE id = $2', [nickname, userId]);
+}
+
+export async function setAvatar(userId: number, avatar: string | null) {
+  await query('UPDATE users SET avatar = $1 WHERE id = $2', [avatar, userId]);
 }
 
 export async function setRole(userId: number, role: Role) {

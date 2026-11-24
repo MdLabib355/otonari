@@ -139,3 +139,52 @@
 .text-input:read-only {
   background: var(--quiet);
 }
+
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  object-fit: cover;
+}
+
+.avatar-large {
+  width: 96px;
+  height: 96px;
+  font-size: 2em;
+}
+
+.account-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+}
+
+.profile-photo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+}
+
+.profile-photo .actions {
+  flex: 1 1 12em;
+  margin: 0;
+}
+
+.profile-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-row .text-input {
+  flex: 1 1 10em;
+}

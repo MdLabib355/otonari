@@ -2,7 +2,7 @@
 // (The AWS library reads AWS_REGION, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY by itself.)
 
 import './env.ts';
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const BUCKET = process.env.S3_BUCKET || null;
@@ -17,6 +17,10 @@ export async function putObject(key: string, body: Buffer, contentType: string) 
   await s3!.send(
     new PutObjectCommand({ Bucket: BUCKET!, Key: key, Body: body, ContentType: contentType, CacheControl })
   );
+}
+
+export async function deleteObject(key: string) {
+  await s3!.send(new DeleteObjectCommand({ Bucket: BUCKET!, Key: key }));
 }
 
 // The same URL for half an hour: otherwise the browser would load a photo again whenever a page is refreshed.
