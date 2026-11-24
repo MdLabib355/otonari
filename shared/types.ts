@@ -6,6 +6,14 @@ export type GroupType = 'building' | 'block';
 export type ItemStatus = 'available' | 'reserved' | 'lent';
 export type LoanStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'active' | 'returned';
 
+export type GroupRole = 'member' | 'co_admin' | 'group_admin';
+export type MemberStatus = 'pending' | 'active' | 'borrow_muted' | 'suspended';
+export type GroupLifecycleStatus = 'active' | 'read_only' | 'suspended' | 'archived';
+export type JoinPolicy = 'open' | 'approval_required' | 'locked';
+export type TrustOverride = 'granted' | 'revoked' | null;
+export type AuditCategory = 'Group' | 'Member' | 'Shelf' | 'Loan' | 'Notice' | 'Catalog' | 'Break-Glass' | 'System';
+export type DisputeStatus = 'open' | 'resolved';
+
 // Golden rule: keys and raw values only, never translated text.
 export interface PhraseParams {
   item?: string; // key from the catalog
@@ -29,6 +37,11 @@ export interface User {
   nickname: string;
   lang: Lang;
   elder_mode: boolean;
+  group_role: GroupRole;
+  member_status: MemberStatus;
+  muted_until: string | null;
+  is_trusted: boolean;
+  trust_override: TrustOverride;
 }
 
 export interface Group {
@@ -37,6 +50,10 @@ export interface Group {
   name: string;
   type: GroupType;
   city: string;
+  join_policy: JoinPolicy;
+  lifecycle_status: GroupLifecycleStatus;
+  invite_code_version: number;
+  active_announcement_key: string | null;
 }
 
 // GET /api/v1/me
@@ -56,10 +73,12 @@ export interface GroupPreview {
   type: GroupType;
   city: string;
   member_count: number;
+  join_policy: JoinPolicy;
+  lifecycle_status: GroupLifecycleStatus;
 }
 
 // POST /api/v1/groups
-export type NewGroupAnswer = Omit<Group, 'id'>;
+export type NewGroupAnswer = Pick<Group, 'code' | 'name' | 'type' | 'city'>;
 
 // GET /api/v1/demo/users
 export interface DemoUser extends User {
@@ -162,4 +181,223 @@ export interface InboxMessage {
   from_lang: Lang | null;
   item_key: string;
   borrower_trust: Trust | null; // only with a request
+}
+
+// ---------- Group Admin DTOs ----------
+
+export interface GroupAnnouncement {
+  id: number;
+  group_id: number;
+  phrase_key: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface GroupAdminDashboard {
+  group: Group;
+  pending_count: number;
+  active_member_count: number;
+  overdue_loan_count: number;
+  flagged_loan_count: number;
+  active_announcement: GroupAnnouncement | null;
+}
+
+export interface ActiveLoanBadge {
+  loan_id: number;
+  role: 'lender' | 'borrower';
+  status: LoanStatus;
+  is_overdue: boolean;
+}
+
+export interface GroupMemberSummary {
+  id: number;
+  nickname: string;
+  lang: Lang;
+  elder_mode: boolean;
+  group_role: GroupRole;
+  member_status: MemberStatus;
+  muted_until: string | null;
+  is_trusted: boolean;
+  trust_override: TrustOverride;
+  trust: Trust;
+  created_at: string;
+  active_loans: ActiveLoanBadge[];
+  owned_available_items: number;
+}
+
+export interface GroupAdminItem extends ShelfItem {
+  hidden_at: string | null;
+}
+
+export interface GroupAdminLoanTimelineItem {
+  id: number;
+  phrase_key: string;
+  params: PhraseParams;
+  from_nickname: string | null;
+  from_lang: Lang | null;
+  created_at: string;
+}
+
+export interface GroupAdminLoan {
+  id: number;
+  item_id: number;
+  item_key: string;
+  spot: string;
+  status: LoanStatus;
+  is_overdue: boolean;
+  start_at: string;
+  end_at: string;
+  returned_at: string | null;
+  handover_photo: string | null;
+  return_photo: string | null;
+  borrower: Person;
+  lender: Person;
+  flagged_reason: string | null;
+  escalated_to_super_admin: boolean;
+  last_nudge_at: string | null;
+  timeline: GroupAdminLoanTimelineItem[];
+}
+
+export interface AuditLogEntry {
+  id: number;
+  actor_id: number | null;
+  actor_label: string;
+  actor_role: 'super_admin' | 'group_admin' | 'co_admin' | 'system';
+  scope_group_id: number | null;
+  category: AuditCategory;
+  action: string;
+  target_type: string;
+  target_id: string;
+  reason: string | null;
+  detail: string;
+  created_at: string;
+}
+
+// ---------- Super Admin & Global Catalog DTOs ----------
+
+export interface CatalogItemRecord {
+  item_key: string;
+  emoji: string;
+  category: string;
+  is_active: boolean;
+  label_en: string;
+  label_ja: string;
+  label_ja_easy: string;
+  label_bn: string;
+  updated_at: string;
+}
+
+export interface SuperAdminSessionInfo {
+  admin_label: string;
+  expires_at: string;
+}
+
+export interface SuperAdminLoginResponse extends SuperAdminSessionInfo {
+  token: string;
+}
+
+export interface ReminderHealth {
+  interval_seconds: number;
+  last_run_at: string | null;
+  last_checked_loans: number;
+  last_error: string | null;
+}
+
+export interface StorageHealth {
+  used_bytes: number;
+  quota_bytes: number;
+  total_files: number;
+  orphan_files: number;
+}
+
+export interface SuperAdminOverview {
+  active_groups: number;
+  total_groups: number;
+  total_neighbors: number;
+  active_loans: number;
+  completed_loans: number;
+  open_disputes: number;
+  orphaned_groups: { id: number; name: string; code: string; member_count: number }[];
+  db_latency_ms: number;
+  demo_mode: boolean;
+  reminder_health: ReminderHealth;
+  storage_health: StorageHealth;
+  recent_audits: AuditLogEntry[];
+}
+
+export interface SuperAdminGroupMemberPreview {
+  id: number;
+  nickname: string;
+  group_role: GroupRole;
+  member_status: MemberStatus;
+  on_time_returns: number;
+}
+
+export interface SuperAdminGroupSummary {
+  id: number;
+  name: string;
+  code: string;
+  type: GroupType;
+  city: string;
+  join_policy: JoinPolicy;
+  lifecycle_status: GroupLifecycleStatus;
+  admin_nickname: string | null;
+  member_count: number;
+  overdue_count: number;
+  members: SuperAdminGroupMemberPreview[];
+}
+
+export interface DisputeSummary {
+  id: number;
+  group_id: number;
+  group_name: string;
+  loan_id: number;
+  item_key: string;
+  spot: string;
+  borrower_nickname: string;
+  borrower_lang: Lang;
+  lender_nickname: string;
+  lender_lang: Lang;
+  reason_key: string;
+  status: DisputeStatus;
+  escalation_notice_sent: boolean;
+  resolution_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface BreakGlassUnlockResponse {
+  break_glass_token: string;
+  expires_at: string;
+  ttl_seconds: number;
+  reason: string;
+}
+
+export interface BreakGlassEvidenceMessage {
+  id: number;
+  sender_nickname: string | null;
+  sender_lang: Lang | null;
+  phrase_key: string;
+  params: PhraseParams;
+  created_at: string;
+}
+
+export interface BreakGlassEvidence {
+  dispute_id: number;
+  loan_id: number;
+  item_key: string;
+  handover_photo: string | null;
+  return_photo: string | null;
+  loan_status: LoanStatus;
+  start_at: string;
+  end_at: string;
+  returned_at: string | null;
+  messages: BreakGlassEvidenceMessage[];
+}
+
+export interface StorageCleanupResult {
+  dry_run: boolean;
+  orphan_files: string[];
+  deleted_count: number;
+  reclaimed_bytes: number;
 }

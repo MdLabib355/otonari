@@ -1,5 +1,5 @@
-// PostgreSQL: the connections, transactions, and the tables from CLAUDE.md section 5.
-// The queries are in the model of each module.
+// PostgreSQL: the connections, transactions, and the tables from CLAUDE.md section 5,
+// extended with Group Admin, Super Admin, global catalog, and append-only audit log tables.
 
 import './env.ts';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -65,8 +65,7 @@ export function found<T>(value: T | undefined): T {
   return value;
 }
 
-// The schema, exactly as in CLAUDE.md section 5.
-// "IF NOT EXISTS" keeps the existing data when the server restarts.
+// Idempotent schema creation + additive migrations for pre-existing local databases.
 export async function createTables() {
   await query(`
     CREATE TABLE IF NOT EXISTS groups (
@@ -74,7 +73,14 @@ export async function createTables() {
       code TEXT UNIQUE NOT NULL,          -- join code, e.g. 'SAKURA-2611'
       name TEXT NOT NULL,                 -- shown as-is (proper noun)
       type TEXT NOT NULL CHECK (type IN ('building','block')),
-      city TEXT NOT NULL
+      city TEXT NOT NULL,
+      join_policy TEXT NOT NULL DEFAULT 'open'
+        CHECK (join_policy IN ('open','approval_required','locked')),
+      lifecycle_status TEXT NOT NULL DEFAULT 'active'
+        CHECK (lifecycle_status IN ('active','read_only','suspended','archived')),
+      invite_code_version INTEGER NOT NULL DEFAULT 1,
+      suspended_at TIMESTAMPTZ,
+      suspension_reason TEXT
     );
 
     CREATE TABLE IF NOT EXISTS users (
@@ -85,6 +91,12 @@ export async function createTables() {
       elder_mode BOOLEAN NOT NULL DEFAULT false,
       token TEXT UNIQUE NOT NULL,         -- crypto.randomUUID()
       is_demo BOOLEAN NOT NULL DEFAULT false, -- seeded demo neighbor: anyone may "continue as" them in demo mode
+      group_role TEXT NOT NULL DEFAULT 'member'
+        CHECK (group_role IN ('member','co_admin','group_admin')),
+      member_status TEXT NOT NULL DEFAULT 'active'
+        CHECK (member_status IN ('pending','active','borrow_muted','suspended')),
+      muted_until TIMESTAMPTZ,
+      trust_override TEXT CHECK (trust_override IN ('granted','revoked')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
       left_at TIMESTAMPTZ                 -- set when they leave (their token stops working); NULL = member
     );
@@ -93,13 +105,14 @@ export async function createTables() {
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       owner_id INTEGER NOT NULL REFERENCES users(id),
       group_id INTEGER NOT NULL REFERENCES groups(id),
-      item_key TEXT NOT NULL,             -- key from catalog.ts, e.g. 'futon_dryer'
+      item_key TEXT NOT NULL,             -- key from catalog_items, e.g. 'futon_dryer'
       max_days INTEGER NOT NULL DEFAULT 3,
       spot TEXT NOT NULL,                 -- key from SPOTS, e.g. 'entrance'
-      trusted_only BOOLEAN NOT NULL DEFAULT false,  -- true = only for people with an on-time return
+      trusted_only BOOLEAN NOT NULL DEFAULT false,  -- true = only for trusted neighbors
       status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','lent')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-      removed_at TIMESTAMPTZ              -- set when the owner removes it (soft delete); NULL = on the shelf
+      removed_at TIMESTAMPTZ,             -- set when the owner removes it (soft delete); NULL = on the shelf
+      hidden_at TIMESTAMPTZ               -- set when Group Admin temporarily hides it; NULL = visible
     );
 
     CREATE TABLE IF NOT EXISTS loans (
@@ -122,19 +135,98 @@ export async function createTables() {
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       loan_id INTEGER NOT NULL REFERENCES loans(id),
-      from_user_id INTEGER REFERENCES users(id),   -- NULL = system message (reminders)
+      from_user_id INTEGER REFERENCES users(id),   -- NULL = system message (reminders / admin notices)
       to_user_id INTEGER NOT NULL REFERENCES users(id),
       phrase_key TEXT NOT NULL,           -- e.g. 'request', 'accept', 'sys.dueSoon'
       params JSONB NOT NULL DEFAULT '{}', -- { item, start, end, spot, name }
       read_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
     );
+
+    CREATE TABLE IF NOT EXISTS group_announcements (
+      id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      group_id INTEGER NOT NULL REFERENCES groups(id),
+      author_id INTEGER REFERENCES users(id),
+      phrase_key TEXT NOT NULL,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+    );
+
+    CREATE TABLE IF NOT EXISTS loan_disputes (
+      id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      group_id INTEGER NOT NULL REFERENCES groups(id),
+      loan_id INTEGER NOT NULL REFERENCES loans(id),
+      raised_by_user_id INTEGER REFERENCES users(id),
+      reason_key TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','resolved')),
+      escalated_to_super_admin BOOLEAN NOT NULL DEFAULT false,
+      escalation_notice_sent BOOLEAN NOT NULL DEFAULT false,
+      resolution_note TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+      resolved_at TIMESTAMPTZ
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      actor_id INTEGER REFERENCES users(id),
+      actor_label TEXT NOT NULL,
+      actor_role TEXT NOT NULL CHECK (actor_role IN ('super_admin','group_admin','co_admin','system')),
+      scope_group_id INTEGER REFERENCES groups(id),
+      category TEXT NOT NULL,
+      action TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      reason TEXT,
+      detail TEXT NOT NULL,
+      ip_address TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+    );
+
+    CREATE TABLE IF NOT EXISTS super_admin_sessions (
+      token TEXT PRIMARY KEY,
+      admin_label TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      last_seen_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+    );
+
+    CREATE TABLE IF NOT EXISTS catalog_items (
+      item_key TEXT PRIMARY KEY,
+      emoji TEXT NOT NULL,
+      category TEXT NOT NULL,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      label_en TEXT NOT NULL,
+      label_ja TEXT NOT NULL,
+      label_ja_easy TEXT NOT NULL,
+      label_bn TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+    );
+
+    -- Additive migrations for existing databases created prior to admin panels
+    ALTER TABLE groups ADD COLUMN IF NOT EXISTS join_policy TEXT NOT NULL DEFAULT 'open';
+    ALTER TABLE groups ADD COLUMN IF NOT EXISTS lifecycle_status TEXT NOT NULL DEFAULT 'active';
+    ALTER TABLE groups ADD COLUMN IF NOT EXISTS invite_code_version INTEGER NOT NULL DEFAULT 1;
+    ALTER TABLE groups ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ;
+    ALTER TABLE groups ADD COLUMN IF NOT EXISTS suspension_reason TEXT;
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS group_role TEXT NOT NULL DEFAULT 'member';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS member_status TEXT NOT NULL DEFAULT 'active';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS muted_until TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS trust_override TEXT;
+
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ;
+
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_scope_created ON audit_logs (scope_group_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_loan_disputes_group_status ON loan_disputes (group_id, status);
+    CREATE INDEX IF NOT EXISTS idx_group_announcements_active ON group_announcements (group_id) WHERE is_active;
   `);
 }
 
 // Start from empty tables: drop them all and create them again (used by seedData.ts).
 export async function resetDatabase() {
-  await query('DROP TABLE IF EXISTS messages, loans, items, users, groups');
+  await query(
+    'DROP TABLE IF EXISTS audit_logs, loan_disputes, group_announcements, super_admin_sessions, catalog_items, messages, loans, items, users, groups'
+  );
   await createTables();
 }
 

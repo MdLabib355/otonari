@@ -1,7 +1,7 @@
-// The users table: the neighbors, and how reliable they have been as borrowers.
+// The users table: the neighbors, roles, statuses, and how reliable they have been as borrowers.
 
 import crypto from 'node:crypto';
-import type { Lang, Person, Trust } from '../../../shared/types.ts';
+import type { GroupRole, Lang, MemberStatus, Person, Trust } from '../../../shared/types.ts';
 import { found, query, queryOne } from '../../core/database.ts';
 import type { CountRow, UserRow } from '../../types.ts';
 
@@ -27,7 +27,17 @@ export async function findMemberByToken(token: string): Promise<UserRow | undefi
 
 export async function countMembers(groupId: number): Promise<number> {
   const row = await queryOne<CountRow>(
-    'SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND left_at IS NULL',
+    "SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND left_at IS NULL AND member_status <> 'pending'",
+    [groupId]
+  );
+  return found(row).count;
+}
+
+export async function countActiveGroupAdmins(groupId: number): Promise<number> {
+  const row = await queryOne<CountRow>(
+    `SELECT COUNT(*)::int AS count
+     FROM users
+     WHERE group_id = $1 AND left_at IS NULL AND member_status = 'active' AND group_role = 'group_admin'`,
     [groupId]
   );
   return found(row).count;
@@ -37,16 +47,24 @@ export async function listDemoUsers(): Promise<DemoUserRow[]> {
   return query<DemoUserRow>(
     `SELECT users.*, groups.name AS group_name, groups.code AS group_code
      FROM users JOIN groups ON groups.id = users.group_id
-     WHERE users.is_demo AND users.left_at IS NULL
+     WHERE users.is_demo AND users.left_at IS NULL AND users.member_status <> 'suspended'
      ORDER BY users.group_id, users.id`
   );
 }
 
 // The new random token is the user's whole identity (the client keeps it in localStorage).
-export async function createUser(groupId: number, nickname: string, lang: Lang): Promise<UserRow> {
+export async function createUser(
+  groupId: number,
+  nickname: string,
+  lang: Lang,
+  options: { memberStatus?: MemberStatus; groupRole?: GroupRole } = {}
+): Promise<UserRow> {
+  const memberStatus = options.memberStatus ?? 'active';
+  const groupRole = options.groupRole ?? 'member';
   const user = await queryOne<UserRow>(
-    'INSERT INTO users (group_id, nickname, lang, token) VALUES ($1, $2, $3, $4) RETURNING *',
-    [groupId, nickname, lang, crypto.randomUUID()]
+    `INSERT INTO users (group_id, nickname, lang, token, member_status, group_role)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [groupId, nickname, lang, crypto.randomUUID(), memberStatus, groupRole]
   );
   return found(user);
 }
@@ -64,6 +82,15 @@ export async function markLeft(userId: number) {
   await query('UPDATE users SET left_at = now() WHERE id = $1', [userId]);
 }
 
+// Auto-lifts an expired borrow_muted status so borrowing resumes cleanly on schedule.
+export async function resolveEffectiveMemberStatus(user: UserRow): Promise<MemberStatus> {
+  if (user.member_status === 'borrow_muted' && user.muted_until && Date.parse(user.muted_until) <= Date.now()) {
+    await query("UPDATE users SET member_status = 'active', muted_until = NULL WHERE id = $1", [user.id]);
+    return 'active';
+  }
+  return user.member_status;
+}
+
 // How reliable a borrower has been: { joined_days, on_time, late }. Only completed returns count,
 // and "on time" means that the return photo was sent before the loan was due.
 export async function trustOf(userId: number): Promise<Trust> {
@@ -79,7 +106,10 @@ export async function trustOf(userId: number): Promise<Trust> {
   return found(trust);
 }
 
-// "Trusted neighbors only" items need at least one on-time return.
+// "Trusted neighbors only" items honor admin endorsement/revocation first, else >= 1 on-time return.
 export async function isTrusted(userId: number): Promise<boolean> {
+  const user = await getUser(userId);
+  if (user.trust_override === 'granted') return true;
+  if (user.trust_override === 'revoked') return false;
   return (await trustOf(userId)).on_time > 0;
 }

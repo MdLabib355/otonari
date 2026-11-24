@@ -5,12 +5,12 @@
 
 import express from 'express';
 import { readMessages, showInbox } from './messageController.ts';
-import { requireUser } from '../../core/auth.ts';
+import { requireActiveMember, requireUser } from '../../core/auth.ts';
 import { read, write } from '../../core/http.ts';
 
 const router = express.Router();
 
-router.get('/me/inbox', read(requireUser, showInbox));
-router.post('/me/inbox/mark-read', write(requireUser, readMessages));
+router.get('/me/inbox', read(requireUser, requireActiveMember, showInbox));
+router.post('/me/inbox/mark-read', write(requireUser, requireActiveMember, readMessages));
 
 export default router;

@@ -11,7 +11,7 @@ const HOUR = 60 * 60 * 1000;
 const DUE_IN = { dueSoon: 12 * HOUR, overdue: -1 * HOUR }; // the new due time, from now
 
 export async function showDemoUsers() {
-  return reply(200, (await listDemoUsers()).map(demoUserView));
+  return reply(200, await Promise.all((await listDemoUsers()).map(demoUserView)));
 }
 
 // Hands out a token, so it works only for the seeded demo neighbors, never for people who joined.
@@ -22,6 +22,7 @@ export async function demoLogin(req: Request) {
   const user = await findMember(toId(userId));
   if (!user) return refuse(404, 'User not found');
   if (!user.is_demo) return refuse(403, 'You can only continue as a demo neighbor');
+  if (user.member_status === 'suspended') return refuse(403, 'Demo neighbor is suspended');
   return reply(200, await loginView(user));
 }
 

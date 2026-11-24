@@ -8,8 +8,9 @@ import { DURATIONS, QUICK_REPLY_KEYS, isOneOf } from '../../core/allowedKeys.ts'
 import { found } from '../../core/database.ts';
 import { refuse, reply, toId } from '../../core/http.ts';
 import { findItem, getItem } from '../item/itemModel.ts';
+import { getGroupRow } from '../group/groupModel.ts';
 import { createMessage } from '../message/messageModel.ts';
-import { isTrusted } from '../user/userModel.ts';
+import { isTrusted, resolveEffectiveMemberStatus } from '../user/userModel.ts';
 import {
   acceptLoan,
   cancelLoan,
@@ -46,9 +47,18 @@ export async function showLoan(req: Request) {
 export async function requestLoan(req: Request) {
   const { item_id, start_at, end_at }: Record<string, unknown> = req.body ?? {};
 
+  const group = await getGroupRow(req.user.group_id);
+  if (group.lifecycle_status !== 'active') {
+    return refuse(403, 'New borrow requests are currently paused for this group');
+  }
+  const effectiveStatus = await resolveEffectiveMemberStatus(req.user);
+  if (effectiveStatus === 'borrow_muted') {
+    return refuse(403, 'Your borrowing privileges are temporarily paused by the building admin');
+  }
+
   if (!Number.isInteger(Number(item_id))) return refuse(400, 'item_id must be a number');
   const item = await findItem(toId(item_id));
-  if (!item) return refuse(404, 'Item not found');
+  if (!item || item.hidden_at) return refuse(404, 'Item not found');
   if (item.group_id !== req.user.group_id) return refuse(403, 'Not in your neighborhood');
   if (item.owner_id === req.user.id) return refuse(403, "You can't borrow your own item");
 
@@ -89,7 +99,7 @@ export async function accept(req: Request) {
   if (loan.status !== 'pending') return refuse(409, 'Only a waiting request can be accepted');
   if (Date.parse(loan.end_at) <= Date.now()) return refuse(409, 'The dates of this request are over');
   const item = await getItem(loan.item_id);
-  if (item.status !== 'available' || item.removed_at) return refuse(409, 'The item is not available');
+  if (item.status !== 'available' || item.removed_at || item.hidden_at) return refuse(409, 'The item is not available');
 
   await acceptLoan(loan);
   return showLoan(req);

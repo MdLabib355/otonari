@@ -1,8 +1,9 @@
 // The neighborhood shelf, and managing my own items.
 
 import type { Request } from 'express';
-import { DURATIONS, ITEM_KEYS, SPOT_KEYS, isOneOf } from '../../core/allowedKeys.ts';
+import { DURATIONS, SPOT_KEYS, isActiveCatalogItemKey, isOneOf } from '../../core/allowedKeys.ts';
 import { refuse, reply, toId } from '../../core/http.ts';
+import { getGroupRow } from '../group/groupModel.ts';
 import { findOpenLoan } from '../loan/loanModel.ts';
 import { isTrusted } from '../user/userModel.ts';
 import { createItem, findItem, findItemWithOwner, listItemsOf, listShelf, setTrustedOnly } from './itemModel.ts';
@@ -29,14 +30,16 @@ export async function showItem(req: Request) {
 
 export async function addItem(req: Request) {
   const { item_key, max_days, spot, trusted_only = false }: Record<string, unknown> = req.body ?? {};
+  const group = await getGroupRow(req.user.group_id);
+  if (group.lifecycle_status !== 'active') return refuse(403, 'This group is currently read-only');
 
-  // Only keys from the catalog: that is what makes every item name translatable.
-  if (!isOneOf(ITEM_KEYS, item_key)) return refuse(400, 'Unknown item');
+  // Only keys from the active catalog: that is what makes every item name translatable.
+  if (!(await isActiveCatalogItemKey(item_key))) return refuse(400, 'Unknown item');
   if (!isOneOf(DURATIONS, max_days)) return refuse(400, `max_days must be one of ${DURATIONS.join(', ')}`);
   if (!isOneOf(SPOT_KEYS, spot)) return refuse(400, 'Unknown handover spot');
   if (typeof trusted_only !== 'boolean') return refuse(400, 'trusted_only must be true or false');
 
-  return reply(201, await createItem(req.user.id, req.user.group_id, item_key, max_days, spot, trusted_only));
+  return reply(201, await createItem(req.user.id, req.user.group_id, item_key as string, max_days, spot, trusted_only));
 }
 
 // Requests that are already waiting stay: the owner can still answer them with No.

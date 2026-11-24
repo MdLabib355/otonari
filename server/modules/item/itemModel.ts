@@ -28,13 +28,13 @@ export async function getLoanItem(itemId: number): Promise<LoanItem> {
   return found(item);
 }
 
-// One item with its owner's nickname and language.
+// One item with its owner's nickname and language (visible on shelf only).
 export async function findItemWithOwner(itemId: number): Promise<ItemWithOwner | undefined> {
   return queryOne<ItemWithOwner>(
     `SELECT items.id, items.group_id, items.item_key, items.max_days, items.spot, items.trusted_only,
             items.status, items.owner_id, users.nickname AS owner_nickname, users.lang AS owner_lang
      FROM items JOIN users ON users.id = items.owner_id
-     WHERE items.id = $1 AND items.removed_at IS NULL`,
+     WHERE items.id = $1 AND items.removed_at IS NULL AND items.hidden_at IS NULL`,
     [itemId]
   );
 }
@@ -44,7 +44,7 @@ export async function listShelf(groupId: number): Promise<ShelfItem[]> {
     `SELECT items.id, items.item_key, items.max_days, items.spot, items.trusted_only, items.status,
             items.owner_id, users.nickname AS owner_nickname
      FROM items JOIN users ON users.id = items.owner_id
-     WHERE items.group_id = $1 AND items.removed_at IS NULL
+     WHERE items.group_id = $1 AND items.removed_at IS NULL AND items.hidden_at IS NULL
      ORDER BY items.id`,
     [groupId]
   );

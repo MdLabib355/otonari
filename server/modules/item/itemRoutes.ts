@@ -10,16 +10,16 @@
 
 import express from 'express';
 import { addItem, deleteItem, showItem, showMyItems, showShelf, updateItem } from './itemController.ts';
-import { requireUser } from '../../core/auth.ts';
+import { requireActiveMember, requireUser } from '../../core/auth.ts';
 import { read, write } from '../../core/http.ts';
 
 const router = express.Router();
 
-router.get('/items', read(requireUser, showShelf));
-router.get('/me/items', read(requireUser, showMyItems));
-router.get('/items/:id', read(requireUser, showItem));
-router.post('/items', write(requireUser, addItem));
-router.patch('/items/:id', write(requireUser, updateItem));
-router.delete('/items/:id', write(requireUser, deleteItem));
+router.get('/items', read(requireUser, requireActiveMember, showShelf));
+router.get('/me/items', read(requireUser, requireActiveMember, showMyItems));
+router.get('/items/:id', read(requireUser, requireActiveMember, showItem));
+router.post('/items', write(requireUser, requireActiveMember, addItem));
+router.patch('/items/:id', write(requireUser, requireActiveMember, updateItem));
+router.delete('/items/:id', write(requireUser, requireActiveMember, deleteItem));
 
 export default router;

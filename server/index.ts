@@ -13,7 +13,7 @@ import { createV1 } from './api/v1.ts';
 import { createTables, query, waitForDatabase } from './core/database.ts';
 import { startReminders } from './modules/loan/reminders.ts';
 import { countGroups } from './modules/group/groupModel.ts';
-import { seed } from './seedData.ts';
+import { seed, seedCatalogItems } from './seedData.ts';
 
 const PORT = process.env.PORT || 3001;
 const uploadsDir = path.join(import.meta.dirname, 'uploads');
@@ -69,6 +69,7 @@ app.use((err: Error & { status?: number }, req: Request, res: Response, next: Ne
 // An empty database (e.g. after a fresh deploy) gets the demo data, exactly like `npm run seed`.
 await waitForDatabase();
 await createTables();
+await seedCatalogItems();
 if ((await countGroups()) === 0) {
   console.log('The database is empty, so it gets the demo data.');
   await seed(false);
