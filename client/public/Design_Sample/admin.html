@@ -1,0 +1,3101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Otonari (お隣) — Super Admin &amp; Group Admin UI Prototype</title>
+  <style>
+    /* =========================================================================
+       OTONARI DESIGN TOKENS & BASE STYLES (Zero External Dependencies)
+       ========================================================================= */
+    :root {
+      --bg-warm: #f6f2ea;
+      --surface: #ffffff;
+      --surface-muted: #faf8f4;
+      --indigo: #1f4b6e;
+      --indigo-dark: #15354f;
+      --indigo-soft: #e8f0f6;
+      --border: #e2dbd0;
+      --border-strong: #cfc5b6;
+      --text-main: #1e242b;
+      --text-muted: #5a6470;
+      --green: #2a7a4b;
+      --green-bg: #e8f5ee;
+      --amber: #b86b11;
+      --amber-bg: #fdf3e4;
+      --red: #b5342a;
+      --red-bg: #fcebeb;
+      --radius-card: 14px;
+      --radius-btn: 10px;
+      --radius-pill: 999px;
+      --shadow-card: 0 2px 8px rgba(30, 36, 43, 0.05);
+      --shadow-modal: 0 18px 48px rgba(21, 53, 79, 0.22);
+      --tap-min: 44px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN",
+                   "Hiragino Sans", "Yu Gothic", "Noto Sans Bengali", Meiryo, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-warm);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    button, input, select {
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid var(--indigo);
+      outline-offset: 2px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* =========================================================================
+       TOP PROTOTYPE SWITCHER BAR
+       ========================================================================= */
+    .proto-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--indigo-dark);
+      color: #ffffff;
+      padding: 10px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .proto-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+    }
+
+    .proto-brand-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.14);
+      font-size: 16px;
+    }
+
+    .proto-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #c7d9e8;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+    }
+
+    .proto-switcher {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .proto-switch-btn {
+      min-height: 38px;
+      padding: 6px 14px;
+      border-radius: var(--radius-btn);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.08);
+      color: #e6eff6;
+      font-weight: 600;
+      font-size: 13.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .proto-switch-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .proto-switch-btn.active {
+      background: #ffffff;
+      color: var(--indigo-dark);
+      border-color: #ffffff;
+    }
+
+    /* =========================================================================
+       SHARED UI COMPONENTS (Cards, Buttons, Badges, Tables, Alerts)
+       ========================================================================= */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .card-subtitle {
+      margin: 4px 0 0;
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      min-height: var(--tap-min);
+      padding: 8px 15px;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--surface-muted);
+      border-color: var(--indigo);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.48;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--indigo-dark);
+      border-color: var(--indigo-dark);
+    }
+
+    .btn-soft {
+      background: var(--indigo-soft);
+      border-color: #c8daea;
+      color: var(--indigo-dark);
+    }
+
+    .btn-soft:hover:not(:disabled) {
+      background: #dce8f2;
+    }
+
+    .btn-success {
+      background: var(--green);
+      border-color: var(--green);
+      color: #ffffff;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #21623c;
+    }
+
+    .btn-danger-outline {
+      background: var(--surface);
+      border-color: #e6b8b5;
+      color: var(--red);
+    }
+
+    .btn-danger-outline:hover:not(:disabled) {
+      background: var(--red-bg);
+      border-color: var(--red);
+    }
+
+    .btn-amber-outline {
+      background: var(--surface);
+      border-color: #e9caa0;
+      color: var(--amber);
+    }
+
+    .btn-amber-outline:hover:not(:disabled) {
+      background: var(--amber-bg);
+      border-color: var(--amber);
+    }
+
+    .btn-sm {
+      min-height: 36px;
+      padding: 5px 11px;
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 12.5px;
+      font-weight: 600;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .badge-green { background: var(--green-bg); color: var(--green); }
+    .badge-amber { background: var(--amber-bg); color: var(--amber); }
+    .badge-red   { background: var(--red-bg); color: var(--red); }
+    .badge-indigo{ background: var(--indigo-soft); color: var(--indigo); }
+    .badge-gray  { background: #ece8e1; color: var(--text-muted); }
+
+    .code-pill {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      background: var(--indigo-soft);
+      color: var(--indigo-dark);
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid #c9dceb;
+      display: inline-block;
+      font-size: 13.5px;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      text-align: left;
+      padding: 11px 12px;
+      font-size: 12.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      background: var(--surface-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 13px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .inline-alert {
+      padding: 12px 15px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 500;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 12px;
+      border: 1px solid transparent;
+    }
+
+    .inline-alert-red {
+      background: var(--red-bg);
+      color: var(--red);
+      border-color: #ebc3c0;
+    }
+
+    .inline-alert-amber {
+      background: var(--amber-bg);
+      color: #8c4f0a;
+      border-color: #ebd0a7;
+    }
+
+    .inline-alert-indigo {
+      background: var(--indigo-soft);
+      color: var(--indigo-dark);
+      border-color: #c7dbea;
+    }
+
+    .inline-alert-green {
+      background: var(--green-bg);
+      color: var(--green);
+      border-color: #bddfc9;
+    }
+
+    /* Form Controls */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-field label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .form-input, .form-select {
+      min-height: var(--tap-min);
+      padding: 9px 12px;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-main);
+      width: 100%;
+    }
+
+    /* =========================================================================
+       VIEW 1: SUPER ADMIN PANEL (Desktop Sidebar + Content)
+       ========================================================================= */
+    .sa-layout {
+      display: grid;
+      grid-template-columns: 256px minmax(0, 1fr);
+      min-height: calc(100vh - 58px);
+    }
+
+    .sa-sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sa-sidebar-heading {
+      padding: 4px 12px 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+
+    .sa-sidebar-heading h2 {
+      margin: 0;
+      font-size: 16px;
+      color: var(--indigo-dark);
+    }
+
+    .sa-sidebar-heading p {
+      margin: 3px 0 0;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .sa-nav-btn {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 13px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-align: left;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .sa-nav-btn:hover {
+      background: var(--bg-warm);
+    }
+
+    .sa-nav-btn.active {
+      background: var(--indigo-soft);
+      color: var(--indigo-dark);
+    }
+
+    .sa-nav-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sa-main {
+      padding: 24px 28px 48px;
+      max-width: 1220px;
+      width: 100%;
+    }
+
+    .sa-page-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .sa-page-head h1 {
+      margin: 0;
+      font-size: 22px;
+      color: var(--indigo-dark);
+    }
+
+    .sa-page-head p {
+      margin: 4px 0 0;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 18px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .kpi-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--indigo-dark);
+      margin-top: 6px;
+      line-height: 1.2;
+    }
+
+    .kpi-meta {
+      margin-top: 6px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    /* Catalog & Phrase Matrix */
+    .lang-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .lang-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 12.5px;
+    }
+
+    .lang-pill strong {
+      font-size: 11px;
+      color: var(--indigo);
+      background: var(--indigo-soft);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    .phrase-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .phrase-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      background: var(--surface-muted);
+    }
+
+    .phrase-key {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--indigo);
+      margin-bottom: 10px;
+      display: inline-block;
+      background: var(--indigo-soft);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .phrase-langs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .phrase-lang-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      font-size: 13.5px;
+    }
+
+    .phrase-lang-box .pl-tag {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+      text-transform: uppercase;
+    }
+
+    /* Break-Glass Privacy Shield */
+    .evidence-wrapper {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface-muted);
+      margin-top: 16px;
+    }
+
+    .evidence-content {
+      padding: 18px;
+      transition: filter 0.25s ease;
+    }
+
+    .evidence-content.is-locked {
+      filter: blur(8px);
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .privacy-shield {
+      position: absolute;
+      inset: 0;
+      background: rgba(246, 242, 234, 0.78);
+      backdrop-filter: blur(3px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      z-index: 2;
+    }
+
+    .privacy-shield-box {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-card);
+      padding: 22px 24px;
+      max-width: 440px;
+      box-shadow: var(--shadow-modal);
+    }
+
+    .photo-compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .photo-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .photo-box-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .timeline-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13.5px;
+    }
+
+    /* =========================================================================
+       VIEW 2: GROUP ADMIN PANEL (Warm Mobile-First Card Layout + Elder Mode)
+       ========================================================================= */
+    .ga-wrapper {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 20px 16px 64px;
+    }
+
+    .ga-subheader {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .ga-sub-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .ga-title-group h1 {
+      margin: 0;
+      font-size: 21px;
+      color: var(--indigo-dark);
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .ga-title-group p {
+      margin: 4px 0 0;
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .ga-controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Toggle Switch */
+    .switch-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: var(--tap-min);
+      padding: 4px 10px;
+      border-radius: 10px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+    }
+
+    .switch-input {
+      appearance: none;
+      width: 48px;
+      height: 28px;
+      background: #cfc7ba;
+      border-radius: 999px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .switch-input::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+      transition: transform 0.2s ease;
+    }
+
+    .switch-input:checked {
+      background: var(--indigo);
+    }
+
+    .switch-input:checked::after {
+      transform: translateX(20px);
+    }
+
+    .lang-picker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .lang-picker select {
+      min-height: var(--tap-min);
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    /* Live Banner Preview inside Group Admin */
+    .live-banner {
+      background: var(--indigo-soft);
+      border: 1px solid #bfd5e8;
+      border-left: 5px solid var(--indigo);
+      border-radius: 12px;
+      padding: 13px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    /* Group Admin Tab Bar */
+    .ga-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .ga-tab-btn {
+      min-height: var(--tap-min);
+      padding: 10px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 13.5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      text-align: center;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .ga-tab-btn:hover {
+      border-color: var(--indigo);
+      color: var(--indigo-dark);
+    }
+
+    .ga-tab-btn.active {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(31, 75, 110, 0.22);
+    }
+
+    .tab-dot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: var(--amber);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .ga-tab-btn.active .tab-dot {
+      background: #ffffff;
+      color: var(--indigo-dark);
+    }
+
+    /* Neighbor & Item Cards */
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .member-card, .item-card, .loan-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .member-card.pending-card {
+      border-color: #e6c697;
+      background: #fffcf7;
+    }
+
+    .member-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .member-identity {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--indigo-soft);
+      color: var(--indigo-dark);
+      font-weight: 800;
+      font-size: 17px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .member-name {
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .member-meta {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .item-card-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .item-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .item-emoji {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      background: var(--bg-warm);
+      border: 1px solid var(--border);
+      font-size: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .phrase-preview-box {
+      background: var(--indigo-soft);
+      border: 1px solid #c9dceb;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 12px 0;
+    }
+
+    .phrase-preview-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--indigo);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .phrase-preview-text {
+      font-size: 15.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin: 0;
+    }
+
+    /* Notice Board Poster Card */
+    .poster-frame {
+      background: #ffffff;
+      border: 2px solid var(--indigo);
+      border-radius: 16px;
+      padding: 24px 20px;
+      text-align: center;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .poster-brand {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--indigo);
+      margin-bottom: 4px;
+    }
+
+    .poster-group-name {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 0 0 6px;
+    }
+
+    .poster-taglines {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+
+    .poster-qr-wrap {
+      display: inline-flex;
+      padding: 12px;
+      background: #ffffff;
+      border: 1px solid var(--border-strong);
+      border-radius: 14px;
+      margin-bottom: 14px;
+    }
+
+    .poster-code-large {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: var(--indigo-dark);
+      background: var(--indigo-soft);
+      display: inline-block;
+      padding: 8px 18px;
+      border-radius: 10px;
+      border: 1px dashed var(--indigo);
+    }
+
+    .notice-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      background: var(--surface-muted);
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .notice-option.selected {
+      border-color: var(--indigo);
+      background: var(--indigo-soft);
+    }
+
+    .notice-option input[type="radio"] {
+      margin-top: 4px;
+      width: 20px;
+      height: 20px;
+      accent-color: var(--indigo);
+      flex-shrink: 0;
+    }
+
+    /* =========================================================================
+       ELDER MODE (.elder) — 22px Base Font & 64px Minimum Touch Targets
+       ========================================================================= */
+    #group-admin-view.elder {
+      font-size: 22px;
+      line-height: 1.55;
+    }
+
+    #group-admin-view.elder .ga-wrapper {
+      max-width: 920px;
+    }
+
+    #group-admin-view.elder h1,
+    #group-admin-view.elder .ga-title-group h1 {
+      font-size: 28px;
+    }
+
+    #group-admin-view.elder .card-title,
+    #group-admin-view.elder .member-name {
+      font-size: 24px;
+    }
+
+    #group-admin-view.elder .card-subtitle,
+    #group-admin-view.elder .member-meta,
+    #group-admin-view.elder .ga-title-group p,
+    #group-admin-view.elder .badge,
+    #group-admin-view.elder .inline-alert,
+    #group-admin-view.elder .phrase-preview-text,
+    #group-admin-view.elder .poster-taglines {
+      font-size: 19px;
+    }
+
+    #group-admin-view.elder .btn,
+    #group-admin-view.elder .btn-sm,
+    #group-admin-view.elder .ga-tab-btn,
+    #group-admin-view.elder .switch-label,
+    #group-admin-view.elder .lang-picker select {
+      min-height: 64px;
+      font-size: 20px;
+      padding: 12px 18px;
+    }
+
+    #group-admin-view.elder .ga-tabs {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    #group-admin-view.elder .code-pill {
+      font-size: 20px;
+      padding: 6px 14px;
+    }
+
+    #group-admin-view.elder .item-emoji {
+      width: 68px;
+      height: 68px;
+      font-size: 34px;
+    }
+
+    #group-admin-view.elder .avatar {
+      width: 58px;
+      height: 58px;
+      font-size: 24px;
+    }
+
+    /* =========================================================================
+       MODAL DIALOG & TOAST NOTIFICATIONS (Zero alert() / confirm())
+       ========================================================================= */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(21, 53, 79, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 200;
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 24px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: var(--shadow-modal);
+    }
+
+    .modal-title {
+      margin: 0 0 6px;
+      font-size: 18px;
+      color: var(--indigo-dark);
+    }
+
+    .modal-desc {
+      margin: 0 0 16px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: calc(100vw - 32px);
+    }
+
+    .toast {
+      background: var(--indigo-dark);
+      color: #ffffff;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(21, 53, 79, 0.25);
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastIn 0.2s ease;
+    }
+
+    .toast.toast-success { background: var(--green); }
+    .toast.toast-warn    { background: var(--amber); }
+    .toast.toast-danger  { background: var(--red); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* =========================================================================
+       RESPONSIVE BREAKPOINTS
+       ========================================================================= */
+    @media (max-width: 960px) {
+      .sa-layout {
+        grid-template-columns: 1fr;
+      }
+      .sa-sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 12px;
+      }
+      .sa-sidebar-heading {
+        width: 100%;
+        padding: 0 4px 8px;
+        margin-bottom: 4px;
+      }
+      .sa-nav-btn {
+        width: auto;
+        flex: 1 1 auto;
+      }
+      .sa-main {
+        padding: 18px 14px 40px;
+      }
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .phrase-langs,
+      .photo-compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+      .ga-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .proto-bar {
+        padding: 10px 12px;
+      }
+    }
+
+    /* =========================================================================
+       PRINT STYLES (Prints only the clean Lobby Notice Board Poster)
+       ========================================================================= */
+    @media print {
+      body {
+        background: #ffffff !important;
+      }
+      .proto-bar,
+      #super-admin-view,
+      .ga-subheader,
+      .live-banner,
+      .ga-tabs,
+      .no-print,
+      .toast-container,
+      .modal-backdrop {
+        display: none !important;
+      }
+      .ga-wrapper {
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
+      }
+      .card {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+      }
+      .poster-frame {
+        border: 3px solid #1f4b6e;
+        padding: 36px 28px;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =======================================================================
+       TOP PROTOTYPE SWITCHER BAR
+       ======================================================================= -->
+  <header class="proto-bar" role="banner">
+    <div class="proto-brand">
+      <span class="proto-brand-logo" aria-hidden="true">🏘️</span>
+      <span>Otonari (お隣)</span>
+      <span class="proto-label">Sample UI Prototype (Static Mock Data)</span>
+    </div>
+
+    <nav class="proto-switcher" aria-label="Switch Admin Prototype Panel">
+      <button id="switch-sa" class="proto-switch-btn active" type="button" onclick="switchTopView('super-admin')">
+        <span aria-hidden="true">🛡️</span> Super Admin Panel
+      </button>
+      <button id="switch-ga" class="proto-switch-btn" type="button" onclick="switchTopView('group-admin')">
+        <span aria-hidden="true">🏠</span> Group Admin Panel
+      </button>
+    </nav>
+  </header>
+
+  <!-- =======================================================================
+       VIEW 1: SUPER ADMIN PANEL (Platform Governance — Desktop Layout)
+       ======================================================================= -->
+  <section id="super-admin-view" aria-label="Super Admin Panel">
+    <div class="sa-layout">
+      <!-- Left Sidebar Navigation -->
+      <aside class="sa-sidebar" aria-label="Super Admin Sections">
+        <div class="sa-sidebar-heading">
+          <h2>Platform Governance</h2>
+          <p>Zero free-text · Privacy-first</p>
+        </div>
+
+        <button class="sa-nav-btn active" data-sa-tab="overview" onclick="setSaTab('overview')">
+          <span class="sa-nav-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Overview
+          </span>
+        </button>
+
+        <button class="sa-nav-btn" data-sa-tab="groups" onclick="setSaTab('groups')">
+          <span class="sa-nav-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+            Groups &amp; Rescue
+          </span>
+          <span class="badge badge-indigo" id="sa-nav-group-count">2</span>
+        </button>
+
+        <button class="sa-nav-btn" data-sa-tab="catalog" onclick="setSaTab('catalog')">
+          <span class="sa-nav-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            Catalog &amp; i18n
+          </span>
+        </button>
+
+        <button class="sa-nav-btn" data-sa-tab="disputes" onclick="setSaTab('disputes')">
+          <span class="sa-nav-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Break-Glass Dispute
+          </span>
+          <span class="badge badge-amber" id="sa-nav-dispute-badge">1</span>
+        </button>
+
+        <button class="sa-nav-btn" data-sa-tab="audit" onclick="setSaTab('audit')">
+          <span class="sa-nav-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Audit Log
+          </span>
+          <span class="badge badge-gray" id="sa-nav-audit-count">3</span>
+        </button>
+      </aside>
+
+      <!-- Main Dynamic Content Container -->
+      <main class="sa-main" id="sa-content"></main>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       VIEW 2: GROUP ADMIN PANEL (Sakura Heights — Neighborhood Control)
+       ======================================================================= -->
+  <section id="group-admin-view" class="hidden" aria-label="Group Admin Panel">
+    <div class="ga-wrapper">
+      <!-- Top Group Admin Sub-Header -->
+      <div class="ga-subheader">
+        <div class="ga-sub-top">
+          <div class="ga-title-group">
+            <h1>
+              <span id="ga-group-title">Sakura Heights</span>
+              <span class="code-pill" id="ga-header-code">SAKURA-2611</span>
+            </h1>
+            <p id="ga-group-subtitle">Nagasaki · Managed by Admin Sato</p>
+          </div>
+          <span class="badge badge-green">● Building Active</span>
+        </div>
+
+        <div class="ga-controls-bar">
+          <label class="switch-label" for="elder-mode-toggle">
+            <input id="elder-mode-toggle" class="switch-input" type="checkbox" onchange="toggleElderMode(this.checked)" />
+            <span>Elder Mode (大文字)</span>
+          </label>
+
+          <div class="lang-picker">
+            <label for="ga-lang-select" id="ga-lang-label">Preview Language:</label>
+            <select id="ga-lang-select" onchange="setPreviewLang(this.value)">
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+              <option value="ja-easy">やさしい日本語</option>
+              <option value="bn">বাংলা</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Shelf Banner Preview (Shown when an announcement is posted) -->
+      <div id="ga-live-banner" class="live-banner hidden" role="status">
+        <div>
+          <strong id="ga-banner-heading">📌 Active Shelf Banner:</strong>
+          <span id="ga-banner-text"></span>
+        </div>
+        <button class="btn btn-sm" type="button" onclick="clearAnnouncementBanner()">Clear</button>
+      </div>
+
+      <!-- Group Admin 4-Tab Bar -->
+      <nav class="ga-tabs" aria-label="Group Admin Sections">
+        <button class="ga-tab-btn active" data-ga-tab="neighbors" onclick="setGaTab('neighbors')">
+          <span>👥 <span id="ga-tab-label-neighbors">Neighbors</span></span>
+          <span class="tab-dot" id="ga-pending-dot">1</span>
+        </button>
+        <button class="ga-tab-btn" data-ga-tab="shelf" onclick="setGaTab('shelf')">
+          <span>📦 <span id="ga-tab-label-shelf">Shelf</span></span>
+        </button>
+        <button class="ga-tab-btn" data-ga-tab="loans" onclick="setGaTab('loans')">
+          <span>🤝 <span id="ga-tab-label-loans">Loans</span></span>
+          <span class="tab-dot" id="ga-overdue-dot">1</span>
+        </button>
+        <button class="ga-tab-btn" data-ga-tab="poster" onclick="setGaTab('poster')">
+          <span>📋 <span id="ga-tab-label-poster">Poster &amp; Notices</span></span>
+        </button>
+      </nav>
+
+      <!-- Dynamic Group Admin Tab Body -->
+      <div id="ga-content"></div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       REUSABLE MODAL CONTAINER & TOAST REGION
+       ======================================================================= -->
+  <div id="modal-root" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-box" id="modal-box"></div>
+  </div>
+
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- =======================================================================
+       VANILLA JAVASCRIPT APPLICATION STATE & INTERACTION LOGIC
+       ======================================================================= -->
+  <script>
+    /* -----------------------------------------------------------------------
+       1. SAFE JOIN-CODE GENERATOR (Excludes I, L, O, 0, 1 for Poster Clarity)
+       ----------------------------------------------------------------------- */
+    const SAFE_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+    function generateSafeJoinCode() {
+      let partA = "";
+      let partB = "";
+      for (let i = 0; i < 4; i++) {
+        partA += SAFE_CODE_CHARS[Math.floor(Math.random() * SAFE_CODE_CHARS.length)];
+        partB += SAFE_CODE_CHARS[Math.floor(Math.random() * SAFE_CODE_CHARS.length)];
+      }
+      return `${partA}-${partB}`;
+    }
+
+    function formatNowTime() {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+
+    /* -----------------------------------------------------------------------
+       2. STATIC MOCK DATA & APPLICATION STATE
+       ----------------------------------------------------------------------- */
+    const state = {
+      activeView: "super-admin", // 'super-admin' | 'group-admin'
+      saTab: "overview",         // 'overview' | 'groups' | 'catalog' | 'disputes' | 'audit'
+      gaTab: "neighbors",        // 'neighbors' | 'shelf' | 'loans' | 'poster'
+      elderMode: false,
+      previewLang: "en",         // 'en' | 'ja' | 'ja-easy' | 'bn'
+
+      // Super Admin: Groups
+      groups: [
+        {
+          id: "grp-sakura",
+          name: "Sakura Heights",
+          code: "SAKURA-2611",
+          type: "Building",
+          city: "Nagasaki",
+          members: 6,
+          admin: "Sato",
+          candidates: ["Sato", "Tanaka", "Maria", "Ayesha"],
+          status: "Active"
+        },
+        {
+          id: "grp-hama",
+          name: "Hamaguchi-machi 3-chome",
+          code: "HAMA-3CHOME",
+          type: "Block",
+          city: "Nagasaki",
+          members: 2,
+          admin: "Inoue",
+          candidates: ["Inoue", "Kobayashi"],
+          status: "Active"
+        }
+      ],
+
+      // Super Admin: Global Fixed Catalog (Zero Free-Text Item Naming)
+      catalog: [
+        {
+          key: "futon_dryer",
+          emoji: "🛏️",
+          active: true,
+          translations: { en: "Futon dryer", ja: "布団乾燥機", "ja-easy": "ふとん かわかす きかい", bn: "লেপ-তোষক শুকানোর যন্ত্র" }
+        },
+        {
+          key: "takoyaki_maker",
+          emoji: "🐙",
+          active: true,
+          translations: { en: "Takoyaki maker", ja: "たこ焼き器", "ja-easy": "たこやき き", bn: "তাকোয়াকি মেকার" }
+        },
+        {
+          key: "ladder",
+          emoji: "🪜",
+          active: true,
+          translations: { en: "Stepladder", ja: "脚立", "ja-easy": "きゃたつ（はしご）", bn: "মই / স্টেপল্যাডার" }
+        },
+        {
+          key: "projector",
+          emoji: "📽️",
+          active: true,
+          translations: { en: "Mini projector", ja: "プロジェクター", "ja-easy": "えいが を うつす きかい", bn: "প্রজেক্টর" }
+        },
+        {
+          key: "power_drill",
+          emoji: "🔩",
+          active: true,
+          translations: { en: "Power drill", ja: "電動ドリル", "ja-easy": "でんどう ドリル", bn: "ইলেকট্রিক ড্রিল" }
+        },
+        {
+          key: "rice_cooker_large",
+          emoji: "🍚",
+          active: true,
+          translations: { en: "Large rice cooker", ja: "大型炊飯器", "ja-easy": "おおきい すいはんき", bn: "বড় রাইস কুকার" }
+        }
+      ],
+
+      // Super Admin: Fixed Structured Phrases Guardrail
+      fixedPhrases: [
+        {
+          key: "request",
+          context: "Borrow Request",
+          en: "Hello! Could I borrow your {item} until {returnTime}?",
+          ja: "こんにちは。{returnTime}まで{item}をお借りできますでしょうか？",
+          "ja-easy": "こんにちは。{returnTime} まで {item} を かして くれますか？",
+          bn: "নমস্কার! আমি কি {returnTime} পর্যন্ত আপনার {item} ধার নিতে পারি?"
+        },
+        {
+          key: "sys.dueSoon",
+          context: "Automated Pre-Return Reminder",
+          en: "Friendly reminder: Your borrowed {item} is due back soon.",
+          ja: "お知らせ：お借りしている{item}の返却時刻が近づいています。",
+          "ja-easy": "おしらせ：かりている {item} を かえす じかん が ちかいです。",
+          bn: "স্মরণিকা: আপনার ধার নেওয়া {item} ফেরত দেওয়ার সময় শীঘ্রই আসছে।"
+        },
+        {
+          key: "sys.overdueLender",
+          context: "Overdue Status Notice (To Owner)",
+          en: "Your {item} is past the planned return time. You can send a gentle reminder.",
+          ja: "{item}の返却予定時刻を過ぎています。やさしいリマインダーを送ることができます。",
+          "ja-easy": "{item} を かえす じかん を すぎました。やさしい おしらせ を おくれます。",
+          bn: "আপনার {item} ফেরত দেওয়ার নির্ধারিত সময় পার হয়েছে। আপনি একটি বিনয়ী স্মরণিকা পাঠাতে পারেন।"
+        }
+      ],
+
+      // Super Admin: Break-Glass Dispute State
+      dispute: {
+        loanId: 14,
+        groupName: "Sakura Heights",
+        itemEmoji: "🔩",
+        itemName: "Power drill",
+        lender: "Tanaka",
+        borrower: "Yamamoto",
+        reportedAt: "2026-11-24 10:15",
+        summary: "Condition photo mismatch reported after handover (scuffed battery pack).",
+        unlocked: false,
+        unlockReason: "",
+        unlockedAt: ""
+      },
+
+      // Super Admin: Audit Log
+      auditLogs: [
+        {
+          time: "2026-11-24 09:40",
+          actor: "SuperAdmin-01",
+          action: "group.health_check",
+          target: "All Groups (2)",
+          detail: "Reminder scheduler verified (30s interval OK, 14.2 MB storage)"
+        },
+        {
+          time: "2026-11-23 18:12",
+          actor: "SuperAdmin-01",
+          action: "catalog.verify_i18n",
+          target: "rice_cooker_large",
+          detail: "Confirmed 4-locale coverage (EN / JA / JA-EASY / BN)"
+        },
+        {
+          time: "2026-11-22 14:05",
+          actor: "SuperAdmin-01",
+          action: "group.provision",
+          target: "Hamaguchi-machi 3-chome",
+          detail: "Created block group with code HAMA-3CHOME (Admin: Inoue)"
+        }
+      ],
+
+      // Group Admin (Sakura Heights): Pending Join Requests
+      pendingRequests: [
+        {
+          id: "req-rahim",
+          name: "Rahim",
+          langs: "EN / BN",
+          room: "Room 405",
+          note: "Scanned notice board poster 5 mins ago"
+        }
+      ],
+
+      // Group Admin (Sakura Heights): Active Neighbors
+      neighbors: [
+        {
+          id: "usr-sato",
+          name: "Sato",
+          room: "Room 201",
+          lang: "JA",
+          isAdmin: true,
+          isPrimaryAdmin: true,
+          trusted: true,
+          muted: false,
+          onTime: 5,
+          late: 0,
+          activeLoanDesc: null
+        },
+        {
+          id: "usr-tanaka",
+          name: "Tanaka",
+          room: "Room 302",
+          lang: "JA",
+          isAdmin: false,
+          isPrimaryAdmin: false,
+          trusted: true,
+          muted: false,
+          onTime: 3,
+          late: 0,
+          activeLoanDesc: null
+        },
+        {
+          id: "usr-maria",
+          name: "Maria",
+          room: "Room 304",
+          lang: "EN",
+          isAdmin: false,
+          isPrimaryAdmin: false,
+          trusted: true,
+          muted: false,
+          onTime: 2,
+          late: 0,
+          activeLoanDesc: null
+        },
+        {
+          id: "usr-ayesha",
+          name: "Ayesha",
+          room: "Room 402",
+          lang: "BN",
+          isAdmin: false,
+          isPrimaryAdmin: false,
+          trusted: false,
+          muted: false,
+          onTime: 1,
+          late: 1,
+          activeLoanDesc: "Borrowing 🪜 Stepladder (due tomorrow)"
+        },
+        {
+          id: "usr-yamamoto",
+          name: "Yamamoto",
+          room: "Room 103",
+          lang: "JA",
+          isAdmin: false,
+          isPrimaryAdmin: false,
+          trusted: false,
+          muted: false,
+          onTime: 0,
+          late: 0,
+          activeLoanDesc: "Overdue 🔩 Power drill (1 day late)"
+        }
+      ],
+
+      // Inline guardrail alerts keyed by neighbor ID
+      neighborAlerts: {},
+
+      // Group Admin: Shelf Moderation Items
+      shelfItems: [
+        { id: "itm-1", emoji: "🛏️", name: "Futon dryer", owner: "Sato", status: "Available", trustedOnly: false, hidden: false },
+        { id: "itm-2", emoji: "📽️", name: "Projector", owner: "Tanaka", status: "Available", trustedOnly: true, hidden: false },
+        { id: "itm-3", emoji: "🪜", name: "Stepladder", owner: "Sato", status: "Lent", trustedOnly: false, hidden: false },
+        { id: "itm-4", emoji: "🔩", name: "Power drill", owner: "Tanaka", status: "Lent - Overdue", trustedOnly: false, hidden: false },
+        { id: "itm-5", emoji: "🍚", name: "Large rice cooker", owner: "Ayesha", status: "Available", trustedOnly: false, hidden: false }
+      ],
+
+      // Group Admin: Active & Overdue Loans
+      loans: [
+        {
+          id: "loan-14",
+          emoji: "🔩",
+          item: "Power drill",
+          borrower: "Yamamoto",
+          owner: "Tanaka",
+          status: "Overdue",
+          dueLabel: "Overdue by 1 day",
+          reminderSent: false,
+          reminderSentAt: ""
+        },
+        {
+          id: "loan-15",
+          emoji: "🪜",
+          item: "Stepladder",
+          borrower: "Ayesha",
+          owner: "Sato",
+          status: "Active",
+          dueLabel: "Due tomorrow at 18:00",
+          reminderSent: false,
+          reminderSentAt: ""
+        }
+      ],
+
+      // Group Admin: Structured Announcement Templates
+      selectedNoticeId: "notice-1",
+      activeBannerNoticeId: null,
+      noticeTemplates: [
+        {
+          id: "notice-1",
+          title: "Entrance handover spot cleaning tomorrow",
+          text: {
+            en: "Notice: The 1F entrance handover bench will be cleaned tomorrow (9:00–11:00). Please meet near the mailbox instead.",
+            ja: "お知らせ：明日9:00〜11:00に1階玄関の受け渡し場所を清掃します。集合ポスト付近をご利用ください。",
+            "ja-easy": "おしらせ：あした 9じ〜11じ に 1かい の わたす ばしょ を そうじ します。ポスト の ちかく を つかって ください。",
+            bn: "বিজ্ঞপ্তি: আগামীকাল সকাল ৯টা–১১টা ১ম তলার হস্তান্তর স্থান পরিষ্কার করা হবে। অনুগ্রহ করে মেইলবক্সের কাছে মিলিত হন।"
+          }
+        },
+        {
+          id: "notice-2",
+          title: "Welcome new neighbors to Sakura Heights",
+          text: {
+            en: "Welcome new neighbors to Sakura Heights! Feel free to borrow everyday items in your own language.",
+            ja: "さくらハイツへようこそ！新しいご近所の皆さん、ご自身の言語で気軽に日用品を借りてみてください。",
+            "ja-easy": "さくらハイツ へ ようこそ！あたらしい ごきんじょ の みなさん、じぶん の ことば で もの を かりて みて ください。",
+            bn: "সাকুরা হাইটসে নতুন প্রতিবেশীদের স্বাগতম! আপনার নিজের ভাষায় নিঃসংকোচে দৈনন্দিন জিনিস ধার নিন।"
+          }
+        },
+        {
+          id: "notice-3",
+          title: "Reminder: Please take handover photos",
+          text: {
+            en: "Friendly tip: Taking a quick photo at handover and return keeps borrowing worry-free for everyone.",
+            ja: "お願い：受け渡し時と返却時に写真を1枚撮っておくと、お互いに安心して貸し借りできます。",
+            "ja-easy": "おねがい：わたす とき と かえす とき に しゃしん を とると、みんな あんしん です。",
+            bn: "অনুরোধ: হস্তান্তর ও ফেরত দেওয়ার সময় একটি দ্রুত ছবি তুলে রাখলে সবার জন্য ধার নেওয়া নিশ্চিন্ত হয়।"
+          }
+        }
+      ]
+    };
+
+    /* -----------------------------------------------------------------------
+       3. MULTILINGUAL COPY FOR GROUP ADMIN & POLITE REMINDER PHRASES
+       ----------------------------------------------------------------------- */
+    const GA_COPY = {
+      en: {
+        tabs: { neighbors: "Neighbors", shelf: "Shelf", loans: "Loans", poster: "Poster & Notices" },
+        subtitle: "Nagasaki · Managed by Admin Sato",
+        langLabel: "Preview Language:",
+        bannerHeading: "📌 Active Shelf Banner:",
+        gentleReminder: "Hello Yamamoto — friendly reminder from Sakura Heights Admin: Tanaka's Power drill was due yesterday. Please arrange a return time in Otonari when convenient. Thank you!"
+      },
+      ja: {
+        tabs: { neighbors: "ご近所さん", shelf: "共有棚", loans: "貸し借り", poster: "掲示・お知らせ" },
+        subtitle: "長崎市 · 管理人：佐藤",
+        langLabel: "表示言語：",
+        bannerHeading: "📌 掲示中のお知らせ：",
+        gentleReminder: "山本様、さくらハイツ管理人よりやさしいお知らせです。田中様の電動ドリルの返却予定日を過ぎております。ご都合のよい返却時間をお隣アプリでお知らせいただけますと幸いです。"
+      },
+      "ja-easy": {
+        tabs: { neighbors: "ごきんじょ", shelf: "たな", loans: "かし かり", poster: "ポスター" },
+        subtitle: "ながさき · かんりにん：さとう",
+        langLabel: "ことば：",
+        bannerHeading: "📌 いま の おしらせ：",
+        gentleReminder: "やまもと さん、こんにちは。さくらハイツ の かんりにん です。たなか さん の でんどう ドリル を かえす ひ が すぎました。アプリ で かえす じかん を おしえて ください。"
+      },
+      bn: {
+        tabs: { neighbors: "প্রতিবেশী", shelf: "শেলফ", loans: "ধার ও ফেরত", poster: "পোস্টার ও নোটিশ" },
+        subtitle: "নাগাসাকি · অ্যাডমিন: সাতো",
+        langLabel: "ভাষা দেখুন:",
+        bannerHeading: "📌 চালু ব্যানার:",
+        gentleReminder: "নমস্কার ইয়ামামোতো — সাকুরা হাইটস অ্যাডমিনের পক্ষ থেকে বিনয়ী স্মরণিকা: তানাকার ইলেকট্রিক ড্রিল গতকাল ফেরত দেওয়ার কথা ছিল। অনুগ্রহ করে ওতোনারি অ্যাপে সুবিধামতো ফেরতের সময় জানান। ধন্যবাদ!"
+      }
+    };
+
+    /* -----------------------------------------------------------------------
+       4. SHARED HELPERS (Toast, Modal, Audit Logger, QR SVG Generator)
+       ----------------------------------------------------------------------- */
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function showToast(message, tone = "default") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = "toast" + (tone !== "default" ? ` toast-${tone}` : "");
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transition = "opacity 0.25s ease";
+        setTimeout(() => toast.remove(), 260);
+      }, 3200);
+    }
+
+    function openModal(htmlContent) {
+      const root = document.getElementById("modal-root");
+      const box = document.getElementById("modal-box");
+      box.innerHTML = htmlContent;
+      root.classList.remove("hidden");
+    }
+
+    function closeModal() {
+      document.getElementById("modal-root").classList.add("hidden");
+    }
+
+    document.getElementById("modal-root").addEventListener("click", (e) => {
+      if (e.target.id === "modal-root") closeModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeModal();
+    });
+
+    function addAuditLog(action, target, detail) {
+      state.auditLogs.unshift({
+        time: formatNowTime(),
+        actor: "SuperAdmin-01",
+        action,
+        target,
+        detail
+      });
+      document.getElementById("sa-nav-audit-count").textContent = state.auditLogs.length;
+    }
+
+    /**
+     * Generates a crisp, deterministic inline SVG QR code graphic seeded by the join code
+     * so rotating the join code visibly updates the lobby poster QR pattern.
+     */
+    function buildQrSvg(code) {
+      let hash = 0;
+      for (let i = 0; i < code.length; i++) {
+        hash = ((hash << 5) - hash + code.charCodeAt(i)) | 0;
+      }
+      const size = 21;
+      const cell = 7;
+      const pad = 10;
+      const total = size * cell + pad * 2;
+      let rects = "";
+
+      const isFinder = (r, c) =>
+        (r < 7 && c < 7) || (r < 7 && c >= size - 7) || (r >= size - 7 && c < 7);
+
+      // Draw 3 corner finder patterns
+      const drawFinder = (sr, sc) => {
+        const x = pad + sc * cell;
+        const y = pad + sr * cell;
+        rects += `<rect x="${x}" y="${y}" width="${7 * cell}" height="${7 * cell}" rx="4" fill="#1f4b6e"/>`;
+        rects += `<rect x="${x + cell}" y="${y + cell}" width="${5 * cell}" height="${5 * cell}" rx="2" fill="#ffffff"/>`;
+        rects += `<rect x="${x + 2 * cell}" y="${y + 2 * cell}" width="${3 * cell}" height="${3 * cell}" rx="1.5" fill="#1f4b6e"/>`;
+      };
+      drawFinder(0, 0);
+      drawFinder(0, size - 7);
+      drawFinder(size - 7, 0);
+
+      // Deterministic data modules
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (isFinder(r, c)) continue;
+          const seed = Math.abs(hash + r * 31 + c * 17 + (r * c * 13));
+          if (seed % 3 === 0 || (r === 6 && c % 2 === 0) || (c === 6 && r % 2 === 0)) {
+            rects += `<rect x="${pad + c * cell}" y="${pad + r * cell}" width="${cell - 0.6}" height="${cell - 0.6}" rx="1.2" fill="#1e242b"/>`;
+          }
+        }
+      }
+
+      return `<svg width="${total}" height="${total}" viewBox="0 0 ${total} ${total}" role="img" aria-label="QR code for join code ${escapeHtml(code)}">
+        <rect width="${total}" height="${total}" fill="#ffffff"/>
+        ${rects}
+      </svg>`;
+    }
+
+    /* -----------------------------------------------------------------------
+       5. TOP-LEVEL VIEW SWITCHING
+       ----------------------------------------------------------------------- */
+    function switchTopView(view) {
+      state.activeView = view;
+      document.getElementById("super-admin-view").classList.toggle("hidden", view !== "super-admin");
+      document.getElementById("group-admin-view").classList.toggle("hidden", view !== "group-admin");
+      document.getElementById("switch-sa").classList.toggle("active", view === "super-admin");
+      document.getElementById("switch-ga").classList.toggle("active", view === "group-admin");
+      renderAll();
+    }
+
+    function setSaTab(tab) {
+      state.saTab = tab;
+      document.querySelectorAll("[data-sa-tab]").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.saTab === tab);
+      });
+      renderSuperAdmin();
+    }
+
+    function setGaTab(tab) {
+      state.gaTab = tab;
+      document.querySelectorAll("[data-ga-tab]").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.gaTab === tab);
+      });
+      renderGroupAdmin();
+    }
+
+    function toggleElderMode(enabled) {
+      state.elderMode = enabled;
+      document.getElementById("group-admin-view").classList.toggle("elder", enabled);
+      showToast(enabled ? "Elder Mode (大文字) enabled: 22px text & 64px buttons" : "Standard display mode restored");
+    }
+
+    function setPreviewLang(lang) {
+      state.previewLang = lang;
+      renderGroupAdmin();
+    }
+
+    /* -----------------------------------------------------------------------
+       6. SUPER ADMIN RENDERERS & ACTIONS
+       ----------------------------------------------------------------------- */
+    function renderSuperAdmin() {
+      const container = document.getElementById("sa-content");
+      document.getElementById("sa-nav-group-count").textContent = state.groups.length;
+      document.getElementById("sa-nav-audit-count").textContent = state.auditLogs.length;
+
+      if (state.saTab === "overview") renderSaOverview(container);
+      else if (state.saTab === "groups") renderSaGroups(container);
+      else if (state.saTab === "catalog") renderSaCatalog(container);
+      else if (state.saTab === "disputes") renderSaDisputes(container);
+      else if (state.saTab === "audit") renderSaAudit(container);
+    }
+
+    function renderSaOverview(container) {
+      const activeGroups = state.groups.filter((g) => g.status === "Active").length;
+      const totalNeighbors = state.groups.reduce((sum, g) => sum + g.members, 0);
+      const activeLoans = state.loans.length;
+
+      const recentRows = state.auditLogs.slice(0, 5).map((log) => `
+        <tr>
+          <td style="white-space:nowrap;color:var(--text-muted);font-family:var(--font-mono);font-size:12.5px;">${escapeHtml(log.time)}</td>
+          <td><span class="badge badge-indigo">${escapeHtml(log.action)}</span></td>
+          <td><strong>${escapeHtml(log.target)}</strong></td>
+          <td>${escapeHtml(log.detail)}</td>
+        </tr>
+      `).join("");
+
+      container.innerHTML = `
+        <div class="sa-page-head">
+          <div>
+            <h1>Platform Overview</h1>
+            <p>High-level neighborhood health across all Otonari communities.</p>
+          </div>
+          <button class="btn btn-primary" type="button" onclick="setSaTab('groups'); openCreateGroupModal()">+ Create Group</button>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Active Groups</div>
+            <div class="kpi-value">${activeGroups}</div>
+            <div class="kpi-meta">${state.groups.length} total provisioned</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Neighbors</div>
+            <div class="kpi-value">${totalNeighbors}</div>
+            <div class="kpi-meta">Across Nagasaki communities</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Active Loans</div>
+            <div class="kpi-value">${activeLoans}</div>
+            <div class="kpi-meta">1 overdue · 1 on track</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">System Health</div>
+            <div class="kpi-value" style="font-size:18px;color:var(--green);margin-top:10px;">● Healthy</div>
+            <div class="kpi-meta">Reminder Job: 30s OK · Storage: 14.2 MB</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Recent Platform Activity</h2>
+              <p class="card-subtitle">Live feed synchronized with the immutable Audit Log.</p>
+            </div>
+            <button class="btn btn-sm" type="button" onclick="setSaTab('audit')">View Full Audit Log →</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Action</th>
+                  <th>Target</th>
+                  <th>Summary</th>
+                </tr>
+              </thead>
+              <tbody>${recentRows}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSaGroups(container) {
+      const rows = state.groups.map((g) => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(g.name)}</strong><br/>
+            <span style="font-size:12.5px;color:var(--text-muted);">${escapeHtml(g.type)} · ${escapeHtml(g.city)}</span>
+          </td>
+          <td><span class="code-pill">${escapeHtml(g.code)}</span></td>
+          <td>${g.members}</td>
+          <td><strong>${escapeHtml(g.admin)}</strong></td>
+          <td>
+            <span class="badge ${g.status === "Active" ? "badge-green" : "badge-red"}">
+              ${g.status === "Active" ? "● Active" : "● Suspended"}
+            </span>
+          </td>
+          <td>
+            <div class="actions-row">
+              <button class="btn btn-sm btn-soft" type="button" onclick="saRotateCode('${g.id}')">Rotate Code</button>
+              <button class="btn btn-sm" type="button" onclick="openRescueAdminModal('${g.id}')">Rescue Admin</button>
+              <button class="btn btn-sm ${g.status === "Active" ? "btn-danger-outline" : "btn-success"}" type="button" onclick="saToggleGroupStatus('${g.id}')">
+                ${g.status === "Active" ? "Suspend" : "Activate"}
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+
+      container.innerHTML = `
+        <div class="sa-page-head">
+          <div>
+            <h1>Groups &amp; Admin Rescue</h1>
+            <p>Provision residential buildings/blocks, rotate leaked poster codes, or assign a backup Group Admin.</p>
+          </div>
+          <button class="btn btn-primary" type="button" onclick="openCreateGroupModal()">+ Create Group</button>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Neighborhood</th>
+                  <th>Join Code</th>
+                  <th>Members</th>
+                  <th>Group Admin</th>
+                  <th>Status</th>
+                  <th>Governance Actions</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function openCreateGroupModal() {
+      const suggestedCode = generateSafeJoinCode();
+      openModal(`
+        <h3 class="modal-title" id="modal-title">Create Neighborhood Group</h3>
+        <p class="modal-desc">Auto-generates a safe <code>XXXX-XXXX</code> code omitting I, L, O, 0, and 1 for lobby posters.</p>
+        <form id="create-group-form" onsubmit="submitCreateGroup(event)">
+          <div class="stack">
+            <div class="form-field">
+              <label for="cg-name">Neighborhood / Building Name</label>
+              <input id="cg-name" class="form-input" type="text" required placeholder="e.g., Midori Mansion" />
+            </div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="cg-type">Group Type</label>
+                <select id="cg-type" class="form-select">
+                  <option value="Building">Building (Apartment / Dorm)</option>
+                  <option value="Block">Block (Chome / Street)</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label for="cg-city">City</label>
+                <input id="cg-city" class="form-input" type="text" required value="Nagasaki" />
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="cg-admin">Initial Group Admin Name</label>
+              <input id="cg-admin" class="form-input" type="text" required placeholder="e.g., Takahashi" />
+            </div>
+            <div class="inline-alert inline-alert-indigo" style="margin-top:0;">
+              <span>Generated Join Code:</span>
+              <strong class="code-pill" id="cg-code-preview">${suggestedCode}</strong>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn" type="button" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" type="submit">Create Group</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function submitCreateGroup(event) {
+      event.preventDefault();
+      const name = document.getElementById("cg-name").value.trim();
+      const type = document.getElementById("cg-type").value;
+      const city = document.getElementById("cg-city").value.trim();
+      const admin = document.getElementById("cg-admin").value.trim();
+      const code = document.getElementById("cg-code-preview").textContent.trim();
+
+      if (!name || !city || !admin) return;
+
+      state.groups.push({
+        id: "grp-" + Date.now(),
+        name,
+        code,
+        type,
+        city,
+        members: 1,
+        admin,
+        candidates: [admin],
+        status: "Active"
+      });
+
+      addAuditLog("group.create", name, `Provisioned ${type} in ${city} with code ${code} (Admin: ${admin})`);
+      closeModal();
+      renderAll();
+      showToast(`Created "${name}" (${code})`, "success");
+    }
+
+    function saRotateCode(groupId) {
+      const grp = state.groups.find((g) => g.id === groupId);
+      if (!grp) return;
+      const oldCode = grp.code;
+      grp.code = generateSafeJoinCode();
+      addAuditLog("group.rotate_code", grp.name, `Rotated join code from ${oldCode} → ${grp.code}`);
+      renderAll();
+      showToast(`Join code for ${grp.name} rotated to ${grp.code}`, "success");
+    }
+
+    function openRescueAdminModal(groupId) {
+      const grp = state.groups.find((g) => g.id === groupId);
+      if (!grp) return;
+      const options = grp.candidates.map((c) => `
+        <option value="${escapeHtml(c)}" ${c === grp.admin ? "selected" : ""}>${escapeHtml(c)}${c === grp.admin ? " (Current Admin)" : ""}</option>
+      `).join("");
+
+      openModal(`
+        <h3 class="modal-title" id="modal-title">Rescue Group Admin — ${escapeHtml(grp.name)}</h3>
+        <p class="modal-desc">Reassign primary Group Admin privileges if the current caretaker lost device access or moved out.</p>
+        <form onsubmit="submitRescueAdmin(event, '${grp.id}')">
+          <div class="stack">
+            <div class="form-field">
+              <label for="rescue-select">Select New Group Admin</label>
+              <select id="rescue-select" class="form-select">${options}</select>
+            </div>
+            <div class="form-field">
+              <label for="rescue-reason">Audit Reason</label>
+              <select id="rescue-reason" class="form-select">
+                <option value="Verified caretaker handover">Verified caretaker handover</option>
+                <option value="Previous admin lost device access">Previous admin lost device access</option>
+                <option value="Previous admin moved out of building">Previous admin moved out of building</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn" type="button" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" type="submit">Confirm Reassignment</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function submitRescueAdmin(event, groupId) {
+      event.preventDefault();
+      const grp = state.groups.find((g) => g.id === groupId);
+      if (!grp) return;
+      const nextAdmin = document.getElementById("rescue-select").value;
+      const reason = document.getElementById("rescue-reason").value;
+      const prevAdmin = grp.admin;
+      grp.admin = nextAdmin;
+
+      addAuditLog("group.rescue_admin", grp.name, `Reassigned admin ${prevAdmin} → ${nextAdmin} (${reason})`);
+      closeModal();
+      renderAll();
+      showToast(`Group Admin for ${grp.name} is now ${nextAdmin}`, "success");
+    }
+
+    function saToggleGroupStatus(groupId) {
+      const grp = state.groups.find((g) => g.id === groupId);
+      if (!grp) return;
+      grp.status = grp.status === "Active" ? "Suspended" : "Active";
+      addAuditLog(
+        grp.status === "Suspended" ? "group.suspend" : "group.activate",
+        grp.name,
+        `Status changed to ${grp.status}`
+      );
+      renderAll();
+      showToast(`${grp.name} is now ${grp.status}`, grp.status === "Suspended" ? "warn" : "success");
+    }
+
+    function renderSaCatalog(container) {
+      const catalogRows = state.catalog.map((item) => `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:22px;">${item.emoji}</span>
+              <code style="font-family:var(--font-mono);font-size:13px;font-weight:700;">${escapeHtml(item.key)}</code>
+            </div>
+          </td>
+          <td>
+            <div class="lang-pills">
+              <span class="lang-pill"><strong>EN</strong> ${escapeHtml(item.translations.en)}</span>
+              <span class="lang-pill"><strong>JA</strong> ${escapeHtml(item.translations.ja)}</span>
+              <span class="lang-pill"><strong>JA-EASY</strong> ${escapeHtml(item.translations["ja-easy"])}</span>
+              <span class="lang-pill"><strong>BN</strong> ${escapeHtml(item.translations.bn)}</span>
+            </div>
+          </td>
+          <td>
+            <span class="badge ${item.active ? "badge-green" : "badge-gray"}">
+              ${item.active ? "Active" : "Inactive"}
+            </span>
+          </td>
+          <td>
+            <button class="btn btn-sm ${item.active ? "" : "btn-soft"}" type="button" onclick="toggleCatalogItem('${item.key}')">
+              ${item.active ? "Disable" : "Activate"}
+            </button>
+          </td>
+        </tr>
+      `).join("");
+
+      const phraseCards = state.fixedPhrases.map((p) => `
+        <div class="phrase-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+            <span class="phrase-key">${escapeHtml(p.key)}</span>
+            <span class="badge badge-gray">${escapeHtml(p.context)}</span>
+          </div>
+          <div class="phrase-langs">
+            <div class="phrase-lang-box"><span class="pl-tag">English (EN)</span>${escapeHtml(p.en)}</div>
+            <div class="phrase-lang-box"><span class="pl-tag">Polite Japanese · Keigo (JA)</span>${escapeHtml(p.ja)}</div>
+            <div class="phrase-lang-box"><span class="pl-tag">Easy Japanese (JA-EASY)</span>${escapeHtml(p["ja-easy"])}</div>
+            <div class="phrase-lang-box"><span class="pl-tag">Bengali (BN)</span>${escapeHtml(p.bn)}</div>
+          </div>
+        </div>
+      `).join("");
+
+      container.innerHTML = `
+        <div class="sa-page-head">
+          <div>
+            <h1>Catalog &amp; i18n Phrases</h1>
+            <p>All shelf items and neighbor messages are strictly key-based across 4 languages — zero free-text chat.</p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Global Fixed Item Catalog</h2>
+              <p class="card-subtitle">Every active item requires verified EN, JA, JA-EASY, and BN translations.</p>
+            </div>
+            <span class="badge badge-green">100% 4-Locale Coverage</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Catalog Key</th>
+                  <th>4-Language Translations</th>
+                  <th>Status</th>
+                  <th>Toggle</th>
+                </tr>
+              </thead>
+              <tbody>${catalogRows}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">🛡️ Structured Phrase Guardrail (No Free-Text Messaging)</h2>
+              <p class="card-subtitle">Neighbors tap curated keys validated by <code>allowedKeys.ts</code>; each device renders them in the recipient's own language.</p>
+            </div>
+          </div>
+          <div class="phrase-grid">${phraseCards}</div>
+        </div>
+      `;
+    }
+
+    function toggleCatalogItem(key) {
+      const item = state.catalog.find((c) => c.key === key);
+      if (!item) return;
+      item.active = !item.active;
+      addAuditLog("catalog.toggle", item.key, `Set catalog item ${item.key} to ${item.active ? "Active" : "Inactive"}`);
+      renderSuperAdmin();
+      showToast(`Catalog item "${item.key}" is now ${item.active ? "Active" : "Inactive"}`);
+    }
+
+    function renderSaDisputes(container) {
+      const d = state.dispute;
+      const unlocked = d.unlocked;
+
+      container.innerHTML = `
+        <div class="sa-page-head">
+          <div>
+            <h1>Dispute Inspection (Break-Glass)</h1>
+            <p>Condition photos and loan timelines are blurred by default to protect resident privacy.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Escalated Dispute — Loan #${d.loanId}: ${d.itemEmoji} ${escapeHtml(d.itemName)}</h2>
+              <p class="card-subtitle">${escapeHtml(d.groupName)} · Reported ${escapeHtml(d.reportedAt)} · ${escapeHtml(d.summary)}</p>
+            </div>
+            <div class="actions-row">
+              <span class="badge ${unlocked ? "badge-amber" : "badge-indigo"}">
+                ${unlocked ? "🔓 Break-Glass Unlocked" : "🔒 Privacy Shield Active"}
+              </span>
+              ${unlocked ? `<button class="btn btn-sm" type="button" onclick="lockBreakGlass()">Re-Lock Evidence</button>` : ""}
+            </div>
+          </div>
+
+          ${unlocked ? `
+            <div class="inline-alert inline-alert-amber" style="margin-top:0;margin-bottom:14px;">
+              <span>⚠️ <strong>Audited Session Active:</strong> Reason logged as "<em>${escapeHtml(d.unlockReason)}</em>" at ${escapeHtml(d.unlockedAt)}. Recorded in Audit Log.</span>
+            </div>
+          ` : ""}
+
+          <div class="evidence-wrapper">
+            ${!unlocked ? `
+              <div class="privacy-shield">
+                <div class="privacy-shield-box">
+                  <div style="font-size:28px;margin-bottom:6px;">🔒</div>
+                  <h3 style="margin:0 0 6px;color:var(--indigo-dark);">Resident Evidence Protected</h3>
+                  <p style="margin:0 0 16px;font-size:13.5px;color:var(--text-muted);">
+                    Before/after condition photos and structured loan messages are hidden under Zero-Snoop policy. Unlocking requires a fixed audit reason.
+                  </p>
+                  <button class="btn btn-primary" type="button" onclick="openBreakGlassModal()">🔓 Unlock Break-Glass View</button>
+                </div>
+              </div>
+            ` : ""}
+
+            <div class="evidence-content ${unlocked ? "" : "is-locked"}">
+              <div class="photo-compare-grid">
+                <div class="photo-box">
+                  <div class="photo-box-meta">
+                    <span>📸 Handover Photo (Before)</span>
+                    <span class="badge badge-green">2026-11-21 18:10</span>
+                  </div>
+                  <!-- Inline SVG illustration of clean drill handover photo -->
+                  <svg viewBox="0 0 320 150" width="100%" style="border-radius:8px;display:block;background:#eef3f7;" aria-label="Handover photo placeholder">
+                    <rect width="320" height="150" fill="#e9f0f5"/>
+                    <rect x="20" y="102" width="280" height="34" rx="6" fill="#d9cfc0"/>
+                    <rect x="92" y="42" width="118" height="36" rx="10" fill="#1f4b6e"/>
+                    <rect x="210" y="53" width="38" height="14" rx="4" fill="#5a6470"/>
+                    <rect x="115" y="74" width="28" height="36" rx="6" fill="#15354f"/>
+                    <rect x="108" y="104" width="46" height="14" rx="4" fill="#2a7a4b"/>
+                    <text x="160" y="25" text-anchor="middle" font-size="11" fill="#5a6470" font-family="sans-serif">Intact battery casing · Verified by Tanaka &amp; Yamamoto</text>
+                  </svg>
+                </div>
+
+                <div class="photo-box">
+                  <div class="photo-box-meta">
+                    <span>📸 Return Photo (After)</span>
+                    <span class="badge badge-amber">2026-11-24 09:50</span>
+                  </div>
+                  <!-- Inline SVG illustration highlighting scuff on battery pack -->
+                  <svg viewBox="0 0 320 150" width="100%" style="border-radius:8px;display:block;background:#fdf6ee;" aria-label="Return photo placeholder">
+                    <rect width="320" height="150" fill="#f7efe6"/>
+                    <rect x="20" y="102" width="280" height="34" rx="6" fill="#d9cfc0"/>
+                    <rect x="92" y="42" width="118" height="36" rx="10" fill="#1f4b6e"/>
+                    <rect x="210" y="53" width="38" height="14" rx="4" fill="#5a6470"/>
+                    <rect x="115" y="74" width="28" height="36" rx="6" fill="#15354f"/>
+                    <rect x="108" y="104" width="46" height="14" rx="4" fill="#b86b11"/>
+                    <circle cx="131" cy="111" r="18" fill="none" stroke="#b5342a" stroke-width="2.5" stroke-dasharray="4 3"/>
+                    <text x="160" y="25" text-anchor="middle" font-size="11" fill="#b5342a" font-family="sans-serif">Minor corner scuff highlighted on battery pack</text>
+                  </svg>
+                </div>
+              </div>
+
+              <h3 style="margin:0 0 10px;font-size:15px;color:var(--indigo-dark);">Structured Message Timeline (Key-Only)</h3>
+              <div class="timeline-list">
+                <div class="timeline-item">
+                  <span><strong>Yamamoto</strong> → <code class="phrase-key" style="margin:0;">request</code> "Could I borrow your Power drill until tomorrow 18:00?"</span>
+                  <span style="color:var(--text-muted);font-size:12.5px;">Nov 21, 17:42</span>
+                </div>
+                <div class="timeline-item">
+                  <span><strong>Tanaka</strong> → <code class="phrase-key" style="margin:0;">reply.approved</code> "Sure! Let's meet at the 1F entrance bench."</span>
+                  <span style="color:var(--text-muted);font-size:12.5px;">Nov 21, 17:50</span>
+                </div>
+                <div class="timeline-item">
+                  <span><strong>System</strong> → <code class="phrase-key" style="margin:0;">handover.photo_saved</code> Both parties confirmed handover.</span>
+                  <span style="color:var(--text-muted);font-size:12.5px;">Nov 21, 18:10</span>
+                </div>
+                <div class="timeline-item">
+                  <span><strong>Tanaka</strong> → <code class="phrase-key" style="margin:0;">dispute.photo_mismatch</code> Flagged condition difference for mediation.</span>
+                  <span style="color:var(--text-muted);font-size:12.5px;">Nov 24, 10:15</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openBreakGlassModal() {
+      openModal(`
+        <h3 class="modal-title" id="modal-title">🔓 Break-Glass Privacy Unlock</h3>
+        <p class="modal-desc">Select a mandatory audit reason to view Loan #${state.dispute.loanId} condition photos and structured timeline. This access will be logged permanently.</p>
+        <form onsubmit="submitBreakGlassUnlock(event)">
+          <div class="form-field">
+            <label for="bg-reason">Fixed Audit Reason</label>
+            <select id="bg-reason" class="form-select" required>
+              <option value="Damage dispute review">Damage dispute review</option>
+              <option value="Safety report">Safety report</option>
+              <option value="Group Admin escalation">Group Admin escalation</option>
+              <option value="Lost item verification">Lost item verification</option>
+            </select>
+          </div>
+          <div class="modal-footer">
+            <button class="btn" type="button" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" type="submit">Unlock &amp; Log Access</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function submitBreakGlassUnlock(event) {
+      event.preventDefault();
+      const reason = document.getElementById("bg-reason").value;
+      state.dispute.unlocked = true;
+      state.dispute.unlockReason = reason;
+      state.dispute.unlockedAt = formatNowTime();
+
+      addAuditLog(
+        "break_glass.unlock",
+        `Loan #${state.dispute.loanId} (${state.dispute.itemName})`,
+        `Unlocked condition photos & timeline — Reason: ${reason}`
+      );
+      closeModal();
+      renderSuperAdmin();
+      showToast("Break-Glass view unlocked and written to Audit Log", "warn");
+    }
+
+    function lockBreakGlass() {
+      state.dispute.unlocked = false;
+      renderSuperAdmin();
+      showToast("Privacy shield restored");
+    }
+
+    function renderSaAudit(container) {
+      const rows = state.auditLogs.map((log) => `
+        <tr>
+          <td style="white-space:nowrap;font-family:var(--font-mono);font-size:12.5px;color:var(--text-muted);">${escapeHtml(log.time)}</td>
+          <td><strong>${escapeHtml(log.actor)}</strong></td>
+          <td><span class="badge badge-indigo">${escapeHtml(log.action)}</span></td>
+          <td><strong>${escapeHtml(log.target)}</strong></td>
+          <td>${escapeHtml(log.detail)}</td>
+        </tr>
+      `).join("");
+
+      container.innerHTML = `
+        <div class="sa-page-head">
+          <div>
+            <h1>Immutable Audit Log</h1>
+            <p>Append-only chronological record of every Super Admin governance action in this session.</p>
+          </div>
+          <span class="badge badge-gray">${state.auditLogs.length} entries recorded</span>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Actor</th>
+                  <th>Action</th>
+                  <th>Target</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    /* -----------------------------------------------------------------------
+       7. GROUP ADMIN RENDERERS & NEIGHBOR CONTROL ACTIONS
+       ----------------------------------------------------------------------- */
+    function getSakuraGroup() {
+      return state.groups.find((g) => g.id === "grp-sakura");
+    }
+
+    function renderGroupAdmin() {
+      const sakura = getSakuraGroup();
+      const copy = GA_COPY[state.previewLang] || GA_COPY.en;
+
+      // Sync header & localized tab labels
+      document.getElementById("ga-group-title").textContent = sakura.name;
+      document.getElementById("ga-header-code").textContent = sakura.code;
+      document.getElementById("ga-group-subtitle").textContent = copy.subtitle;
+      document.getElementById("ga-lang-label").textContent = copy.langLabel;
+
+      document.getElementById("ga-tab-label-neighbors").textContent = copy.tabs.neighbors;
+      document.getElementById("ga-tab-label-shelf").textContent = copy.tabs.shelf;
+      document.getElementById("ga-tab-label-loans").textContent = copy.tabs.loans;
+      document.getElementById("ga-tab-label-poster").textContent = copy.tabs.poster;
+
+      // Update notification dots
+      const pendingDot = document.getElementById("ga-pending-dot");
+      pendingDot.textContent = state.pendingRequests.length;
+      pendingDot.classList.toggle("hidden", state.pendingRequests.length === 0);
+
+      const overdueCount = state.loans.filter((l) => l.status === "Overdue").length;
+      const overdueDot = document.getElementById("ga-overdue-dot");
+      overdueDot.textContent = overdueCount;
+      overdueDot.classList.toggle("hidden", overdueCount === 0);
+
+      // Update live shelf banner if posted
+      const bannerEl = document.getElementById("ga-live-banner");
+      if (state.activeBannerNoticeId) {
+        const tmpl = state.noticeTemplates.find((n) => n.id === state.activeBannerNoticeId);
+        if (tmpl) {
+          document.getElementById("ga-banner-heading").textContent = copy.bannerHeading;
+          document.getElementById("ga-banner-text").textContent = " " + tmpl.text[state.previewLang];
+          bannerEl.classList.remove("hidden");
+        }
+      } else {
+        bannerEl.classList.add("hidden");
+      }
+
+      const container = document.getElementById("ga-content");
+      if (state.gaTab === "neighbors") renderGaNeighbors(container);
+      else if (state.gaTab === "shelf") renderGaShelf(container);
+      else if (state.gaTab === "loans") renderGaLoans(container);
+      else if (state.gaTab === "poster") renderGaPoster(container);
+    }
+
+    function renderGaNeighbors(container) {
+      // Pending Join Requests Card
+      let pendingHtml = "";
+      if (state.pendingRequests.length > 0) {
+        const reqCards = state.pendingRequests.map((req) => `
+          <div class="member-card pending-card">
+            <div class="member-top">
+              <div class="member-identity">
+                <div class="avatar" style="background:var(--amber-bg);color:var(--amber);">${escapeHtml(req.name[0])}</div>
+                <div>
+                  <div class="member-name">
+                    ${escapeHtml(req.name)}
+                    <span class="badge badge-amber">Waiting Approval</span>
+                    <span class="badge badge-indigo">${escapeHtml(req.langs)}</span>
+                  </div>
+                  <div class="member-meta">${escapeHtml(req.room)} · ${escapeHtml(req.note)}</div>
+                </div>
+              </div>
+              <div class="actions-row">
+                <button class="btn btn-success" type="button" onclick="approvePendingNeighbor('${req.id}')">✓ Approve</button>
+                <button class="btn btn-danger-outline" type="button" onclick="declinePendingNeighbor('${req.id}')">✕ Decline</button>
+              </div>
+            </div>
+          </div>
+        `).join("");
+
+        pendingHtml = `
+          <div style="margin-bottom:20px;">
+            <h2 class="card-title" style="margin-bottom:10px;">⏳ Pending Join Requests (${state.pendingRequests.length})</h2>
+            <div class="stack">${reqCards}</div>
+          </div>
+        `;
+      } else {
+        pendingHtml = `
+          <div class="inline-alert inline-alert-green" style="margin-top:0;margin-bottom:18px;">
+            <span>✓ No pending join requests right now.</span>
+          </div>
+        `;
+      }
+
+      // Active Neighbors List
+      const activeCards = state.neighbors.map((n) => {
+        const alertMsg = state.neighborAlerts[n.id];
+        return `
+          <div class="member-card">
+            <div class="member-top">
+              <div class="member-identity">
+                <div class="avatar">${escapeHtml(n.name[0])}</div>
+                <div>
+                  <div class="member-name">
+                    ${escapeHtml(n.name)}
+                    <span class="badge badge-gray">${escapeHtml(n.lang)}</span>
+                    ${n.isAdmin ? `<span class="badge badge-indigo">★ ${n.isPrimaryAdmin ? "Admin" : "Co-Admin"}</span>` : ""}
+                  </div>
+                  <div class="member-meta">
+                    ${escapeHtml(n.room)} · ${n.onTime} on-time return${n.onTime === 1 ? "" : "s"}${n.late > 0 ? ` · ${n.late} late` : ""}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="badge-row">
+              ${n.trusted ? `<span class="badge badge-green">🔒 Trusted Neighbor</span>` : `<span class="badge badge-gray">Standard Tier</span>`}
+              ${n.muted ? `<span class="badge badge-amber">🔇 Borrowing Muted</span>` : ""}
+              ${n.activeLoanDesc ? `<span class="badge ${n.activeLoanDesc.includes("Overdue") ? "badge-red" : "badge-indigo"}">● ${escapeHtml(n.activeLoanDesc)}</span>` : ""}
+            </div>
+
+            <div class="actions-row">
+              <button class="btn btn-sm ${n.trusted ? "btn-soft" : ""}" type="button" onclick="toggleNeighborTrust('${n.id}')">
+                🔒 ${n.trusted ? "Trusted ✓" : "Grant Trust"}
+              </button>
+              <button class="btn btn-sm ${n.muted ? "btn-amber-outline" : ""}" type="button" onclick="toggleNeighborMute('${n.id}')">
+                ${n.muted ? "🔊 Unmute Borrowing" : "🔇 Mute Borrowing"}
+              </button>
+              <button class="btn btn-sm" type="button" onclick="toggleNeighborCoAdmin('${n.id}')">
+                ${n.isAdmin ? "Remove Admin" : "Make Co-Admin"}
+              </button>
+              <button class="btn btn-sm btn-danger-outline" type="button" onclick="safeRemoveNeighbor('${n.id}')">
+                Safe Remove
+              </button>
+            </div>
+
+            ${alertMsg ? `
+              <div class="inline-alert inline-alert-red" role="alert">
+                <span>⛔ ${escapeHtml(alertMsg)}</span>
+              </div>
+            ` : ""}
+          </div>
+        `;
+      }).join("");
+
+      container.innerHTML = `
+        ${pendingHtml}
+        <h2 class="card-title" style="margin-bottom:10px;">🏠 Active Neighbors (${state.neighbors.length})</h2>
+        <div class="stack">${activeCards}</div>
+      `;
+    }
+
+    function approvePendingNeighbor(reqId) {
+      const idx = state.pendingRequests.findIndex((r) => r.id === reqId);
+      if (idx === -1) return;
+      const req = state.pendingRequests.splice(idx, 1)[0];
+
+      state.neighbors.push({
+        id: "usr-" + Date.now(),
+        name: req.name,
+        room: req.room,
+        lang: req.langs,
+        isAdmin: false,
+        isPrimaryAdmin: false,
+        trusted: false,
+        muted: false,
+        onTime: 0,
+        late: 0,
+        activeLoanDesc: null
+      });
+
+      const sakura = getSakuraGroup();
+      sakura.members = state.neighbors.length;
+      if (!sakura.candidates.includes(req.name)) sakura.candidates.push(req.name);
+
+      renderGroupAdmin();
+      showToast(`Approved ${req.name} — welcome notice sent in ${req.langs}`, "success");
+    }
+
+    function declinePendingNeighbor(reqId) {
+      const idx = state.pendingRequests.findIndex((r) => r.id === reqId);
+      if (idx === -1) return;
+      const req = state.pendingRequests.splice(idx, 1)[0];
+      renderGroupAdmin();
+      showToast(`Declined join request from ${req.name}`, "warn");
+    }
+
+    function toggleNeighborTrust(userId) {
+      const n = state.neighbors.find((u) => u.id === userId);
+      if (!n) return;
+      n.trusted = !n.trusted;
+      delete state.neighborAlerts[userId];
+      renderGroupAdmin();
+      showToast(n.trusted ? `${n.name} endorsed as Trusted Neighbor 🔒` : `Removed Trusted badge from ${n.name}`);
+    }
+
+    function toggleNeighborMute(userId) {
+      const n = state.neighbors.find((u) => u.id === userId);
+      if (!n) return;
+      n.muted = !n.muted;
+      delete state.neighborAlerts[userId];
+      renderGroupAdmin();
+      showToast(n.muted ? `Paused borrowing for ${n.name}` : `Restored borrowing for ${n.name}`, n.muted ? "warn" : "success");
+    }
+
+    function toggleNeighborCoAdmin(userId) {
+      const n = state.neighbors.find((u) => u.id === userId);
+      if (!n) return;
+      const adminCount = state.neighbors.filter((u) => u.isAdmin).length;
+
+      if (n.isAdmin && adminCount <= 1) {
+        state.neighborAlerts[userId] = "Guardrail: Cannot remove the last Group Admin. Appoint a Co-Admin first.";
+        renderGroupAdmin();
+        showToast("Cannot remove the last Group Admin", "danger");
+        return;
+      }
+
+      n.isAdmin = !n.isAdmin;
+      if (!n.isAdmin) n.isPrimaryAdmin = false;
+      delete state.neighborAlerts[userId];
+      renderGroupAdmin();
+      showToast(n.isAdmin ? `${n.name} appointed as Co-Admin` : `${n.name} returned to standard neighbor role`, "success");
+    }
+
+    function safeRemoveNeighbor(userId) {
+      const n = state.neighbors.find((u) => u.id === userId);
+      if (!n) return;
+
+      // Guardrail 1: Active/Overdue loan check (Otonari safe-leaving rule)
+      if (n.activeLoanDesc) {
+        state.neighborAlerts[userId] = "Cannot remove: neighbor has an active loan (" + n.activeLoanDesc + "). Use Mute Borrowing until the item is returned.";
+        renderGroupAdmin();
+        showToast("Safe-leave blocked: neighbor has an active loan", "danger");
+        return;
+      }
+
+      // Guardrail 2: Last admin check
+      const adminCount = state.neighbors.filter((u) => u.isAdmin).length;
+      if (n.isAdmin && adminCount <= 1) {
+        state.neighborAlerts[userId] = "Cannot remove: neighbor is the sole Group Admin. Assign a Co-Admin first.";
+        renderGroupAdmin();
+        showToast("Safe-leave blocked: cannot remove sole Group Admin", "danger");
+        return;
+      }
+
+      // Clean custom modal confirmation (never window.confirm)
+      openModal(`
+        <h3 class="modal-title" id="modal-title">Remove ${escapeHtml(n.name)} from Sakura Heights?</h3>
+        <p class="modal-desc">${escapeHtml(n.name)} has no active loans. Their shelf listings will be safely archived and group access revoked.</p>
+        <div class="modal-footer">
+          <button class="btn" type="button" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-danger-outline" type="button" onclick="confirmRemoveNeighbor('${n.id}')">Confirm Safe Remove</button>
+        </div>
+      `);
+    }
+
+    function confirmRemoveNeighbor(userId) {
+      const idx = state.neighbors.findIndex((u) => u.id === userId);
+      if (idx === -1) return;
+      const removed = state.neighbors.splice(idx, 1)[0];
+      const sakura = getSakuraGroup();
+      sakura.members = state.neighbors.length;
+      closeModal();
+      renderGroupAdmin();
+      showToast(`Safely removed ${removed.name} from Sakura Heights`, "warn");
+    }
+
+    function renderGaShelf(container) {
+      const cards = state.shelfItems.map((item) => {
+        const isLent = item.status.startsWith("Lent");
+        const statusClass =
+          item.status === "Available" ? (item.hidden ? "badge-gray" : "badge-green") :
+          item.status.includes("Overdue") ? "badge-red" : "badge-indigo";
+
+        return `
+          <div class="item-card" style="${item.hidden ? "opacity:0.72;background:var(--surface-muted);" : ""}">
+            <div class="item-card-row">
+              <div class="item-info">
+                <div class="item-emoji" aria-hidden="true">${item.emoji}</div>
+                <div>
+                  <div class="member-name">
+                    ${escapeHtml(item.name)}
+                    ${item.trustedOnly ? `<span class="badge badge-indigo">🔒 Trusted Only</span>` : ""}
+                    ${item.hidden ? `<span class="badge badge-gray">Hidden from Shelf</span>` : ""}
+                  </div>
+                  <div class="member-meta">
+                    Owner: <strong>${escapeHtml(item.owner)}</strong> ·
+                    <span class="badge ${statusClass}" style="margin-left:4px;">${escapeHtml(item.status)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="actions-row">
+                <button class="btn btn-sm ${item.trustedOnly ? "btn-soft" : ""}" type="button" onclick="toggleShelfTrusted('${item.id}')">
+                  🔒 ${item.trustedOnly ? "Trusted Only ✓" : "Set Trusted Only"}
+                </button>
+                <button
+                  class="btn btn-sm ${item.hidden ? "btn-primary" : ""}"
+                  type="button"
+                  ${isLent ? "disabled title='Cannot hide an item while it is currently lent'" : ""}
+                  onclick="toggleShelfHidden('${item.id}')"
+                >
+                  ${item.hidden ? "Restore on Shelf" : "Hide on Shelf"}
+                </button>
+              </div>
+            </div>
+            ${isLent ? `<div class="member-meta" style="margin-top:8px;">ℹ️ Hide is locked while item is actively lent to protect return tracking.</div>` : ""}
+          </div>
+        `;
+      }).join("");
+
+      container.innerHTML = `
+        <div class="card-header" style="margin-bottom:12px;">
+          <div>
+            <h2 class="card-title">Shelf Moderation (${state.shelfItems.length} items)</h2>
+            <p class="card-subtitle">Adjust trusted-only access or temporarily hide items on Sakura Heights' shelf.</p>
+          </div>
+        </div>
+        <div class="stack">${cards}</div>
+      `;
+    }
+
+    function toggleShelfTrusted(itemId) {
+      const item = state.shelfItems.find((i) => i.id === itemId);
+      if (!item) return;
+      item.trustedOnly = !item.trustedOnly;
+      renderGroupAdmin();
+      showToast(`${item.name}: ${item.trustedOnly ? "Restricted to Trusted Neighbors 🔒" : "Open to all group neighbors"}`);
+    }
+
+    function toggleShelfHidden(itemId) {
+      const item = state.shelfItems.find((i) => i.id === itemId);
+      if (!item || item.status.startsWith("Lent")) return;
+      item.hidden = !item.hidden;
+      renderGroupAdmin();
+      showToast(item.hidden ? `Hidden "${item.name}" from shelf` : `Restored "${item.name}" to shelf`, item.hidden ? "warn" : "success");
+    }
+
+    function renderGaLoans(container) {
+      const copy = GA_COPY[state.previewLang] || GA_COPY.en;
+      const speechSupported = "speechSynthesis" in window;
+
+      const cards = state.loans.map((loan) => {
+        const isOverdue = loan.status === "Overdue";
+        return `
+          <div class="loan-card" style="${isOverdue ? "border-color:#e4b4b0;" : ""}">
+            <div class="member-top">
+              <div class="item-info">
+                <div class="item-emoji" aria-hidden="true">${loan.emoji}</div>
+                <div>
+                  <div class="member-name">${escapeHtml(loan.item)}</div>
+                  <div class="member-meta">
+                    <strong>${escapeHtml(loan.borrower)}</strong> borrowing from <strong>${escapeHtml(loan.owner)}</strong>
+                  </div>
+                </div>
+              </div>
+              <span class="badge ${isOverdue ? "badge-red" : "badge-green"}">
+                ${isOverdue ? "⚠️ " : "● "}${escapeHtml(loan.dueLabel)}
+              </span>
+            </div>
+
+            ${isOverdue ? `
+              <div class="phrase-preview-box">
+                <div class="phrase-preview-label">
+                  <span>Fixed Polite Admin Phrase (${escapeHtml(state.previewLang.toUpperCase())})</span>
+                  ${speechSupported ? `
+                    <button class="btn btn-sm" type="button" onclick="speakGentleReminder()">🔊 Read Aloud</button>
+                  ` : ""}
+                </div>
+                <p class="phrase-preview-text">${escapeHtml(copy.gentleReminder)}</p>
+              </div>
+
+              ${loan.reminderSent ? `
+                <div class="inline-alert inline-alert-green" style="margin-top:0;">
+                  <span>✓ Gentle admin reminder delivered to ${escapeHtml(loan.borrower)} at ${escapeHtml(loan.reminderSentAt)} (24h anti-spam cooldown active).</span>
+                </div>
+              ` : `
+                <div class="actions-row">
+                  <button class="btn btn-primary" type="button" onclick="sendGentleReminder('${loan.id}')">
+                    ✉️ Send Gentle Admin Reminder
+                  </button>
+                </div>
+              `}
+            ` : `
+              <div class="inline-alert inline-alert-indigo" style="margin-top:8px;">
+                <span>ℹ️ On schedule — no admin intervention needed. Automated reminder runs 2 hours before due time.</span>
+              </div>
+            `}
+          </div>
+        `;
+      }).join("");
+
+      container.innerHTML = `
+        <div class="card-header" style="margin-bottom:12px;">
+          <div>
+            <h2 class="card-title">Loans &amp; Gentle Mediation</h2>
+            <p class="card-subtitle">Nudge overdue returns politely in the borrower's preferred language without writing confrontational free text.</p>
+          </div>
+        </div>
+        <div class="stack">${cards}</div>
+      `;
+    }
+
+    function speakGentleReminder() {
+      if (!("speechSynthesis" in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        const copy = GA_COPY[state.previewLang] || GA_COPY.en;
+        const utter = new SpeechSynthesisUtterance(copy.gentleReminder);
+        const langMap = { en: "en-US", ja: "ja-JP", "ja-easy": "ja-JP", bn: "bn-BD" };
+        utter.lang = langMap[state.previewLang] || "en-US";
+        utter.rate = state.elderMode ? 0.9 : 1.0;
+        window.speechSynthesis.speak(utter);
+        showToast("🔊 Reading polite reminder aloud...");
+      } catch (err) {
+        showToast("Speech synthesis unavailable in this browser", "warn");
+      }
+    }
+
+    function sendGentleReminder(loanId) {
+      const loan = state.loans.find((l) => l.id === loanId);
+      if (!loan) return;
+      loan.reminderSent = true;
+      loan.reminderSentAt = formatNowTime();
+      renderGroupAdmin();
+      showToast(`Gentle localized reminder sent to ${loan.borrower}`, "success");
+    }
+
+    function renderGaPoster(container) {
+      const sakura = getSakuraGroup();
+      const selectedNotice = state.noticeTemplates.find((n) => n.id === state.selectedNoticeId) || state.noticeTemplates[0];
+
+      const noticeRadios = state.noticeTemplates.map((n) => `
+        <label class="notice-option ${n.id === state.selectedNoticeId ? "selected" : ""}">
+          <input
+            type="radio"
+            name="notice-template"
+            value="${n.id}"
+            ${n.id === state.selectedNoticeId ? "checked" : ""}
+            onchange="selectNoticeTemplate('${n.id}')"
+          />
+          <div>
+            <strong>${escapeHtml(n.title)}</strong>
+            <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">Fixed multilingual template (EN · JA · JA-EASY · BN)</div>
+          </div>
+        </label>
+      `).join("");
+
+      container.innerHTML = `
+        <div class="stack">
+          <!-- Printable Notice Board Poster Card -->
+          <div class="card">
+            <div class="poster-frame">
+              <div class="poster-brand">OTONARI · お隣 · ওতোনারি</div>
+              <h2 class="poster-group-name">${escapeHtml(sakura.name)}</h2>
+              <div class="poster-taglines">
+                <span>ご近所さんと、自分のことばで借りあおう。</span>
+                <span>Borrow from next door, in your own language.</span>
+                <span>পাশের প্রতিবেশীর কাছ থেকে ধার নিন, আপনার নিজের ভাষায়।</span>
+              </div>
+              <div class="poster-qr-wrap">
+                ${buildQrSvg(sakura.code)}
+              </div>
+              <div style="margin-bottom:8px;font-size:13px;color:var(--text-muted);">Scan QR or enter building join code:</div>
+              <div class="poster-code-large">${escapeHtml(sakura.code)}</div>
+            </div>
+
+            <div class="actions-row no-print" style="justify-content:center;">
+              <button class="btn btn-soft" type="button" onclick="gaRotateJoinCode()">🔄 Rotate Join Code</button>
+              <button class="btn btn-primary" type="button" onclick="window.print()">🖨️ Print Poster</button>
+            </div>
+          </div>
+
+          <!-- Structured Neighborhood Announcement Card -->
+          <div class="card no-print">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">📢 Structured Neighborhood Announcement</h2>
+                <p class="card-subtitle">Pick a fixed announcement template. Every resident sees it automatically in their own language.</p>
+              </div>
+            </div>
+
+            <div class="stack" style="margin-bottom:14px;">
+              ${noticeRadios}
+            </div>
+
+            <div class="phrase-preview-box">
+              <div class="phrase-preview-label">
+                <span>Live Multilingual Preview (${escapeHtml(state.previewLang.toUpperCase())})</span>
+              </div>
+              <p class="phrase-preview-text">${escapeHtml(selectedNotice.text[state.previewLang])}</p>
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid #c9dceb;display:grid;gap:6px;font-size:13px;color:var(--text-muted);">
+                <div><strong>JA:</strong> ${escapeHtml(selectedNotice.text.ja)}</div>
+                <div><strong>JA-EASY:</strong> ${escapeHtml(selectedNotice.text["ja-easy"])}</div>
+                <div><strong>BN:</strong> ${escapeHtml(selectedNotice.text.bn)}</div>
+              </div>
+            </div>
+
+            <div class="actions-row">
+              <button class="btn btn-primary" type="button" onclick="postAnnouncementBanner()">📌 Post to Shelf Banner</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function gaRotateJoinCode() {
+      const sakura = getSakuraGroup();
+      const oldCode = sakura.code;
+      sakura.code = generateSafeJoinCode();
+      addAuditLog("group_admin.rotate_code", sakura.name, `Admin Sato rotated poster join code ${oldCode} → ${sakura.code}`);
+      renderAll();
+      showToast(`New poster join code generated: ${sakura.code}`, "success");
+    }
+
+    function selectNoticeTemplate(id) {
+      state.selectedNoticeId = id;
+      renderGroupAdmin();
+    }
+
+    function postAnnouncementBanner() {
+      state.activeBannerNoticeId = state.selectedNoticeId;
+      renderGroupAdmin();
+      showToast("Announcement posted to Sakura Heights shelf banner!", "success");
+    }
+
+    function clearAnnouncementBanner() {
+      state.activeBannerNoticeId = null;
+      renderGroupAdmin();
+      showToast("Shelf banner cleared");
+    }
+
+    /* -----------------------------------------------------------------------
+       8. INITIAL RENDER
+       ----------------------------------------------------------------------- */
+    function renderAll() {
+      renderSuperAdmin();
+      renderGroupAdmin();
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderAll();
+    });
+  </script>
+</body>
+</html>
