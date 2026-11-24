@@ -3,9 +3,12 @@
 
 import express from 'express';
 import { requireGroupAdmin, requirePrimaryGroupAdmin } from '../../core/auth.ts';
-import { read, write } from '../../core/http.ts';
+import { check, read, write } from '../../core/http.ts';
+import { storePhoto } from '../../core/photoFiles.ts';
+import { receivePhoto } from '../../core/receivePhoto.ts';
 import {
   approveMember,
+  changeImage,
   clearAnnouncement,
   listItems,
   listLoans,
@@ -14,6 +17,7 @@ import {
   nudgeLoan,
   publishAnnouncement,
   rejectMember,
+  removeImage,
   removeMember,
   resolveLoan,
   rotateInviteCode,
@@ -36,6 +40,8 @@ router.patch('/group-admin/members/:userId/status', write(requireGroupAdmin, set
 router.patch('/group-admin/members/:userId/role', write(requirePrimaryGroupAdmin, setMemberRole));
 router.delete('/group-admin/members/:userId', write(requireGroupAdmin, removeMember));
 router.patch('/group-admin/settings', write(requireGroupAdmin, updateSettings));
+router.post('/group-admin/image', check(requireGroupAdmin), receivePhoto, storePhoto, read(requireGroupAdmin, changeImage));
+router.delete('/group-admin/image', read(requireGroupAdmin, removeImage));
 router.post('/group-admin/invite-code/rotate', write(requireGroupAdmin, rotateInviteCode));
 
 router.get('/group-admin/items', read(requireGroupAdmin, listItems));

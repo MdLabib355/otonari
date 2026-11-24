@@ -9,6 +9,8 @@ import type {
   GroupMemberSummary,
 } from '../../../../shared/types.ts';
 import { LoansIcon, QrCodeIcon, ShelfIcon, UsersIcon } from '../../components/Icons.tsx';
+import GroupIcon from '../../components/GroupIcon.tsx';
+import ImageEditor from '../../components/ImageEditor.tsx';
 import SpeakButton from '../../components/SpeakButton.tsx';
 import { api } from '../../core/api.ts';
 import { useMember } from '../../core/UserContext.ts';
@@ -83,6 +85,7 @@ export default function GroupAdminPage({ onAlertCountChange }: { onAlertCountCha
     <section className="ga-page">
       <div className="ga-header print-button">
         <div className="ga-header-title">
+          <GroupIcon group={currentGroup} className="group-icon-svg" />
           <h1>{t(lang, 'groupAdmin.title')}</h1>
           <span className="ga-badge ga-badge-indigo">{roleBadge}</span>
           <span className="ga-code-chip">{currentGroup.code}</span>
@@ -140,6 +143,21 @@ export default function GroupAdminPage({ onAlertCountChange }: { onAlertCountCha
         <p>{t(lang, 'common.loading')}</p>
       ) : (
         <>
+          {tab === 'neighbors' && (
+            <div className="ga-card group-image-card">
+              <h2>{t(lang, 'groupAdmin.groupImage')}</h2>
+              <p className="ga-meta">{t(lang, 'groupAdmin.groupImageHint')}</p>
+              <ImageEditor<Group>
+                path="/group-admin/image"
+                picture={<GroupIcon group={currentGroup} className="group-image-large" />}
+                hasImage={currentGroup.image !== null}
+                onSaved={(updated) => {
+                  handleGroupUpdated(updated);
+                  refreshAll().catch(() => {}); // the activity log
+                }}
+              />
+            </div>
+          )}
           {tab === 'neighbors' && (
             <NeighborsTab
               lang={lang}

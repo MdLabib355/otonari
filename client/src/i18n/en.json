@@ -2,6 +2,9 @@
   "meta": { "lang": "en", "name": "English", "locale": "en-US", "speech": "en-US" },
 
   "ui": {
+    "groupAdmin.groupImage": "Group image",
+    "groupAdmin.groupImageHint": "Everybody in the group sees it, and people who enter the join code.",
+
     "auth.forgot": "Forgot password?",
     "auth.resetTitle": "Choose a new password",
     "profile.title": "Your profile",

@@ -4,12 +4,13 @@ import crypto from 'node:crypto';
 import type { AdminGroup, Group, GroupLifecycleStatus, GroupType, JoinPolicy } from '../../../shared/types.ts';
 import { found, query, queryOne } from '../../core/database.ts';
 import { toText } from '../../core/http.ts';
+import { photoUrl } from '../../core/photoFiles.ts';
 import type { CountRow, GroupRow } from '../../types.ts';
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 const GROUP_SELECT = `
-  SELECT groups.id, groups.code, groups.name, groups.type, groups.city,
+  SELECT groups.id, groups.code, groups.name, groups.type, groups.city, groups.image,
          groups.join_policy, groups.lifecycle_status, groups.invite_code_version,
          (SELECT ga.phrase_key
           FROM group_announcements AS ga
@@ -19,12 +20,18 @@ const GROUP_SELECT = `
   FROM groups
 `;
 
+// Groups go to the client from many places, so the image becomes a URL here.
+async function withImageUrl<T extends Group>(group: T): Promise<T> {
+  return { ...group, image: await photoUrl(group.image) };
+}
+
 export async function findGroupByCode(code: unknown): Promise<Group | undefined> {
-  return queryOne<Group>(`${GROUP_SELECT} WHERE groups.code = $1`, [toText(code).toUpperCase()]);
+  const group = await queryOne<Group>(`${GROUP_SELECT} WHERE groups.code = $1`, [toText(code).toUpperCase()]);
+  return group && withImageUrl(group);
 }
 
 export async function getGroup(groupId: number): Promise<Group> {
-  return found(await queryOne<Group>(`${GROUP_SELECT} WHERE groups.id = $1`, [groupId]));
+  return withImageUrl(found(await queryOne<Group>(`${GROUP_SELECT} WHERE groups.id = $1`, [groupId])));
 }
 
 export async function getGroupRow(groupId: number): Promise<GroupRow> {
@@ -32,12 +39,13 @@ export async function getGroupRow(groupId: number): Promise<GroupRow> {
 }
 
 export async function listGroups(): Promise<Group[]> {
-  return query<Group>(`${GROUP_SELECT} ORDER BY groups.id`);
+  const groups = await query<Group>(`${GROUP_SELECT} ORDER BY groups.id`);
+  return Promise.all(groups.map(withImageUrl));
 }
 
 export async function listGroupsWithCounts(): Promise<AdminGroup[]> {
-  return query<AdminGroup>(
-    `SELECT groups.id, groups.code, groups.name, groups.type, groups.city,
+  const groups = await query<AdminGroup>(
+    `SELECT groups.id, groups.code, groups.name, groups.type, groups.city, groups.image,
             groups.join_policy, groups.lifecycle_status, groups.invite_code_version,
             (SELECT ga.phrase_key
              FROM group_announcements AS ga
@@ -48,6 +56,7 @@ export async function listGroupsWithCounts(): Promise<AdminGroup[]> {
      FROM groups LEFT JOIN users ON users.group_id = groups.id
      GROUP BY groups.id ORDER BY groups.id`
   );
+  return Promise.all(groups.map(withImageUrl));
 }
 
 export async function changeJoinCode(groupId: number) {
@@ -106,6 +115,13 @@ export async function rotateGroupCode(groupId: number): Promise<Group> {
     [code, groupId]
   );
   return getGroup(groupId);
+}
+
+// Returns the old image: it can be deleted once everything is saved.
+export async function setGroupImage(groupId: number, image: string | null): Promise<string | null> {
+  const old = (await getGroupRow(groupId)).image;
+  await query('UPDATE groups SET image = $1 WHERE id = $2', [image, groupId]);
+  return old;
 }
 
 export async function updateGroupJoinPolicy(groupId: number, joinPolicy: JoinPolicy): Promise<Group> {

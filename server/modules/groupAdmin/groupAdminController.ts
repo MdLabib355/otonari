@@ -3,8 +3,10 @@
 import type { Request } from 'express';
 import { ANNOUNCEMENT_KEYS, GROUP_ROLES, JOIN_POLICIES, isOneOf } from '../../core/allowedKeys.ts';
 import { listAuditLogs, writeAuditLog } from '../../core/audit.ts';
+import { transaction } from '../../core/database.ts';
 import { refuse, reply, toId, toText } from '../../core/http.ts';
-import { getGroup, rotateGroupCode, updateGroupJoinPolicy } from '../group/groupModel.ts';
+import { deletePhoto } from '../../core/photoFiles.ts';
+import { getGroup, rotateGroupCode, setGroupImage, updateGroupJoinPolicy } from '../group/groupModel.ts';
 import { setTrustedOnly } from '../item/itemModel.ts';
 import { declinePendingLoans } from '../loan/loanModel.ts';
 import {
@@ -254,6 +256,37 @@ export async function updateSettings(req: Request) {
   });
 
   return reply(200, updated);
+}
+
+// The group's icon. (A new one has been stored by storePhoto.) Not write() routes: deleting the old file can be
+// slow, so it is done after the transaction.
+export async function changeImage(req: Request) {
+  return saveImage(req, req.photo);
+}
+
+export async function removeImage(req: Request) {
+  return saveImage(req, null);
+}
+
+async function saveImage(req: Request, image: string | null) {
+  const old = await transaction(async () => {
+    const previous = await setGroupImage(req.groupId, image);
+    await writeAuditLog({
+      actorId: req.user.id,
+      actorLabel: actorLabelOf(req),
+      actorRole: actorRoleOf(req),
+      scopeGroupId: req.groupId,
+      category: 'Group',
+      action: image ? 'group.image_changed' : 'group.image_removed',
+      targetType: 'group',
+      targetId: req.groupId,
+      detail: image ? 'Changed the group image.' : 'Removed the group image.',
+      ipAddress: req.ip ?? null,
+    });
+    return previous;
+  });
+  await deletePhoto(old);
+  return reply(200, await getGroup(req.groupId));
 }
 
 export async function rotateInviteCode(req: Request) {

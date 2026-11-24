@@ -8,6 +8,7 @@ export function groupPreviewView(group: Group, memberCount: number): GroupPrevie
     name: group.name,
     type: group.type,
     city: group.city,
+    image: group.image,
     member_count: memberCount,
     join_policy: group.join_policy,
     lifecycle_status: group.lifecycle_status,

@@ -188,3 +188,35 @@
 .profile-row .text-input {
   flex: 1 1 10em;
 }
+
+.group-image {
+  flex: none;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 28%;
+  object-fit: cover;
+}
+
+.group-image.group-icon-svg {
+  width: 2.4em;
+  height: 2.4em;
+}
+
+.group-image-large,
+.group-image.group-image-large {
+  flex: none;
+  width: 84px;
+  height: 84px;
+  color: var(--accent);
+}
+
+.group-image-card {
+  margin-bottom: 14px;
+}
+
+/* Not enough room on a phone for the app's name beside the links. */
+@media (max-width: 520px) {
+  .many-links .header-brand {
+    display: none;
+  }
+}

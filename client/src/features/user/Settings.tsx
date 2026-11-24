@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { Lang, Me } from '../../../../shared/types.ts';
 import { api, errorStatus } from '../../core/api.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
-import { BlockIcon, BuildingIcon } from '../../components/Icons.tsx';
+import GroupIcon from '../../components/GroupIcon.tsx';
 import { LANGUAGES } from '../../data/catalog.ts';
 import { meta, t, type UiKey } from '../../i18n/index.ts';
 import { useMember } from '../../core/UserContext.ts';
@@ -54,7 +54,6 @@ export default function Settings() {
   }
 
   const languageOptions = LANGUAGES.map((language) => ({ value: language, label: meta(language).name }));
-  const GroupIcon = group.type === 'block' ? BlockIcon : BuildingIcon;
   const confirming = leaveTappedAt !== null;
 
   return (
@@ -95,7 +94,7 @@ export default function Settings() {
           <div className="field">
             <p className="label">{t(lang, 'settings.group')}</p>
             <div className="group-preview">
-              <GroupIcon className="group-icon-svg" />
+              <GroupIcon group={group} className="group-icon-svg" />
               <div>
                 <strong>{group.name}</strong>
                 <p>{t(lang, `groupType.${group.type}`)}</p>
