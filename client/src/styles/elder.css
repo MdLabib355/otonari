@@ -82,8 +82,20 @@ body.elder .app-header-inner {
   padding-bottom: 8px;
 }
 
+body.elder .bottom-nav {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+body.elder .bottom-nav::-webkit-scrollbar {
+  display: none;
+}
+
 body.elder .bottom-nav a {
   height: 76px;
+  min-width: 82px;
+  flex-shrink: 0;
+  padding: 6px 8px;
 }
 
 body.elder .search-input,

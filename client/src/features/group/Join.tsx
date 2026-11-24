@@ -116,6 +116,12 @@ export default function Join() {
                   <p className="inline-icon-text">
                     {t(lang, `groupType.${preview.type}`)} · <UsersIcon className="icon-xs" /> {preview.member_count}
                   </p>
+                  {preview.join_policy === 'approval_required' && (
+                    <p className="hint">{t(lang, 'groupAdmin.joinApprovalHint')}</p>
+                  )}
+                  {(preview.join_policy === 'locked' || preview.lifecycle_status !== 'active') && (
+                    <p className="error">{t(lang, 'groupAdmin.joinLocked')}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -149,7 +155,17 @@ export default function Join() {
         </div>
 
         {failed && <p className="error">{t(lang, 'common.error')}</p>}
-        <button type="submit" className="button-primary" disabled={!preview || !nickname.trim() || busy}>
+        <button
+          type="submit"
+          className="button-primary"
+          disabled={
+            !preview ||
+            preview.join_policy === 'locked' ||
+            preview.lifecycle_status !== 'active' ||
+            !nickname.trim() ||
+            busy
+          }
+        >
           {t(lang, 'join.button')}
         </button>
       </form>
