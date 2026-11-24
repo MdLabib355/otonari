@@ -2,11 +2,17 @@
 // so every item has a stable key that translates perfectly into every language.
 // Names live in the i18n files under "items.<key>".
 
-import type { Lang } from '../../../shared/types.ts';
+import type { CatalogItemRecord, Lang } from '../../../shared/types.ts';
 
 export const CATEGORIES = ['kitchen', 'cleaning', 'tools', 'living', 'outdoor'];
 
-export const ITEMS = [
+export interface CatalogEntry {
+  key: string;
+  emoji: string;
+  category: string;
+}
+
+export const ITEMS: CatalogEntry[] = [
   // kitchen
   { key: 'takoyaki_maker', emoji: '🐙', category: 'kitchen' },
   { key: 'hot_plate', emoji: '🍳', category: 'kitchen' },
@@ -61,6 +67,33 @@ export type TimeSlot = 'morning' | 'afternoon' | 'evening';
 export const TIME_SLOTS: Record<TimeSlot, number> = { morning: 9, afternoon: 13, evening: 18 }; // hour, Japan time
 
 export const LANGUAGES: Lang[] = ['en', 'ja', 'ja-easy', 'bn'];
+
+// Runtime localized overrides synced from GET /api/v1/catalog (falls back to static i18n JSON).
+const dynamicItemLabels: Record<Lang, Record<string, string>> = {
+  en: {},
+  ja: {},
+  'ja-easy': {},
+  bn: {},
+};
+
+export function syncDynamicCatalog(records: CatalogItemRecord[]) {
+  if (!Array.isArray(records) || records.length === 0) return;
+  ITEMS.splice(
+    0,
+    ITEMS.length,
+    ...records.map((r) => ({ key: r.item_key, emoji: r.emoji, category: r.category }))
+  );
+  for (const r of records) {
+    dynamicItemLabels.en[r.item_key] = r.label_en;
+    dynamicItemLabels.ja[r.item_key] = r.label_ja;
+    dynamicItemLabels['ja-easy'][r.item_key] = r.label_ja_easy;
+    dynamicItemLabels.bn[r.item_key] = r.label_bn;
+  }
+}
+
+export function dynamicItemLabel(lang: Lang, itemKey: string): string | undefined {
+  return dynamicItemLabels[lang]?.[itemKey];
+}
 
 export function findItem(key: string) {
   return ITEMS.find((item) => item.key === key);
