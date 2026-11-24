@@ -157,6 +157,7 @@ describe('Slice 3: End-to-end API integration tests (T01-T38)', () => {
     assert.equal((await req('POST', '/api/join', { body: { code: 'BAD-CODE', nickname: 'Rahim', lang: 'en' } })).status, 404);
 
     const rahim = await joinUser('SAKURA-2611', 'Rahim', 'en');
+    assert.equal(rahim.user.is_demo, false);
     assert.equal((await req('GET', '/api/me')).status, 401);
     assert.equal((await req('GET', '/api/me', { token: 'invalid-token' })).status, 401);
 
@@ -507,5 +508,33 @@ describe('Slice 3: End-to-end API integration tests (T01-T38)', () => {
       }
     }
     assert.equal(got429, true, 'Expected 429 from group creation rate limiter');
+  });
+
+  it('T39-T40: demo /api/leave is non-destructive, exposes is_demo, and static asset/SPA fallback headers work', async () => {
+    const sato = await demoLogin('Sato');
+    assert.equal(sato.user.is_demo, true);
+    const itemsBefore = (await req('GET', '/api/my-items', { token: sato.token })).data;
+    assert.ok(itemsBefore.length > 0);
+
+    // Calling POST /api/leave as a seeded demo user returns 204 without deleting the demo user or items
+    assert.equal((await req('POST', '/api/leave', { token: sato.token })).status, 204);
+    assert.equal((await req('GET', '/api/me', { token: sato.token })).status, 200);
+    const itemsAfter = (await req('GET', '/api/my-items', { token: sato.token })).data;
+    assert.equal(itemsAfter.length, itemsBefore.length);
+    const demoUsers = (await req('GET', '/api/demo/users')).data;
+    assert.ok(demoUsers.some((u) => u.nickname === 'Sato'));
+
+    // When client/dist is built, verify missing hashed assets return 404, non-GET SPA paths return 404,
+    // and index.html serves with Cache-Control: no-cache.
+    const distIndex = path.join(import.meta.dirname, '..', '..', 'client', 'dist', 'index.html');
+    if (fs.existsSync(distIndex)) {
+      const missingAsset = await req('GET', '/assets/does-not-exist.css');
+      assert.equal(missingAsset.status, 404);
+      const postUnknown = await req('POST', '/unknown-spa-route');
+      assert.equal(postUnknown.status, 404);
+      const rootPage = await req('GET', '/');
+      assert.equal(rootPage.status, 200);
+      assert.match(rootPage.headers.get('cache-control') || '', /no-cache/i);
+    }
   });
 });

@@ -156,4 +156,23 @@ describe('Slice 2: Persistent volume photos, EXIF stripping, and path-traversal 
     assert.equal(fs.existsSync(path.join(getUploadsDir(), '.gitkeep')), true);
     assert.equal(fs.existsSync(path.join(getUploadsDir(), 'secret.txt')), false);
   });
+
+  it('serves uploaded photos even when UPLOADS_DIR resides inside a dot-prefixed parent directory', async () => {
+    const dotDir = path.join(tempDir, '.hidden-storage', 'uploads');
+    const prev = process.env.UPLOADS_DIR;
+    process.env.UPLOADS_DIR = dotDir;
+    try {
+      const form = new FormData();
+      form.append('photo', new Blob([VALID_PNG], { type: 'image/png' }), 'dotdir.png');
+      const uploadRes = await fetch(`${baseUrl}/req-photo`, { method: 'POST', body: form });
+      assert.equal(uploadRes.status, 201);
+      const { url } = await uploadRes.json();
+
+      const fileRes = await fetch(`${baseUrl}${url}`);
+      assert.equal(fileRes.status, 200);
+      assert.equal(fileRes.headers.get('content-type'), 'image/png');
+    } finally {
+      process.env.UPLOADS_DIR = prev;
+    }
+  });
 });

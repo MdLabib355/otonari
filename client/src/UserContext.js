@@ -1,19 +1,10 @@
-// The logged-in neighbor, shared with every page.
-// App.jsx loads it from /api/me and provides it. Pages read it with useUser():
-//
-//    const { user, group, lang, login, logout, setMe } = useUser();
-//
-//  user    { id, group_id, nickname, lang, elder_mode }   (undefined before joining)
-//  group   { id, code, name, type, city }                 (undefined before joining)
-//  lang    the language to show the app in
-//  login   call with the { token, user, group } from /api/join or the demo login
-//  logout  forget the token (back to the join screen)
-//  setMe   call with the { user, group } from PATCH /api/me to update the whole app at once
-//  inbox, refreshInbox, markRead   my unread messages (see useInbox.js)
-//
-// (This lives in its own file so pages don't have to import App.jsx, which imports them.)
+// The logged-in neighbor + persistent device UI language, shared with every page.
+// App.jsx loads it from /api/me and provides it. Pages read it with useUser().
 
 import { createContext, useContext } from 'react';
+import { LANGUAGES } from './data/catalog.js';
+
+const LANG_KEY = 'otonari-lang';
 
 export const UserContext = createContext(null);
 
@@ -21,10 +12,29 @@ export function useUser() {
   return useContext(UserContext);
 }
 
-// Before someone joins we don't know their language, so start with the browser's.
+// Auto-detect from browser/OS language when no explicit preference is saved.
 export function browserLanguage() {
   const code = (navigator.language || 'en').toLowerCase();
   if (code.startsWith('ja')) return 'ja';
   if (code.startsWith('bn')) return 'bn';
   return 'en';
+}
+
+export function getSavedLanguage() {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved && LANGUAGES.includes(saved)) return saved;
+  } catch {
+    // Ignore storage restriction
+  }
+  return browserLanguage();
+}
+
+export function saveLanguage(code) {
+  if (!LANGUAGES.includes(code)) return;
+  try {
+    localStorage.setItem(LANG_KEY, code);
+  } catch {
+    // Ignore storage restriction
+  }
 }

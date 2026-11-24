@@ -3,8 +3,9 @@ import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { api, clearToken, getToken, openEventStream, saveToken } from './api.js';
 import { formatNumber, t } from './i18n/index.js';
 import { useInbox } from './useInbox.js';
-import { UserContext, browserLanguage } from './UserContext.js';
+import { UserContext, getSavedLanguage, saveLanguage } from './UserContext.js';
 import Banner from './components/Banner.jsx';
+import { BoxIcon, LoansIcon, SettingsIcon, ShelfIcon } from './components/Icons.jsx';
 import Join from './pages/Join.jsx';
 import Shelf from './pages/Shelf.jsx';
 import ItemPage from './pages/ItemPage.jsx';
@@ -15,23 +16,21 @@ import Settings from './pages/Settings.jsx';
 import Poster from './pages/Poster.jsx';
 import Manager from './pages/Manager.jsx';
 
-const TABS = [
-  { to: '/', icon: '🏘️', label: 'nav.shelf' },
-  { to: '/my-items', icon: '📦', label: 'nav.myItems' },
-  { to: '/loans', icon: '🤝', label: 'nav.loans' },
-  { to: '/settings', icon: '⚙️', label: 'nav.settings' },
+export const NAV_TABS = [
+  { to: '/', Icon: ShelfIcon, label: 'nav.shelf', end: true },
+  { to: '/my-items', Icon: BoxIcon, label: 'nav.myItems' },
+  { to: '/loans', Icon: LoansIcon, label: 'nav.loans' },
+  { to: '/settings', Icon: SettingsIcon, label: 'nav.settings' },
 ];
 
 function BottomNav({ lang, unreadCount }) {
   return (
-    <nav className="bottom-nav">
-      {TABS.map((tab) => (
-        <NavLink key={tab.to} to={tab.to}>
-          <span className="nav-icon" aria-hidden="true">
-            {tab.icon}
-          </span>
-          {t(lang, tab.label)}
-          {tab.to === '/loans' && unreadCount > 0 && <span className="count-badge">{formatNumber(lang, unreadCount)}</span>}
+    <nav className="bottom-nav" aria-label={t(lang, 'appName')}>
+      {NAV_TABS.map(({ to, Icon, label, end }) => (
+        <NavLink key={to} to={to} end={end}>
+          <Icon className="nav-icon" />
+          <span>{t(lang, label)}</span>
+          {to === '/loans' && unreadCount > 0 && <span className="count-badge">{formatNumber(lang, unreadCount)}</span>}
         </NavLink>
       ))}
     </nav>
@@ -85,7 +84,7 @@ function PendingApproval({ me, lang, onUpdated, onLeave }) {
   }
 
   return (
-    <section>
+    <section className="narrow-page surface-card">
       <h1>{t(lang, 'pending.title')}</h1>
       <p className={isRejected ? 'error' : 'notice'}>
         {isRejected ? t(lang, 'pending.rejected') : t(lang, 'pending.body', { group: me.group.name })}
@@ -100,29 +99,44 @@ function PendingApproval({ me, lang, onUpdated, onLeave }) {
 }
 
 export default function App() {
-  const [me, setMe] = useState(null);
+  const [me, setMeState] = useState(null);
+  const [deviceLang, setDeviceLangState] = useState(() => getSavedLanguage());
   const [loading, setLoading] = useState(Boolean(getToken()));
   const [loadFailed, setLoadFailed] = useState(false);
   const { inbox, dueLoans, refreshInbox, markRead, markAllRead, clearInbox } = useInbox();
   const { pathname } = useLocation();
 
+  function setDeviceLang(code) {
+    saveLanguage(code);
+    setDeviceLangState(code);
+  }
+
+  function setMe(next) {
+    setMeState(next);
+    if (next?.user?.lang) {
+      saveLanguage(next.user.lang);
+      setDeviceLangState(next.user.lang);
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) return;
     api
       .get('/api/me')
-      .then(setMe)
+      .then(setMeState)
       .catch((error) => {
         if (error.status !== 401) setLoadFailed(true);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const lang = me ? me.user.lang : browserLanguage();
+  const isPublicRoute = pathname === '/join' || pathname === '/poster' || pathname === '/manager';
+  const lang = pathname === '/poster' ? (me?.user.lang ?? deviceLang) : !isPublicRoute && me ? me.user.lang : deviceLang;
 
   useEffect(() => {
-    document.body.classList.toggle('elder', Boolean(me?.user.elder_mode));
+    document.body.classList.toggle('elder', Boolean(!isPublicRoute && me?.user.elder_mode));
     document.documentElement.lang = lang === 'ja-easy' ? 'ja' : lang;
-  }, [me, lang]);
+  }, [me, lang, isPublicRoute]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -131,23 +145,22 @@ export default function App() {
   function login({ token, user, group }) {
     saveToken(token);
     clearInbox();
-    setMe({ user, group });
+    setMeState({ user, group });
   }
 
   function logout() {
     clearToken();
     clearInbox();
-    setMe(null);
+    setMeState(null);
   }
 
-  const isPublicRoute = pathname === '/join' || pathname === '/poster' || pathname === '/manager';
   const isApproved = me?.user?.status === 'approved';
 
   let page;
   if (loading && !isPublicRoute) {
-    page = <p>{t(lang, 'common.loading')}</p>;
+    page = <p className="narrow-page">{t(lang, 'common.loading')}</p>;
   } else if (loadFailed && !isPublicRoute) {
-    page = <p className="error">{t(lang, 'common.error')}</p>;
+    page = <p className="error narrow-page">{t(lang, 'common.error')}</p>;
   } else if (!me && !isPublicRoute) {
     page = <Navigate to="/join" replace />;
   } else if (me && !isApproved && !isPublicRoute) {
@@ -174,6 +187,8 @@ export default function App() {
     user: me?.user,
     group: me?.group,
     lang,
+    deviceLang,
+    setDeviceLang,
     login,
     logout,
     setMe,
@@ -186,8 +201,8 @@ export default function App() {
 
   return (
     <UserContext.Provider value={shared}>
-      <div className="app">
-        {showNav && <Banner />}
+      <div className="app-shell">
+        {showNav && <Banner key={me.user.id} tabs={NAV_TABS} />}
         <main className="page">{page}</main>
         {showNav && <BottomNav lang={lang} unreadCount={inbox.length} />}
       </div>

@@ -1,9 +1,22 @@
-// Otonari Service Worker: caches built app assets for offline fallback AND handles Web Push notifications.
+// Otonari Service Worker: deduplicated build-versioned precaching, network-first HTML, and Web Push.
 
-const CACHE_NAME = 'otonari-shell-v3';
-const PRECACHE_URLS = (self.__WB_MANIFEST || []).map((entry) =>
-  typeof entry === 'string' ? entry : entry.url
-);
+const MANIFEST = self.__WB_MANIFEST || [];
+// Deduplicate and root-anchor URLs so cache.addAll() never rejects with Duplicate requests.
+const PRECACHE_URLS = [
+  ...new Set(
+    MANIFEST.map((entry) => {
+      const u = typeof entry === 'string' ? entry : entry.url;
+      return u.startsWith('/') ? u : `/${u}`;
+    })
+  ),
+];
+
+const BUILD_TAG = MANIFEST.map((e) => (typeof e === 'string' ? e : `${e.url}:${e.revision || ''}`)).join('|');
+let hash = 0;
+for (let i = 0; i < BUILD_TAG.length; i += 1) {
+  hash = (Math.imul(31, hash) + BUILD_TAG.charCodeAt(i)) | 0;
+}
+const CACHE_NAME = `otonari-shell-${(hash >>> 0).toString(36)}`;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -23,7 +36,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Always load /api and /uploads from network; network-first for SPA navigations with cached index.html fallback.
+// Always load /api and /uploads from network; network-first for HTML navigations & /index.html.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
@@ -32,15 +45,16 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/')) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => caches.match('/index.html'))
-    );
+    event.respondWith(fetch(request).catch(() => caches.match('/index.html')));
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request))
-  );
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(fetch(request.url, { cache: 'no-cache' }).catch(() => caches.match('/index.html')));
+    return;
+  }
+
+  event.respondWith(caches.match(request).then((cached) => cached || fetch(request)));
 });
 
 // Layer 3: Display localized OS notification when server fires a Web Push message.

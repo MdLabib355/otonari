@@ -14,8 +14,8 @@ const pwa = VitePWA({
     short_name: 'Otonari',
     start_url: '/',
     display: 'standalone',
-    theme_color: '#264d73',
-    background_color: '#faf8f3',
+    theme_color: '#1f4b6e',
+    background_color: '#f6f2ea',
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -29,6 +29,10 @@ const pwa = VitePWA({
 
 export default defineConfig({
   plugins: [react(), pwa],
+  build: {
+    // Emit universal @media (min-width: ...) syntax instead of CSS Level 4 range queries.
+    cssTarget: 'chrome90',
+  },
   server: {
     port: 5173,
     strictPort: true,

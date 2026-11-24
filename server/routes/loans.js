@@ -144,7 +144,7 @@ router.post('/loans', requireUser, loanCreateLimiter, async (req, res) => {
     return res.status(400).json({ error: 'start_at and end_at must be ISO dates' });
   }
   const now = Date.now();
-  if (start < now - HOUR_MS) {
+  if (start < now - 2 * HOUR_MS) {
     return res.status(400).json({ error: 'start_at is in the past' });
   }
   if (start > now + MAX_ADVANCE_DAYS * DAY_MS) {

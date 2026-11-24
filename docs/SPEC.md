@@ -37,7 +37,7 @@ pending ──accept──▶ accepted ──(lender handover photo)──▶ ac
    └──auto-expire──▶ expired  on accepted before handover_photo)
 ```
 
-- **Auto-expiry (`server/services/reminders.js`):** Every 30s, `pending` loans whose `start_at < NOW()` transition to `expired` and send `sys.expired` to the borrower.
+- **Auto-expiry (`server/services/reminders.js`):** Every 30s, `pending` loans whose `end_at < NOW()` transition to `expired` and send `sys.expired` to the borrower (so unanswered requests stay acceptable throughout the requested borrowing window and expire only once obsolete).
 - **Reminders:** Active loans without `return_photo` trigger `sys.dueSoon` (≤24h before `end_at`) and `sys.overdue` + `sys.overdueLender` (past `end_at`), guarded by `FOR UPDATE SKIP LOCKED` and idempotent timestamp columns.
 - **Item controls:** Owners can edit `max_days`, `spot`, `trusted_only`, and `paused` (`PATCH /api/items/:id`). Paused items cannot be requested (`409`).
 - **Issue reports & thank-you stamps:** Either participant can send a structured non-confrontational issue report (`POST /api/loans/:id/issue`, optional EXIF-stripped photo) on `active`/`returned` loans, and send warm Japanese thank-you stamps (`POST /api/loans/:id/stamp`) on `returned` loans.
@@ -77,7 +77,7 @@ pending ──accept──▶ accepted ──(lender handover photo)──▶ ac
 All live/push deliveries register via `afterCommit(client, fn)` in `server/db/pool.js` so rolled-back transactions never leak ghost notifications.
 
 1. **Layer 1 — Persistent Notification Center (`GET /api/inbox`, `POST /api/inbox/read`, `POST /api/inbox/read-all`):** Every unread message piles up in PostgreSQL until read. The top bar 🔔 button opens the Notification Center drawer listing all piled-up alerts with one-tap navigation and "Mark all read".
-2. **Layer 2 — Live Authenticated SSE (`GET /api/events`):** Connected via `fetch()` with `Authorization: Bearer <token>` (never URL query tokens), capped at 5 concurrent streams per resident, delivering instant `<100ms` updates + `revoked` disconnect events, backed by a 30s fallback poll.
+2. **Layer 2 — Live Authenticated SSE (`GET /api/events`):** Connected via `fetch()` with `Authorization: Bearer <token>` (never URL query tokens), capped at 5 concurrent streams per resident, delivering instant `<100ms` updates + `revoked` disconnect events, backed by a 10s fallback poll.
 3. **Layer 3 — Background Web Push (`GET /api/push/vapid-key`, `POST/DELETE /api/push/subscribe`, `client/src/sw.js`):** Uses `web-push` with zero-config VAPID keys auto-generated and persisted in `app_settings` (or overridden via `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`). Delivers localized OS notifications even when the app is closed, automatically pruning `404`/`410` expired endpoints.
 
 ---
@@ -93,12 +93,12 @@ All live/push deliveries register via `afterCommit(client, fn)` in `server/db/po
 ## 7. Nagasaki Seed Data & 5-Step Demo Script
 
 ### Seeded Groups (`npm run seed`)
-- `SAKURA-2611` — **Sakura Heights** (`building`, Nagasaki), owned by demo manager `manager@sakura.nagasaki.jp`, with Sato (`ja`, elder), Tanaka (`ja`), Yamamoto (`ja`), Maria (`en`, 1 on-time return), Ayesha (`bn`).
-- `HAMA-3CHOME` — **Hamaguchi-machi 3-chome** (`block`, Nagasaki), with Inoue (`ja`, elder) and Kobayashi (`ja`).
+- `SAKURA-2611` — **Sakura Heights** (`building`, Nagasaki), owned by demo manager `manager@sakura.nagasaki.jp`, with Sato (`ja`), Tanaka (`ja`), Yamamoto (`ja`), Maria (`en`, 1 on-time return), Ayesha (`bn`).
+- `HAMA-3CHOME` — **Hamaguchi-machi 3-chome** (`block`, Nagasaki), with Inoue (`ja`) and Kobayashi (`ja`).
 
 ### 5-Step Live Demo
 1. **Join:** Rahim scans `/join?code=SAKURA-2611` (or Manager toggles approval & approves live), picks English → browses shelf with live neighborhood stats & search.
 2. **Request:** Rahim selects Sato's 🛏️ Futon dryer, picks date/time, previews polite Japanese → taps "Can I borrow it?".
-3. **Instant Bilingual Answer:** Sato's SSE banner + 🔔 Notification Center lights up instantly in Elder Mode Japanese (with 🔊 read-aloud). Sato taps はい → Rahim switches language to Bengali and sees the entire thread re-render immediately.
+3. **Instant Bilingual Answer:** Sato's SSE banner + 🔔 Notification Center lights up instantly in Japanese (with optional Elder Mode & 🔊 read-aloud toggleable in Settings). Sato taps はい → Rahim switches language to Bengali and sees the entire thread re-render immediately.
 4. **Handover:** Sato uploads EXIF-stripped handover photo; Rahim confirms receipt (with pinned handover spot card + etiquette tip).
 5. **Return, Reminders & Stamp:** Fast-forward to overdue fires reminders + Web Push + sticky red return bar → Rahim returns with photo → Sato confirms → both exchange Japanese thank-you stamps (`🙇`, `🍪`) without typing a single free-text word.

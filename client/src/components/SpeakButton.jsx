@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { meta, t } from '../i18n/index.js';
+import { SpeakerIcon } from './Icons.jsx';
 
 // 🔊 Reads a text aloud with the browser's own voices. Hidden if it has no voice for the language.
 // A small icon normally, a big button with text in elder mode (see styles.css).
@@ -19,7 +20,7 @@ export default function SpeakButton({ lang, text }) {
 
   return (
     <button type="button" className="speak-button" aria-label={t(lang, 'speak.button')} onClick={speak}>
-      <span aria-hidden="true">🔊</span>
+      <SpeakerIcon />
       <span className="speak-text">{t(lang, 'speak.button')}</span>
     </button>
   );

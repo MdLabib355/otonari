@@ -36,10 +36,10 @@ export async function checkReminders() {
       await remindLoan(loan, client);
     }
 
-    // Expire unanswered pending requests whose requested start time has already passed.
+    // Expire unanswered pending requests only once their entire requested borrowing window has passed.
     const expiredRes = await query(
       `SELECT * FROM loans
-       WHERE status = 'pending' AND start_at < NOW()
+       WHERE status = 'pending' AND end_at < NOW()
        FOR UPDATE SKIP LOCKED`,
       [],
       client

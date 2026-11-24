@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { api } from '../api.js';
+import {
+  ArrowLeftIconWrapped,
+  BellIcon,
+  CameraIcon,
+  CheckIcon,
+  PinIcon,
+  WarningIcon,
+} from '../components/Icons.jsx';
 import PhotoCapture, { shrinkPhoto } from '../components/PhotoCapture.jsx';
 import PhraseBubble from '../components/PhraseBubble.jsx';
 import TipCard from '../components/TipCard.jsx';
@@ -82,14 +90,14 @@ function Loan({ loanId }) {
 
   const backLink = (
     <Link to="/loans" className="back-link">
-      ← {t(lang, 'common.back')}
+      <ArrowLeftIconWrapped className="icon-sm" /> {t(lang, 'common.back')}
     </Link>
   );
   const errorText = failed && <p className="error">{t(lang, 'common.error')}</p>;
 
   if (!details) {
     return (
-      <section>
+      <section className="wide-page">
         {backLink}
         {errorText || <p>{t(lang, 'common.loading')}</p>}
       </section>
@@ -102,60 +110,68 @@ function Loan({ loanId }) {
   const step = { loan, iAmLender, otherName: displayName(lang, other.nickname), lang, busy, act, sendPhoto, pingNotice };
 
   return (
-    <section>
+    <section className="wide-page">
       {backLink}
-      <LoanHeader loan={loan} item={item} other={other} lang={lang} />
+      <div className="loan-workspace">
+        <aside className="loan-sidebar">
+          <LoanHeader loan={loan} item={item} other={other} lang={lang} />
 
-      {(loan.status === 'accepted' || loan.status === 'active') && (
-        <p className="handover-summary">
-          📍{' '}
-          {t(lang, 'loan.handoverSummary', {
-            spot: spotName(lang, item.spot),
-            start: formatDate(lang, loan.start_at),
-          })}
-        </p>
-      )}
+          {(loan.status === 'accepted' || loan.status === 'active') && (
+            <p className="handover-summary inline-icon-text">
+              <PinIcon className="icon-sm" />
+              <span>
+                {t(lang, 'loan.handoverSummary', {
+                  spot: spotName(lang, item.spot),
+                  start: formatDate(lang, loan.start_at),
+                })}
+              </span>
+            </p>
+          )}
 
-      {state?.sentTo && loan.status === 'pending' && (
-        <p className="notice">{t(lang, 'borrow.sent', { name: displayName(lang, state.sentTo) })}</p>
-      )}
+          <LoanPhotos loan={loan} lang={lang} />
+        </aside>
 
-      <ol className="messages" ref={messageList}>
-        {messages.map((message) => (
-          <PhraseBubble key={message.id} message={message} lang={lang} myId={user.id} other={other} />
-        ))}
-      </ol>
+        <div className="loan-thread">
+          {state?.sentTo && loan.status === 'pending' && (
+            <p className="notice">{t(lang, 'borrow.sent', { name: displayName(lang, state.sentTo) })}</p>
+          )}
 
-      <LoanPhotos loan={loan} lang={lang} />
+          <ol className="messages" ref={messageList}>
+            {messages.map((message) => (
+              <PhraseBubble key={message.id} message={message} lang={lang} myId={user.id} other={other} />
+            ))}
+          </ol>
 
-      {errorText}
-      {loan.status === 'pending' && (
-        <PendingActions
-          loanId={loan.id}
-          iAmLender={iAmLender}
-          trust={borrower_trust}
-          lang={lang}
-          busy={busy}
-          act={act}
-        />
-      )}
-      {loan.status === 'accepted' && <HandoverStep {...step} />}
-      {loan.status === 'active' && <ReturnStep {...step} />}
-      {loan.status === 'returned' && <ThankYouStamps item={item} lang={lang} busy={busy} act={act} />}
-      {QUICK_REPLY_STATUSES.includes(loan.status) && <QuickReplies item={item} lang={lang} busy={busy} act={act} />}
-      {(loan.status === 'active' || loan.status === 'returned') && (
-        <ReportIssue item={item} lang={lang} busy={busy} act={act} />
-      )}
-      {loan.status === 'active' && (
-        <DemoButtons
-          loanId={loan.id}
-          lang={lang}
-          onDone={() => {
-            loadLoan();
-            refreshInbox();
-          }}
-        />
-      )}
+          {errorText}
+          {loan.status === 'pending' && (
+            <PendingActions
+              loanId={loan.id}
+              iAmLender={iAmLender}
+              trust={borrower_trust}
+              lang={lang}
+              busy={busy}
+              act={act}
+            />
+          )}
+          {loan.status === 'accepted' && <HandoverStep {...step} />}
+          {loan.status === 'active' && <ReturnStep {...step} />}
+          {loan.status === 'returned' && <ThankYouStamps item={item} lang={lang} busy={busy} act={act} />}
+          {QUICK_REPLY_STATUSES.includes(loan.status) && <QuickReplies item={item} lang={lang} busy={busy} act={act} />}
+          {(loan.status === 'active' || loan.status === 'returned') && (
+            <ReportIssue item={item} lang={lang} busy={busy} act={act} />
+          )}
+          {loan.status === 'active' && (
+            <DemoButtons
+              loanId={loan.id}
+              lang={lang}
+              onDone={() => {
+                loadLoan();
+                refreshInbox();
+              }}
+            />
+          )}
+        </div>
+      </div>
     </section>
   );
 }
@@ -180,7 +196,36 @@ function LoanHeader({ loan, item, other, lang }) {
         {t(lang, 'loan.period', { start: formatDate(lang, loan.start_at), end: formatDate(lang, loan.end_at) })}
       </p>
       <span className={`badge badge-${loan.status}`}>{t(lang, `status.${loan.status}`)}</span>
+      <LoanStepper status={loan.status} lang={lang} />
     </>
+  );
+}
+
+const STEP_ORDER = ['pending', 'accepted', 'active', 'returned'];
+
+function LoanStepper({ status, lang }) {
+  const activeIndex = STEP_ORDER.indexOf(status);
+  if (activeIndex === -1) return null;
+
+  return (
+    <ol className="loan-stepper" aria-label={t(lang, `status.${status}`)}>
+      {STEP_ORDER.map((step, idx) => {
+        const done = idx < activeIndex || (idx === activeIndex && status === 'returned');
+        const current = idx === activeIndex && status !== 'returned';
+        return (
+          <li
+            key={step}
+            aria-current={current ? 'step' : undefined}
+            className={done ? 'stepper-step done' : current ? 'stepper-step current' : 'stepper-step'}
+          >
+            <span className="stepper-dot" aria-hidden="true">
+              {done ? <CheckIcon className="icon-xs" /> : idx + 1}
+            </span>
+            <span className="stepper-label">{t(lang, `status.${step}`).split(/[—・]/)[0].trim()}</span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -302,8 +347,8 @@ function ReturnStep({ loan, iAmLender, otherName, lang, busy, act, sendPhoto, pi
       <div className="step">
         <p className="notice">{t(lang, 'loan.waitReturn', { name: otherName })}</p>
         <div className="actions ping-section">
-          <button type="button" className="button-secondary" disabled={busy} onClick={() => act('ping')}>
-            🔔 {t(lang, isOverdue ? 'loan.pingOverdue' : 'loan.pingNeedBack')}
+          <button type="button" className="button-secondary inline-btn" disabled={busy} onClick={() => act('ping')}>
+            <BellIcon className="icon-sm" /> {t(lang, isOverdue ? 'loan.pingOverdue' : 'loan.pingNeedBack')}
           </button>
           {pingNotice && <p className="hint">{pingNotice}</p>}
         </div>
@@ -343,7 +388,7 @@ function ThankYouStamps({ item, lang, busy, act }) {
 function ReportIssue({ item, lang, busy, act }) {
   const [open, setOpen] = useState(false);
   const [issueKey, setIssueKey] = useState(ISSUE_KEYS[0]);
-  const [photo, setPhoto] = useState(null); // { file, url }
+  const [photo, setPhoto] = useState(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoRefused, setPhotoRefused] = useState(false);
 
@@ -390,19 +435,20 @@ function ReportIssue({ item, lang, busy, act }) {
   return (
     <div className="step">
       {!open ? (
-        <button type="button" className="text-button" onClick={() => setOpen(true)}>
-          ⚠️ {t(lang, 'loan.reportIssue')}
+        <button type="button" className="text-button inline-icon-text" onClick={() => setOpen(true)}>
+          <WarningIcon className="icon-sm" /> {t(lang, 'loan.reportIssue')}
         </button>
       ) : (
         <div className="issue-box">
-          <p className="label">⚠️ {t(lang, 'loan.reportIssue')}</p>
+          <p className="label inline-icon-text">
+            <WarningIcon className="icon-sm" /> {t(lang, 'loan.reportIssue')}
+          </p>
           <div className="chip-stack">
             {ISSUE_KEYS.map((key) => (
               <button
                 key={key}
                 type="button"
-                className={key === issueKey ? 'chip selected' : 'chip'}
-                style={{ textAlign: 'left', padding: '10px 14px', borderRadius: 12 }}
+                className={key === issueKey ? 'chip selected issue-chip' : 'chip issue-chip'}
                 onClick={() => setIssueKey(key)}
               >
                 {renderPhrase(lang, key, { item: item.item_key, spot: item.spot })}
@@ -411,7 +457,7 @@ function ReportIssue({ item, lang, busy, act }) {
           </div>
           <div className="actions" style={{ marginTop: 12, marginBottom: 0 }}>
             <label className="photo-button button-secondary">
-              <span aria-hidden="true">📷</span> {t(lang, 'loan.issuePhotoOptional')}
+              <CameraIcon /> {t(lang, 'loan.issuePhotoOptional')}
               <input
                 type="file"
                 accept="image/*"

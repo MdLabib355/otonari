@@ -212,6 +212,10 @@ describe('v3 Slice 3: Manager Auth, Approval Toggle, Resident Moderation & Devic
     const mgr = (await req('POST', '/api/demo/manager-login')).data;
     const mgrMe = (await req('GET', '/api/manager/me', { token: mgr.token })).data;
     const sakura = mgrMe.groups.find((g) => g.code === 'SAKURA-2611');
+    assert.equal(sakura.member_count, 5);
+    assert.equal(sakura.pending_count, 0);
+    assert.equal(sakura.item_count, 12);
+    assert.equal(sakura.issue_count, 0);
 
     const rahim = (await req('POST', '/api/join', { body: { code: 'SAKURA-2611', nickname: 'Rahim', lang: 'en' } })).data;
     const demoUsers = (await req('GET', '/api/demo/users')).data;
@@ -259,12 +263,14 @@ describe('v3 Slice 3: Manager Auth, Approval Toggle, Resident Moderation & Devic
       409
     );
 
-    // Report an issue -> visible in manager issues feed
+    // Report an issue -> visible in manager issues feed and increments KPI issue_count
     await req('POST', `/api/loans/${loan2.id}/issue`, { token: tariq.token, body: { issue_key: 'issue.missingOrBroken' } });
     const issues = (await req('GET', `/api/manager/groups/${sakura.id}/issues`, { token: mgr.token })).data;
     assert.equal(issues.length, 1);
     assert.equal(issues[0].phrase_key, 'issue.missingOrBroken');
     assert.equal(issues[0].reporter_nickname, 'Tariq');
+    const mgrMeAfter = (await req('GET', '/api/manager/me', { token: mgr.token })).data;
+    assert.equal(mgrMeAfter.groups.find((g) => g.code === 'SAKURA-2611').issue_count, 1);
   });
 
   it('supports self-service device transfer (keeps token) and manager lost-phone restore (rotates & revokes old token)', async () => {

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import ChipGroup from '../components/ChipGroup.jsx';
+import { CameraIcon, CloseIcon, EditIcon, LockIcon, PauseIcon } from '../components/Icons.jsx';
 import { shrinkPhoto } from '../components/PhotoCapture.jsx';
 import { CATEGORIES, DURATIONS, ITEMS, SPOTS, findItem } from '../data/catalog.js';
 import { categoryName, itemName, spotName, t } from '../i18n/index.js';
@@ -10,19 +11,24 @@ function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// My items: what I lend (with pause & inline edit), plus the "Add an item" form.
+// My items: responsive 2-column layout with instant Configure & Share modal when tapping any catalog item.
 export default function MyItems() {
   const { lang } = useUser();
   const [items, setItems] = useState(null);
   const [failed, setFailed] = useState(false);
-  const [itemKey, setItemKey] = useState(null);
+  const [catalogCategory, setCatalogCategory] = useState('all');
+
+  // Modal state: either adding a new catalog item ({ mode: 'add', itemKey }) or editing an existing one ({ mode: 'edit', item })
+  const [modal, setModal] = useState(null);
   const [maxDays, setMaxDays] = useState(3);
   const [spot, setSpot] = useState('entrance');
   const [trustedOnly, setTrustedOnly] = useState(false);
-  const [itemPhoto, setItemPhoto] = useState(null); // { file, url }
+  const [itemPhoto, setItemPhoto] = useState(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoRefused, setPhotoRefused] = useState(false);
   const [busy, setBusy] = useState(false);
+  const modalRef = useRef(null);
+  const triggerRef = useRef(null);
 
   function loadItems() {
     api
@@ -40,6 +46,57 @@ export default function MyItems() {
       if (itemPhoto) URL.revokeObjectURL(itemPhoto.url);
     };
   }, [itemPhoto]);
+
+  useEffect(() => {
+    if (!modal) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusTarget = modalRef.current?.querySelector('button, input, [tabindex]') ?? modalRef.current;
+    focusTarget?.focus();
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      if (triggerRef.current instanceof HTMLElement) {
+        triggerRef.current.focus();
+      }
+    };
+  }, [modal]);
+
+  useEffect(() => {
+    if (!modal) return undefined;
+    function onKeyDown(e) {
+      if (e.key === 'Escape' && !busy) closeModal();
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [modal, busy]);
+
+  function openAddModal(key) {
+    triggerRef.current = document.activeElement;
+    setMaxDays(3);
+    setSpot('entrance');
+    setTrustedOnly(false);
+    setItemPhoto(null);
+    setPhotoRefused(false);
+    setFailed(false);
+    setModal({ mode: 'add', itemKey: key });
+  }
+
+  function openEditModal(item) {
+    triggerRef.current = document.activeElement;
+    setMaxDays(item.max_days);
+    setSpot(item.spot);
+    setTrustedOnly(Boolean(item.trusted_only));
+    setItemPhoto(null);
+    setPhotoRefused(false);
+    setFailed(false);
+    setModal({ mode: 'edit', item });
+  }
+
+  function closeModal() {
+    setModal(null);
+    setItemPhoto(null);
+    setPhotoRefused(false);
+  }
 
   async function pickPhoto(event) {
     const file = event.target.files[0];
@@ -59,27 +116,37 @@ export default function MyItems() {
     }
   }
 
-  async function addItem() {
+  async function submitModal() {
+    if (!modal) return;
     setBusy(true);
     setFailed(false);
     try {
-      if (itemPhoto) {
-        const form = new FormData();
-        form.append('item_key', itemKey);
-        form.append('max_days', String(maxDays));
-        form.append('spot', spot);
-        form.append('trusted_only', String(trustedOnly));
-        form.append('photo', itemPhoto.file, 'item.jpg');
-        await api.post('/api/items', form);
+      if (modal.mode === 'add') {
+        if (itemPhoto) {
+          const form = new FormData();
+          form.append('item_key', modal.itemKey);
+          form.append('max_days', String(maxDays));
+          form.append('spot', spot);
+          form.append('trusted_only', String(trustedOnly));
+          form.append('photo', itemPhoto.file, 'item.jpg');
+          await api.post('/api/items', form);
+        } else {
+          await api.post('/api/items', {
+            item_key: modal.itemKey,
+            max_days: maxDays,
+            spot,
+            trusted_only: trustedOnly,
+          });
+        }
       } else {
-        await api.post('/api/items', { item_key: itemKey, max_days: maxDays, spot, trusted_only: trustedOnly });
+        await api.patch(`/api/items/${modal.item.id}`, {
+          max_days: maxDays,
+          spot,
+          trusted_only: trustedOnly,
+        });
       }
-      setItemKey(null);
-      setTrustedOnly(false);
-      setItemPhoto(null);
-      setPhotoRefused(false);
+      closeModal();
       loadItems();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
       setFailed(true);
     } finally {
@@ -112,104 +179,190 @@ export default function MyItems() {
     label: n === 1 ? t(lang, 'borrow.day') : t(lang, 'borrow.days', { n }),
   }));
   const spotOptions = SPOTS.map((key) => ({ value: key, label: capitalize(spotName(lang, key)) }));
+  const visibleCategories = catalogCategory === 'all' ? CATEGORIES : [catalogCategory];
+  const modalItemKey = modal ? (modal.mode === 'add' ? modal.itemKey : modal.item.item_key) : null;
 
   return (
-    <section>
+    <section className="wide-page">
       <h1>{t(lang, 'myItems.title')}</h1>
 
-      {failed && <p className="error">{t(lang, 'common.error')}</p>}
-      {!items && !failed && <p>{t(lang, 'common.loading')}</p>}
-      {items?.length === 0 && <p className="empty">{t(lang, 'myItems.empty')}</p>}
-      {items?.length > 0 && (
-        <ul className="my-items">
-          {items.map((item) => (
-            <MyItemRow
-              key={item.id}
-              item={item}
-              lang={lang}
-              durationOptions={durationOptions}
-              spotOptions={spotOptions}
-              onRemove={removeItem}
-              onPatch={patchItem}
-            />
-          ))}
-        </ul>
-      )}
+      {failed && !modal && <p className="error">{t(lang, 'common.error')}</p>}
 
-      <h2 className="section-title">{t(lang, 'myItems.add')}</h2>
-
-      <div className="field">
-        <p className="label">{t(lang, 'myItems.pick')}</p>
-        {CATEGORIES.map((category) => (
-          <div key={category}>
-            <h3 className="catalog-heading">{categoryName(lang, category)}</h3>
-            <div className="catalog-grid">
-              {ITEMS.filter((item) => item.category === category).map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  className={item.key === itemKey ? 'catalog-item selected' : 'catalog-item'}
-                  aria-pressed={item.key === itemKey}
-                  onClick={() => setItemKey(item.key)}
-                >
-                  <span className="catalog-emoji" aria-hidden="true">
-                    {item.emoji}
-                  </span>
-                  {itemName(lang, item.key)}
-                </button>
+      <div className="two-col-layout">
+        <div className="two-col-main">
+          {!items && !failed && <p>{t(lang, 'common.loading')}</p>}
+          {items?.length === 0 && <p className="empty surface-card">{t(lang, 'myItems.empty')}</p>}
+          {items?.length > 0 && (
+            <ul className="my-items">
+              {items.map((item) => (
+                <MyItemRow
+                  key={item.id}
+                  item={item}
+                  lang={lang}
+                  onEdit={openEditModal}
+                  onRemove={removeItem}
+                  onPatch={patchItem}
+                />
               ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="field">
-        <p className="label">{t(lang, 'myItems.maxDays')}</p>
-        <ChipGroup label={t(lang, 'myItems.maxDays')} options={durationOptions} value={maxDays} onChange={setMaxDays} />
-      </div>
-
-      <div className="field">
-        <p className="label">{t(lang, 'myItems.spot')}</p>
-        <ChipGroup label={t(lang, 'myItems.spot')} options={spotOptions} value={spot} onChange={setSpot} />
-      </div>
-
-      <div className="field">
-        <p className="label">{t(lang, 'myItems.photoOptional')}</p>
-        <div className="actions">
-          <label className="photo-button button-secondary">
-            <span aria-hidden="true">📷</span> {t(lang, 'loan.takePhoto')}
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="visually-hidden"
-              disabled={busy || photoBusy}
-              onChange={pickPhoto}
-            />
-          </label>
-          {photoBusy && <p className="hint">{t(lang, 'common.loading')}</p>}
-          {photoRefused && <p className="error">{t(lang, 'loan.photoRefused')}</p>}
-          {itemPhoto && (
-            <>
-              <img className="photo-preview" src={itemPhoto.url} alt="" />
-              <button type="button" className="button-secondary" disabled={busy} onClick={() => setItemPhoto(null)}>
-                {t(lang, 'myItems.photoRemove')}
-              </button>
-            </>
+            </ul>
           )}
+        </div>
+
+        <div className="two-col-side add-item-panel">
+          <h2 className="section-title-mobile">{t(lang, 'myItems.add')}</h2>
+          <p className="hint" style={{ marginTop: -6, marginBottom: 12 }}>
+            {t(lang, 'myItems.pick')}
+          </p>
+
+          <div
+            className="filter-strip"
+            style={{ marginBottom: 10 }}
+            role="group"
+            aria-label={t(lang, 'shelf.allCategories')}
+          >
+            <button
+              type="button"
+              className={catalogCategory === 'all' ? 'filter-chip selected' : 'filter-chip'}
+              aria-pressed={catalogCategory === 'all'}
+              onClick={() => setCatalogCategory('all')}
+            >
+              {t(lang, 'shelf.allCategories')}
+            </button>
+            {CATEGORIES.map((category) => (
+              <button
+                key={category}
+                type="button"
+                className={catalogCategory === category ? 'filter-chip selected' : 'filter-chip'}
+                aria-pressed={catalogCategory === category}
+                onClick={() => setCatalogCategory(category)}
+              >
+                {categoryName(lang, category)}
+              </button>
+            ))}
+          </div>
+
+          {visibleCategories.map((category) => (
+            <div key={category}>
+              {catalogCategory === 'all' && <h3 className="catalog-heading">{categoryName(lang, category)}</h3>}
+              <div className="catalog-grid">
+                {ITEMS.filter((item) => item.category === category).map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className="catalog-item"
+                    onClick={() => openAddModal(item.key)}
+                  >
+                    <span className="catalog-emoji" aria-hidden="true">
+                      {item.emoji}
+                    </span>
+                    <span>{itemName(lang, item.key)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="field">
-        <TrustedSwitch lang={lang} checked={trustedOnly} onChange={setTrustedOnly} />
-        <p className="hint">{t(lang, 'trust.explain')}</p>
-        <p className="hint">{t(lang, 'trust.hint')}</p>
-      </div>
+      {modal && modalItemKey && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !busy) closeModal();
+          }}
+        >
+          <div
+            ref={modalRef}
+            className="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="item-modal-title"
+            tabIndex={-1}
+          >
+            <div className="modal-header">
+              <div className="inline-icon-text" style={{ gap: 10 }}>
+                <span className="item-emoji" aria-hidden="true" style={{ fontSize: '1.9em' }}>
+                  {findItem(modalItemKey)?.emoji}
+                </span>
+                <h2 id="item-modal-title">{itemName(lang, modalItemKey)}</h2>
+              </div>
+              <button type="button" className="icon-close-btn" aria-label="Close" disabled={busy} onClick={closeModal}>
+                <CloseIcon className="icon-sm" />
+              </button>
+            </div>
 
-      <button type="button" className="button-primary" disabled={!itemKey || busy || photoBusy} onClick={addItem}>
-        {itemKey && `${findItem(itemKey).emoji} `}
-        {t(lang, 'myItems.save')}
-      </button>
+            <div className="modal-body">
+              <div className="field">
+                <p className="label">{t(lang, 'myItems.maxDays')}</p>
+                <ChipGroup
+                  label={t(lang, 'myItems.maxDays')}
+                  options={durationOptions}
+                  value={maxDays}
+                  onChange={setMaxDays}
+                />
+              </div>
+
+              <div className="field">
+                <p className="label">{t(lang, 'myItems.spot')}</p>
+                <ChipGroup label={t(lang, 'myItems.spot')} options={spotOptions} value={spot} onChange={setSpot} />
+              </div>
+
+              {modal.mode === 'add' && (
+                <div className="field">
+                  <p className="label">{t(lang, 'myItems.photoOptional')}</p>
+                  <div className="actions" style={{ marginBottom: 0 }}>
+                    <label className="photo-button button-secondary">
+                      <CameraIcon /> {t(lang, 'loan.takePhoto')}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="visually-hidden"
+                        disabled={busy || photoBusy}
+                        onChange={pickPhoto}
+                      />
+                    </label>
+                    {photoBusy && <p className="hint">{t(lang, 'common.loading')}</p>}
+                    {photoRefused && <p className="error">{t(lang, 'loan.photoRefused')}</p>}
+                    {itemPhoto && (
+                      <>
+                        <img className="photo-preview" src={itemPhoto.url} alt="" />
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          disabled={busy}
+                          onClick={() => setItemPhoto(null)}
+                        >
+                          {t(lang, 'myItems.photoRemove')}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="field" style={{ marginBottom: 0 }}>
+                <TrustedSwitch lang={lang} checked={trustedOnly} onChange={setTrustedOnly} />
+                <p className="hint">{t(lang, 'trust.explain')}</p>
+                <p className="hint">{t(lang, 'trust.hint')}</p>
+              </div>
+
+              {failed && <p className="error">{t(lang, 'common.error')}</p>}
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="button-secondary" disabled={busy} onClick={closeModal}>
+                {t(lang, 'myItems.cancelEdit')}
+              </button>
+              <button type="button" className="button-primary" disabled={busy || photoBusy} onClick={submitModal}>
+                {findItem(modalItemKey)?.emoji}{' '}
+                {t(lang, modal.mode === 'add' ? 'myItems.save' : 'myItems.saveEdit')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -217,7 +370,9 @@ export default function MyItems() {
 function TrustedSwitch({ lang, checked, onChange }) {
   return (
     <label className="switch-row">
-      <span>🔒 {t(lang, 'trust.only')}</span>
+      <span className="inline-icon-text">
+        <LockIcon className="icon-sm" /> {t(lang, 'trust.only')}
+      </span>
       <input
         type="checkbox"
         role="switch"
@@ -229,17 +384,9 @@ function TrustedSwitch({ lang, checked, onChange }) {
   );
 }
 
-function MyItemRow({ item, lang, durationOptions, spotOptions, onRemove, onPatch }) {
-  const [editing, setEditing] = useState(false);
-  const [editMaxDays, setEditMaxDays] = useState(item.max_days);
-  const [editSpot, setEditSpot] = useState(item.spot);
+function MyItemRow({ item, lang, onEdit, onRemove, onPatch }) {
   const canRemove = item.status === 'available';
   const days = item.max_days === 1 ? t(lang, 'item.maxDay') : t(lang, 'item.maxDays', { n: item.max_days });
-
-  async function saveEdit() {
-    await onPatch(item.id, { max_days: editMaxDays, spot: editSpot });
-    setEditing(false);
-  }
 
   return (
     <li className="my-item">
@@ -259,16 +406,8 @@ function MyItemRow({ item, lang, durationOptions, spotOptions, onRemove, onPatch
       </div>
       {canRemove ? (
         <div className="my-item-buttons">
-          <button
-            type="button"
-            className="button-secondary"
-            onClick={() => {
-              setEditMaxDays(item.max_days);
-              setEditSpot(item.spot);
-              setEditing((v) => !v);
-            }}
-          >
-            {t(lang, 'myItems.edit')}
+          <button type="button" className="button-secondary inline-btn" onClick={() => onEdit(item)}>
+            <EditIcon className="icon-sm" /> {t(lang, 'myItems.edit')}
           </button>
           <button type="button" className="button-secondary" onClick={() => onRemove(item.id)}>
             {t(lang, 'myItems.remove')}
@@ -278,32 +417,10 @@ function MyItemRow({ item, lang, durationOptions, spotOptions, onRemove, onPatch
         <span className={`badge badge-${item.status}`}>{t(lang, `shelf.${item.status}`)}</span>
       )}
 
-      {editing && (
-        <div className="my-item-edit">
-          <p className="label">{t(lang, 'myItems.maxDays')}</p>
-          <ChipGroup
-            label={t(lang, 'myItems.maxDays')}
-            options={durationOptions}
-            value={editMaxDays}
-            onChange={setEditMaxDays}
-          />
-          <p className="label" style={{ marginTop: 12 }}>
-            {t(lang, 'myItems.spot')}
-          </p>
-          <ChipGroup label={t(lang, 'myItems.spot')} options={spotOptions} value={editSpot} onChange={setEditSpot} />
-          <div className="my-item-buttons" style={{ marginTop: 12 }}>
-            <button type="button" className="button-primary" onClick={saveEdit}>
-              {t(lang, 'myItems.saveEdit')}
-            </button>
-            <button type="button" className="button-secondary" onClick={() => setEditing(false)}>
-              {t(lang, 'myItems.cancelEdit')}
-            </button>
-          </div>
-        </div>
-      )}
-
       <label className="switch-row">
-        <span>⏸️ {t(lang, 'myItems.pause')}</span>
+        <span className="inline-icon-text">
+          <PauseIcon className="icon-sm" /> {t(lang, 'myItems.pause')}
+        </span>
         <input
           type="checkbox"
           role="switch"

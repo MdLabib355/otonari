@@ -66,8 +66,25 @@ export function createApp() {
   });
 
   if (fs.existsSync(clientDist)) {
-    app.use(express.static(clientDist));
+    app.use(
+      express.static(clientDist, {
+        setHeaders(res, filePath) {
+          const base = path.basename(filePath);
+          if (base === 'index.html' || base === 'sw.js') {
+            res.setHeader('Cache-Control', 'no-cache');
+          }
+        },
+      })
+    );
+    // Missing hashed build assets must return 404 (not index.html) so browsers never receive text/html for CSS/JS.
+    app.use('/assets', (req, res) => {
+      res.status(404).end();
+    });
     app.use((req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.join(clientDist, 'index.html'));
     });
   }

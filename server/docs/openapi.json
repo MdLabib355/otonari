@@ -57,6 +57,7 @@
           "nickname": { "type": "string" },
           "lang": { "type": "string", "enum": ["en", "ja", "ja-easy", "bn"] },
           "elder_mode": { "type": "boolean" },
+          "is_demo": { "type": "boolean" },
           "status": { "type": "string", "enum": ["pending", "approved", "rejected"] }
         }
       },
@@ -251,10 +252,10 @@
     "/api/leave": {
       "post": {
         "tags": ["Groups & Residents"],
-        "summary": "Leave the neighborhood group (blocked while accepted/active loans exist)",
+        "summary": "Leave the neighborhood group (blocked while accepted/active loans exist; non-destructive 204 for seeded demo accounts)",
         "security": [{ "ResidentBearerAuth": [] }],
         "responses": {
-          "204": { "description": "Left group; available items removed and pending loans cleaned up" },
+          "204": { "description": "Left group; available items removed and pending loans cleaned up (no-op for seeded demo accounts so demo personas stay available)" },
           "401": { "description": "Unauthorized" },
           "409": { "description": "Cannot leave while accepted or active loans remain" }
         }

@@ -145,6 +145,7 @@
     "settings.elderModeHint": "文字とボタンを大きくし、読み上げ機能を使えます。",
     "settings.group": "参加しているグループ",
     "settings.poster": "参加用ポスターを印刷する",
+    "settings.switchUser": "ログアウト・別の住民に切り替え",
     "settings.leave": "このグループを退会する",
     "settings.leaveConfirm": "もう一度押すと退会します",
     "settings.leaveBlocked": "先に、現在の貸し借りを終えてください。",

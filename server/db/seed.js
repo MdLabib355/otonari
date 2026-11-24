@@ -23,7 +23,7 @@ const GROUPS = [
       {
         nickname: 'Sato',
         lang: 'ja',
-        elder: true,
+        elder: false,
         items: [
           ['futon_dryer', 3, 'entrance'],
           ['takoyaki_maker', 2, 'entrance'],
@@ -78,7 +78,7 @@ const GROUPS = [
       {
         nickname: 'Inoue',
         lang: 'ja',
-        elder: true,
+        elder: false,
         items: [
           ['lawn_mower', 1, 'notice_board'],
           ['hedge_trimmer', 1, 'notice_board'],

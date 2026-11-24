@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { displayName, meta, renderPhrase, t } from '../i18n/index.js';
+import { BellIcon } from './Icons.jsx';
 import SpeakButton from './SpeakButton.jsx';
 
 // One message of a loan, rendered dynamically in MY language.
@@ -23,7 +24,11 @@ export default function PhraseBubble({ message, lang, myId, other }) {
 
   return (
     <li className={`bubble bubble-${side}${extraClass}`}>
-      {isSystem && <p className="bubble-label">🔔 {t(lang, 'loan.system')}</p>}
+      {isSystem && (
+        <p className="bubble-label inline-icon-text" style={{ justifyContent: 'center' }}>
+          <BellIcon className="icon-sm" /> {t(lang, 'loan.system')}
+        </p>
+      )}
       <div className="bubble-main">
         <p className="bubble-text">{text}</p>
         <SpeakButton lang={lang} text={text} />

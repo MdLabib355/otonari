@@ -163,6 +163,11 @@ router.patch('/me', requireResidentAnyStatus, async (req, res) => {
 
 router.post('/leave', requireResidentAnyStatus, async (req, res) => {
   const myId = req.user.id;
+  // Preserve seeded demo personas and their shelf items so switching demo accounts never deletes demo data
+  // or kicks another open demo window sharing the same persona.
+  if (req.user.is_demo) {
+    return res.status(204).end();
+  }
   const blocked = await withTransaction(async (client) => {
     const openLoan = await query(
       `SELECT id FROM loans

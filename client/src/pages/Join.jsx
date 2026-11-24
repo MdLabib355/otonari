@@ -2,21 +2,20 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import ChipGroup from '../components/ChipGroup.jsx';
+import { ArrowRightIconWrapped, BlockIcon, BuildingIcon, KeyIcon, UsersIcon } from '../components/Icons.jsx';
 import { LANGUAGES } from '../data/catalog.js';
 import { formatNumber, meta, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
-const GROUP_ICONS = { building: '🏢', block: '🏘️' };
-
-// The join screen. The QR code on the poster opens /join?code=SAKURA-2611,
-// and a device-transfer / lost-phone QR opens /join?restore=XXXX-XXXX.
+// Join screen: segmented Join / Restore switcher, clean Building Manager row card, and Demo quick-login.
 export default function Join() {
-  const { lang: startLang, login } = useUser();
+  const { lang: startLang, setDeviceLang, login } = useUser();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const initialRestore = searchParams.get('restore') ?? '';
 
+  const [mode, setMode] = useState(initialRestore ? 'restore' : 'join'); // 'join' | 'restore'
   const [code, setCode] = useState(searchParams.get('code') ?? '');
   const [preview, setPreview] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -24,15 +23,20 @@ export default function Join() {
   const [managerNote, setManagerNote] = useState('');
   const [lang, setLang] = useState(startLang);
   const [demoUsers, setDemoUsers] = useState([]);
+  const [demoBusy, setDemoBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [joinError, setJoinError] = useState(null);
 
-  const [showRestore, setShowRestore] = useState(Boolean(initialRestore));
   const [restoreCode, setRestoreCode] = useState(initialRestore);
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [restoreError, setRestoreError] = useState(null);
 
   const cleanCode = code.trim().toUpperCase();
+
+  function pickLang(next) {
+    setLang(next);
+    setDeviceLang?.(next);
+  }
 
   useEffect(() => {
     setPreview(null);
@@ -100,6 +104,8 @@ export default function Join() {
   }
 
   async function continueAs(userId) {
+    if (demoBusy) return;
+    setDemoBusy(true);
     setJoinError(null);
     try {
       const result = await api.post('/api/demo/login', { user_id: userId });
@@ -107,144 +113,176 @@ export default function Join() {
       navigate('/', { replace: true });
     } catch {
       setJoinError('common.error');
+      setDemoBusy(false);
     }
   }
 
   const languageOptions = LANGUAGES.map((language) => ({ value: language, label: meta(language).name }));
   const visibleDemoUsers = preview ? demoUsers.filter((user) => user.group_code === cleanCode) : demoUsers;
+  const PreviewIcon = preview?.type === 'block' ? BlockIcon : BuildingIcon;
 
   return (
-    <section>
+    <section className="narrow-page surface-card">
       <header className="brand">
         <p className="brand-name">{t(lang, 'appName')}</p>
         <p className="brand-tagline">{t(lang, 'tagline')}</p>
       </header>
 
-      <h1>{t(lang, 'join.title')}</h1>
+      <div className="segmented-tabs" role="tablist" aria-label={t(lang, 'join.title')}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'join'}
+          className={mode === 'join' ? 'segmented-tab active' : 'segmented-tab'}
+          onClick={() => setMode('join')}
+        >
+          <span>{t(lang, 'join.title')}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'restore'}
+          className={mode === 'restore' ? 'segmented-tab active' : 'segmented-tab'}
+          onClick={() => setMode('restore')}
+        >
+          <KeyIcon className="icon-xs" />
+          <span>{t(lang, 'join.restoreTitle')}</span>
+        </button>
+      </div>
 
-      <form onSubmit={handleJoin}>
-        <div className="field">
-          <label className="label" htmlFor="join-code">
-            {t(lang, 'join.codeLabel')}
-          </label>
-          <input
-            id="join-code"
-            className="text-input"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            placeholder={t(lang, 'join.codePlaceholder')}
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          <div aria-live="polite">
-            {preview && (
-              <div className="group-preview">
-                <span className="group-icon" aria-hidden="true">
-                  {GROUP_ICONS[preview.type]}
-                </span>
-                <div>
-                  <strong>{t(lang, 'join.groupFound', { group: preview.name, city: preview.city })}</strong>
-                  <p>
-                    {t(lang, `groupType.${preview.type}`)} · 👥 {formatNumber(lang, preview.memberCount)}
-                  </p>
-                </div>
-              </div>
-            )}
-            {notFound && <p className="error">{t(lang, 'join.groupNotFound')}</p>}
-          </div>
-        </div>
-
-        <div className="field">
-          <label className="label" htmlFor="join-nickname">
-            {t(lang, 'join.nicknameLabel')}
-          </label>
-          <input
-            id="join-nickname"
-            className="text-input"
-            value={nickname}
-            onChange={(event) => setNickname(event.target.value)}
-            maxLength={20}
-            autoComplete="nickname"
-          />
-          <p className="hint">{t(lang, 'join.nicknameHint')}</p>
-        </div>
-
-        {preview?.require_approval && (
+      <div role="tabpanel">
+        {mode === 'join' ? (
+          <form onSubmit={handleJoin}>
           <div className="field">
-            <label className="label" htmlFor="join-manager-note">
-              {t(lang, 'join.managerNoteLabel')}
+            <label className="label" htmlFor="join-code">
+              {t(lang, 'join.codeLabel')}
             </label>
             <input
-              id="join-manager-note"
+              id="join-code"
               className="text-input"
-              value={managerNote}
-              onChange={(event) => setManagerNote(event.target.value)}
-              maxLength={40}
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              placeholder={t(lang, 'join.codePlaceholder')}
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
             />
-            <p className="hint">{t(lang, 'join.managerNoteHint')}</p>
+            <div aria-live="polite">
+              {preview && (
+                <div className="group-preview">
+                  <PreviewIcon className="group-icon-svg" />
+                  <div>
+                    <strong>{t(lang, 'join.groupFound', { group: preview.name, city: preview.city })}</strong>
+                    <p className="inline-icon-text">
+                      {t(lang, `groupType.${preview.type}`)} · <UsersIcon className="icon-xs" />{' '}
+                      {formatNumber(lang, preview.memberCount)}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {notFound && <p className="error">{t(lang, 'join.groupNotFound')}</p>}
+            </div>
           </div>
-        )}
 
-        <div className="field">
-          <p className="label">{t(lang, 'join.languageLabel')}</p>
-          <ChipGroup
-            label={t(lang, 'join.languageLabel')}
-            options={languageOptions}
-            value={lang}
-            onChange={setLang}
-          />
-        </div>
+          <div className="field">
+            <label className="label" htmlFor="join-nickname">
+              {t(lang, 'join.nicknameLabel')}
+            </label>
+            <input
+              id="join-nickname"
+              className="text-input"
+              value={nickname}
+              onChange={(event) => setNickname(event.target.value)}
+              maxLength={20}
+              autoComplete="nickname"
+            />
+            <p className="hint">{t(lang, 'join.nicknameHint')}</p>
+          </div>
 
-        {joinError && <p className="error">{t(lang, joinError)}</p>}
-        <button type="submit" className="button-primary" disabled={!preview || !nickname.trim() || busy}>
-          {t(lang, 'join.button')}
-        </button>
-      </form>
-
-      <div className="new-group">
-        <button type="button" className="text-button" onClick={() => setShowRestore((open) => !open)}>
-          🔑 {t(lang, 'join.restoreLink')}
-        </button>
-
-        {showRestore && (
-          <form className="transfer-box" onSubmit={handleRestore}>
-            <h2>{t(lang, 'join.restoreTitle')}</h2>
+          {preview?.require_approval && (
             <div className="field">
-              <label className="label" htmlFor="restore-code">
-                {t(lang, 'join.restoreCodeLabel')}
+              <label className="label" htmlFor="join-manager-note">
+                {t(lang, 'join.managerNoteLabel')}
               </label>
               <input
-                id="restore-code"
+                id="join-manager-note"
                 className="text-input"
-                value={restoreCode}
-                onChange={(e) => setRestoreCode(e.target.value)}
-                placeholder="ABCD-1234"
-                autoCapitalize="characters"
-                autoComplete="off"
-                spellCheck={false}
+                value={managerNote}
+                onChange={(event) => setManagerNote(event.target.value)}
+                maxLength={40}
               />
+              <p className="hint">{t(lang, 'join.managerNoteHint')}</p>
             </div>
-            {restoreError && <p className="error">{t(lang, restoreError)}</p>}
-            <button type="submit" className="button-primary" disabled={!restoreCode.trim() || restoreBusy}>
-              {t(lang, 'join.restoreButton')}
-            </button>
-          </form>
-        )}
+          )}
 
-        <p style={{ marginTop: 12 }}>
-          <Link to="/manager" className="back-link">
-            🏢 {t(lang, 'join.managerPortalLink')} →
-          </Link>
-        </p>
+          <div className="field">
+            <p className="label">{t(lang, 'join.languageLabel')}</p>
+            <ChipGroup
+              label={t(lang, 'join.languageLabel')}
+              options={languageOptions}
+              value={lang}
+              onChange={pickLang}
+            />
+          </div>
+
+          {joinError && <p className="error">{t(lang, joinError)}</p>}
+          <button type="submit" className="button-primary" disabled={!preview || !nickname.trim() || busy}>
+            {t(lang, 'join.button')}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleRestore}>
+          <p className="hint" style={{ marginTop: 0, marginBottom: 16 }}>
+            {t(lang, 'settings.transferHint')}
+          </p>
+          <div className="field">
+            <label className="label" htmlFor="restore-code">
+              {t(lang, 'join.restoreCodeLabel')}
+            </label>
+            <input
+              id="restore-code"
+              className="text-input"
+              value={restoreCode}
+              onChange={(e) => setRestoreCode(e.target.value)}
+              placeholder="ABCD-1234"
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+          {restoreError && <p className="error">{t(lang, restoreError)}</p>}
+          <button type="submit" className="button-primary" disabled={!restoreCode.trim() || restoreBusy}>
+            {t(lang, 'join.restoreButton')}
+          </button>
+        </form>
+      )}
       </div>
+
+      <div className="join-divider" />
+
+      <Link to="/manager" className="portal-card">
+        <span className="portal-card-icon" aria-hidden="true">
+          <BuildingIcon />
+        </span>
+        <span className="portal-card-text">
+          <strong>{t(lang, 'join.managerPortalLink')}</strong>
+          <span className="muted">{t(lang, 'newGroup.hint')}</span>
+        </span>
+        <ArrowRightIconWrapped className="portal-card-arrow icon-sm" />
+      </Link>
 
       {visibleDemoUsers.length > 0 && (
         <section className="demo">
           <h2>{t(lang, 'join.demoTitle')}</h2>
           <div className="demo-users">
             {visibleDemoUsers.map((user) => (
-              <button key={user.id} type="button" className="demo-user" onClick={() => continueAs(user.id)}>
+              <button
+                key={user.id}
+                type="button"
+                className="demo-user"
+                disabled={demoBusy}
+                onClick={() => continueAs(user.id)}
+              >
                 <strong>{user.nickname}</strong>
                 <span>
                   {meta(user.lang).name} · {user.group_name}

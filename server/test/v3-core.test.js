@@ -141,7 +141,7 @@ describe('v3 Slice 1: Core upgrades, neighborhood stats, pause/edit, dup nicknam
     );
   });
 
-  it('auto-expires stale pending requests past start_at and unblocks borrower', async () => {
+  it('keeps pending requests acceptable during borrowing window and auto-expires only past end_at', async () => {
     const rahim = await join('SAKURA-2611', 'Rahim', 'en');
     const shelf = (await req('GET', '/api/shelf', { token: rahim.token })).data;
     const futonDryer = shelf.find((i) => i.item_key === 'futon_dryer');
@@ -154,8 +154,16 @@ describe('v3 Slice 1: Core upgrades, neighborhood stats, pause/edit, dup nicknam
     });
     const loanId = loanRes.data.loan.id;
 
-    // Simulate start_at having passed without a response
-    await query("UPDATE loans SET start_at = NOW() - INTERVAL '2 hours' WHERE id = $1", [loanId]);
+    // Even if start_at has passed, pending request stays acceptable while end_at is still in the future
+    await query("UPDATE loans SET start_at = NOW() - INTERVAL '2 hours', end_at = NOW() + INTERVAL '22 hours' WHERE id = $1", [
+      loanId,
+    ]);
+    await checkReminders();
+    const midWindow = await req('GET', `/api/loans/${loanId}`, { token: rahim.token });
+    assert.equal(midWindow.data.loan.status, 'pending');
+
+    // Once end_at passes without a response, auto-expiry triggers and unblocks borrower
+    await query("UPDATE loans SET end_at = NOW() - INTERVAL '1 hour' WHERE id = $1", [loanId]);
     await checkReminders();
 
     const updated = await req('GET', `/api/loans/${loanId}`, { token: rahim.token });

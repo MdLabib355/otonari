@@ -58,7 +58,7 @@ export default function Poster() {
   if (!poster) return <p>{t(lang, 'common.loading')}</p>;
 
   return (
-    <section>
+    <section className="narrow-page poster-page">
       <button type="button" className="button-primary print-button" onClick={() => window.print()}>
         {t(lang, 'poster.print')}
       </button>

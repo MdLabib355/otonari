@@ -3,8 +3,39 @@ import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { api, clearManagerToken, getManagerToken, managerApi, saveManagerToken } from '../api.js';
 import ChipGroup from '../components/ChipGroup.jsx';
+import {
+  ArrowLeftIconWrapped,
+  BlockIcon,
+  BuildingIcon,
+  CheckIcon,
+  ClockIcon,
+  CopyIcon,
+  KeyIcon,
+  NoteIcon,
+  PlusIcon,
+  RefreshIcon,
+} from '../components/Icons.jsx';
+import { LANGUAGES } from '../data/catalog.js';
 import { displayName, formatDate, formatNumber, itemName, meta, renderPhrase, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
+
+function LangBar({ lang, onChange }) {
+  return (
+    <div className="lang-switcher" role="group" aria-label={t(lang, 'settings.language')}>
+      {LANGUAGES.map((code) => (
+        <button
+          key={code}
+          type="button"
+          className={code === lang ? 'filter-chip selected' : 'filter-chip'}
+          aria-pressed={code === lang}
+          onClick={() => onChange(code)}
+        >
+          {meta(code).name}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 async function qrDataUrl(text) {
   const svg = await QRCode.toString(text, { type: 'svg' });
@@ -12,11 +43,10 @@ async function qrDataUrl(text) {
 }
 
 // Building manager / neighborhood association portal:
-// authenticate, create/configure buildings, rotate codes, approve/remove residents,
-// issue lost-phone restore codes, and view reported item issues.
+// responsive 2-column desktop admin dashboard + centered auth card.
 export default function Manager() {
-  const { lang } = useUser();
-  const [account, setAccount] = useState(null); // { manager, groups }
+  const { lang, setDeviceLang } = useUser();
+  const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(Boolean(getManagerToken()));
   const [selectedGroupId, setSelectedGroupId] = useState(null);
 
@@ -60,7 +90,7 @@ export default function Manager() {
 
   if (loading && !account) {
     return (
-      <section>
+      <section className="narrow-page">
         <h1>{t(lang, 'manager.title')}</h1>
         <p>{t(lang, 'common.loading')}</p>
       </section>
@@ -68,16 +98,19 @@ export default function Manager() {
   }
 
   if (!account) {
-    return <ManagerAuth lang={lang} onSignedIn={handleSignedIn} />;
+    return <ManagerAuth lang={lang} onLangChange={setDeviceLang} onSignedIn={handleSignedIn} />;
   }
 
   const activeGroup = account.groups.find((g) => g.id === selectedGroupId) ?? account.groups[0] ?? null;
 
   return (
-    <section>
-      <Link to="/join" className="back-link">
-        ← {t(lang, 'common.back')}
-      </Link>
+    <section className="wide-page">
+      <div className="manager-topbar">
+        <Link to="/join" className="back-link">
+          <ArrowLeftIconWrapped className="icon-sm" /> {t(lang, 'common.back')}
+        </Link>
+        <LangBar lang={lang} onChange={setDeviceLang} />
+      </div>
       <div className="manager-header">
         <div>
           <h1>{t(lang, 'manager.title')}</h1>
@@ -94,17 +127,21 @@ export default function Manager() {
         <div className="field">
           <p className="label">{t(lang, 'manager.myGroups')}</p>
           <div className="chip-group">
-            {account.groups.map((g) => (
-              <button
-                key={g.id}
-                type="button"
-                className={g.id === activeGroup?.id ? 'chip selected' : 'chip'}
-                onClick={() => setSelectedGroupId(g.id)}
-              >
-                {g.type === 'building' ? '🏢' : '🏘️'} {g.name}
-                {g.pending_count > 0 && ` (${formatNumber(lang, g.pending_count)})`}
-              </button>
-            ))}
+            {account.groups.map((g) => {
+              const Icon = g.type === 'building' ? BuildingIcon : BlockIcon;
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  className={g.id === activeGroup?.id ? 'chip selected inline-btn' : 'chip inline-btn'}
+                  aria-pressed={g.id === activeGroup?.id}
+                  onClick={() => setSelectedGroupId(g.id)}
+                >
+                  <Icon className="icon-sm" /> {g.name}
+                  {g.pending_count > 0 && ` (${formatNumber(lang, g.pending_count)})`}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -129,8 +166,8 @@ export default function Manager() {
   );
 }
 
-function ManagerAuth({ lang, onSignedIn }) {
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
+function ManagerAuth({ lang, onLangChange, onSignedIn }) {
+  const [mode, setMode] = useState('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -173,10 +210,13 @@ function ManagerAuth({ lang, onSignedIn }) {
   }
 
   return (
-    <section>
-      <Link to="/join" className="back-link">
-        ← {t(lang, 'common.back')}
-      </Link>
+    <section className="narrow-page surface-card">
+      <div className="manager-topbar">
+        <Link to="/join" className="back-link">
+          <ArrowLeftIconWrapped className="icon-sm" /> {t(lang, 'common.back')}
+        </Link>
+        <LangBar lang={lang} onChange={onLangChange} />
+      </div>
       <h1>{t(lang, 'manager.title')}</h1>
       <p className="subtitle">{t(lang, 'newGroup.hint')}</p>
 
@@ -253,8 +293,14 @@ function ManagerAuth({ lang, onSignedIn }) {
 
       {demoMode && (
         <div className="demo">
-          <button type="button" className="button-secondary" style={{ width: '100%' }} disabled={busy} onClick={demoLogin}>
-            🔑 {t(lang, 'manager.demoLogin')}
+          <button
+            type="button"
+            className="button-secondary inline-btn"
+            style={{ width: '100%' }}
+            disabled={busy}
+            onClick={demoLogin}
+          >
+            <KeyIcon className="icon-sm" /> {t(lang, 'manager.demoLogin')}
           </button>
         </div>
       )}
@@ -263,11 +309,22 @@ function ManagerAuth({ lang, onSignedIn }) {
 }
 
 function GroupDashboard({ group, lang, onGroupChanged }) {
-  const [members, setMembers] = useState(null); // { pending, active }
+  const [members, setMembers] = useState(null);
   const [issues, setIssues] = useState([]);
   const [busy, setBusy] = useState(false);
   const [errorText, setErrorText] = useState(null);
-  const [restoreInfo, setRestoreInfo] = useState(null); // { userId, nickname, code, qr }
+  const [restoreInfo, setRestoreInfo] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(group.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API may be unavailable on non-HTTPS LAN origins
+    }
+  }
 
   async function loadDetails() {
     try {
@@ -347,156 +404,206 @@ function GroupDashboard({ group, lang, onGroupChanged }) {
   }
 
   return (
-    <div className="manager-card">
-      <h2>
-        {group.name} · <span className="muted">{group.city}</span>
-      </h2>
-      <p className="big-code">{group.code}</p>
-
-      <div className="actions">
-        <Link to={`/poster?code=${encodeURIComponent(group.code)}`} className="button-primary button-link">
-          {t(lang, 'newGroup.poster')}
-        </Link>
-        <button type="button" className="button-secondary" disabled={busy} onClick={rotateCode}>
-          🔄 {t(lang, 'manager.rotateCode')}
-        </button>
-      </div>
-
-      <div className="field">
-        <label className="switch-row">
-          <span>
-            <strong>{t(lang, 'manager.requireApproval')}</strong>
-          </span>
-          <input
-            type="checkbox"
-            role="switch"
-            className="switch"
-            disabled={busy}
-            checked={Boolean(group.require_approval)}
-            onChange={toggleApproval}
-          />
-        </label>
-      </div>
-
-      {errorText && <p className="error">{errorText}</p>}
-
-      {restoreInfo && (
-        <div className="transfer-box">
-          <p className="label">
-            🔑 {displayName(lang, restoreInfo.nickname)} — {t(lang, 'settings.transferExpires')}
-          </p>
-          <p className="big-code">{restoreInfo.code}</p>
-          <img className="transfer-qr" src={restoreInfo.qr} alt={restoreInfo.code} />
+    <>
+      <div className="stats-grid manager-kpis">
+        <div className="stat-card">
+          <strong>{formatNumber(lang, group.member_count ?? 0)}</strong>
+          <span className="muted">{t(lang, 'manager.members')}</span>
         </div>
-      )}
-
-      <div className="manager-section">
-        <h3>{t(lang, 'manager.pendingRequests')}</h3>
-        {!members ? (
-          <p className="muted">{t(lang, 'common.loading')}</p>
-        ) : members.pending.length === 0 ? (
-          <p className="muted">{t(lang, 'manager.noPending')}</p>
-        ) : (
-          <ul className="manager-list">
-            {members.pending.map((m) => (
-              <li key={m.id} className="manager-row">
-                <div className="manager-row-info">
-                  <strong>{displayName(lang, m.nickname)}</strong>
-                  <span className="muted">{meta(m.lang).name}</span>
-                  {m.manager_note && <span className="badge badge-available">📝 {m.manager_note}</span>}
-                </div>
-                <div className="manager-row-actions">
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    disabled={busy}
-                    onClick={() => moderateMember(m.id, 'approve')}
-                  >
-                    ✓ {t(lang, 'manager.approve')}
-                  </button>
-                  <button
-                    type="button"
-                    className="button-secondary button-danger"
-                    disabled={busy}
-                    onClick={() => moderateMember(m.id, 'reject')}
-                  >
-                    {t(lang, 'manager.reject')}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="stat-card">
+          <strong>{formatNumber(lang, group.pending_count ?? 0)}</strong>
+          <span className="muted">{t(lang, 'manager.pendingRequests')}</span>
+        </div>
+        <div className="stat-card">
+          <strong>{formatNumber(lang, group.item_count ?? 0)}</strong>
+          <span className="muted">{t(lang, 'stats.items')}</span>
+        </div>
+        <div className="stat-card">
+          <strong>{formatNumber(lang, group.issue_count ?? 0)}</strong>
+          <span className="muted">{t(lang, 'manager.issues')}</span>
+        </div>
       </div>
 
-      <div className="manager-section">
-        <h3>{t(lang, 'manager.members')}</h3>
-        {!members ? (
-          <p className="muted">{t(lang, 'common.loading')}</p>
-        ) : members.active.length === 0 ? (
-          <p className="muted">{t(lang, 'manager.noMembers')}</p>
-        ) : (
-          <ul className="manager-list">
-            {members.active.map((m) => (
-              <li key={m.id} className="manager-row">
-                <div className="manager-row-info">
-                  <strong>{displayName(lang, m.nickname)}</strong>
-                  <span className="muted">
-                    {meta(m.lang).name} · ✓ {formatNumber(lang, m.on_time)} / ⏰ {formatNumber(lang, m.late)}
-                  </span>
-                  {m.manager_note && <span className="muted">📝 {m.manager_note}</span>}
-                </div>
-                <div className="manager-row-actions">
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    disabled={busy}
-                    onClick={() => generateRestore(m)}
-                  >
-                    🔑 {t(lang, 'manager.restoreCode')}
-                  </button>
-                  <button
-                    type="button"
-                    className="button-secondary button-danger"
-                    disabled={busy}
-                    onClick={() => moderateMember(m.id, 'remove')}
-                  >
-                    {t(lang, 'manager.removeMember')}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <div className="manager-grid">
+        <div className="manager-col">
+          <div className="manager-card">
+            <h2>
+              {group.name} · <span className="muted">{group.city}</span>
+            </h2>
+            <div className="code-row">
+              <p className="big-code" style={{ margin: 0 }}>
+                {group.code}
+              </p>
+              <button
+                type="button"
+                className="icon-copy-btn"
+                aria-label="Copy code"
+                title={group.code}
+                onClick={copyCode}
+              >
+                {copied ? <CheckIcon className="icon-sm" /> : <CopyIcon className="icon-sm" />}
+              </button>
+            </div>
 
-      <div className="manager-section">
-        <h3>{t(lang, 'manager.issues')}</h3>
-        {issues.length === 0 ? (
-          <p className="muted">{t(lang, 'manager.noIssues')}</p>
-        ) : (
-          <ul className="manager-list">
-            {issues.map((issue) => (
-              <li key={issue.id} className="manager-row">
-                <div className="manager-row-info">
-                  <strong>{itemName(lang, issue.item_key)}</strong>
-                  <p style={{ margin: '2px 0' }}>
-                    {renderPhrase(lang, issue.phrase_key, { item: issue.item_key, spot: issue.spot ?? 'entrance' })}
-                  </p>
-                  <span className="muted">
-                    {displayName(lang, issue.reporter_nickname ?? '?')} →{' '}
-                    {displayName(lang, issue.other_nickname ?? '?')} · {formatDate(lang, issue.created_at)}
-                  </span>
-                </div>
-                {issue.issue_photo && (
-                  <img className="my-item-thumb" src={issue.issue_photo} alt="" loading="lazy" />
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+            <div className="actions">
+              <Link to={`/poster?code=${encodeURIComponent(group.code)}`} className="button-primary button-link">
+                {t(lang, 'newGroup.poster')}
+              </Link>
+              <button type="button" className="button-secondary inline-btn" disabled={busy} onClick={rotateCode}>
+                <RefreshIcon className="icon-sm" /> {t(lang, 'manager.rotateCode')}
+              </button>
+            </div>
+
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label className="switch-row">
+                <span>
+                  <strong>{t(lang, 'manager.requireApproval')}</strong>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  disabled={busy}
+                  checked={Boolean(group.require_approval)}
+                  onChange={toggleApproval}
+                />
+              </label>
+            </div>
+
+            {errorText && <p className="error">{errorText}</p>}
+
+            {restoreInfo && (
+              <div className="transfer-box">
+                <p className="label inline-icon-text">
+                  <KeyIcon className="icon-sm" /> {displayName(lang, restoreInfo.nickname)} —{' '}
+                  {t(lang, 'settings.transferExpires')}
+                </p>
+                <p className="big-code">{restoreInfo.code}</p>
+                <img className="transfer-qr" src={restoreInfo.qr} alt={restoreInfo.code} />
+              </div>
+            )}
+          </div>
+
+          <div className="manager-card">
+            <h3>{t(lang, 'manager.issues')}</h3>
+            {issues.length === 0 ? (
+              <p className="muted">{t(lang, 'manager.noIssues')}</p>
+            ) : (
+              <ul className="manager-list">
+                {issues.map((issue) => (
+                  <li key={issue.id} className="manager-row">
+                    <div className="manager-row-info">
+                      <strong>{itemName(lang, issue.item_key)}</strong>
+                      <p style={{ margin: '2px 0' }}>
+                        {renderPhrase(lang, issue.phrase_key, { item: issue.item_key, spot: issue.spot ?? 'entrance' })}
+                      </p>
+                      <span className="muted">
+                        {displayName(lang, issue.reporter_nickname ?? '?')} →{' '}
+                        {displayName(lang, issue.other_nickname ?? '?')} · {formatDate(lang, issue.created_at)}
+                      </span>
+                    </div>
+                    {issue.issue_photo && (
+                      <img className="my-item-thumb" src={issue.issue_photo} alt="" loading="lazy" />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="manager-col">
+          <div className="manager-card">
+            <h3>{t(lang, 'manager.pendingRequests')}</h3>
+            {!members ? (
+              <p className="muted">{t(lang, 'common.loading')}</p>
+            ) : members.pending.length === 0 ? (
+              <p className="muted">{t(lang, 'manager.noPending')}</p>
+            ) : (
+              <ul className="manager-list">
+                {members.pending.map((m) => (
+                  <li key={m.id} className="manager-row">
+                    <div className="manager-row-info">
+                      <strong>{displayName(lang, m.nickname)}</strong>
+                      <span className="muted">{meta(m.lang).name}</span>
+                      {m.manager_note && (
+                        <span className="badge badge-available inline-icon-text">
+                          <NoteIcon className="icon-xs" /> {m.manager_note}
+                        </span>
+                      )}
+                    </div>
+                    <div className="manager-row-actions">
+                      <button
+                        type="button"
+                        className="button-secondary inline-btn"
+                        disabled={busy}
+                        onClick={() => moderateMember(m.id, 'approve')}
+                      >
+                        <CheckIcon className="icon-sm" /> {t(lang, 'manager.approve')}
+                      </button>
+                      <button
+                        type="button"
+                        className="button-secondary button-danger"
+                        disabled={busy}
+                        onClick={() => moderateMember(m.id, 'reject')}
+                      >
+                        {t(lang, 'manager.reject')}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="manager-card">
+            <h3>{t(lang, 'manager.members')}</h3>
+            {!members ? (
+              <p className="muted">{t(lang, 'common.loading')}</p>
+            ) : members.active.length === 0 ? (
+              <p className="muted">{t(lang, 'manager.noMembers')}</p>
+            ) : (
+              <ul className="manager-list">
+                {members.active.map((m) => (
+                  <li key={m.id} className="manager-row">
+                    <div className="manager-row-info">
+                      <strong>{displayName(lang, m.nickname)}</strong>
+                      <span className="muted inline-icon-text">
+                        {meta(m.lang).name} · <CheckIcon className="icon-xs" /> {formatNumber(lang, m.on_time)} /{' '}
+                        <ClockIcon className="icon-xs" /> {formatNumber(lang, m.late)}
+                      </span>
+                      {m.manager_note && (
+                        <span className="muted inline-icon-text">
+                          <NoteIcon className="icon-xs" /> {m.manager_note}
+                        </span>
+                      )}
+                    </div>
+                    <div className="manager-row-actions">
+                      <button
+                        type="button"
+                        className="button-secondary inline-btn"
+                        disabled={busy}
+                        onClick={() => generateRestore(m)}
+                      >
+                        <KeyIcon className="icon-sm" /> {t(lang, 'manager.restoreCode')}
+                      </button>
+                      <button
+                        type="button"
+                        className="button-secondary button-danger"
+                        disabled={busy}
+                        onClick={() => moderateMember(m.id, 'remove')}
+                      >
+                        {t(lang, 'manager.removeMember')}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -541,11 +648,13 @@ function CreateGroupForm({ lang, onCreated }) {
   return (
     <div className="section-title">
       {!open ? (
-        <button type="button" className="button-secondary" style={{ width: '100%' }} onClick={() => setOpen(true)}>
-          ＋ {t(lang, 'manager.createGroup')}
+        <button type="button" className="button-secondary inline-btn" onClick={() => setOpen(true)}>
+          <PlusIcon className="icon-sm" /> {t(lang, 'manager.createGroup')}
         </button>
       ) : (
         <form
+          className="surface-card narrow-page"
+          style={{ margin: 0 }}
           onSubmit={(e) => {
             e.preventDefault();
             submit(false);
@@ -570,8 +679,8 @@ function CreateGroupForm({ lang, onCreated }) {
             <ChipGroup
               label={t(lang, 'newGroup.type')}
               options={[
-                { value: 'building', label: `🏢 ${t(lang, 'groupType.building')}` },
-                { value: 'block', label: `🏘️ ${t(lang, 'groupType.block')}` },
+                { value: 'building', label: t(lang, 'groupType.building') },
+                { value: 'block', label: t(lang, 'groupType.block') },
               ]}
               value={type}
               onChange={setType}

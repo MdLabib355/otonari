@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import ChipGroup from '../components/ChipGroup.jsx';
+import { ArrowLeftIconWrapped, LockIcon } from '../components/Icons.jsx';
 import TipCard from '../components/TipCard.jsx';
 import { DURATIONS, START_DAYS, TIME_SLOTS, findItem } from '../data/catalog.js';
-import { displayName, formatDate, formatHour, itemName, renderPhrase, spotName, t } from '../i18n/index.js';
+import { displayName, formatDate, formatHour, itemName, meta, renderPhrase, spotName, t } from '../i18n/index.js';
 import { useUser } from '../UserContext.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -50,20 +51,20 @@ export default function ItemPage() {
 
   const backLink = (
     <Link to="/" className="back-link">
-      ← {t(lang, 'common.back')}
+      <ArrowLeftIconWrapped className="icon-sm" /> {t(lang, 'common.back')}
     </Link>
   );
 
   if (problem === 'missing') {
     return (
-      <section>
+      <section className="narrow-page surface-card">
         {backLink}
         <p className="notice">{t(lang, 'borrow.notAvailable')}</p>
       </section>
     );
   }
-  if (problem === 'failed') return <p className="error">{t(lang, 'common.error')}</p>;
-  if (!item) return <p>{t(lang, 'common.loading')}</p>;
+  if (problem === 'failed') return <p className="error narrow-page">{t(lang, 'common.error')}</p>;
+  if (!item) return <p className="narrow-page">{t(lang, 'common.loading')}</p>;
 
   const mine = item.owner_id === user.id;
   const alreadyAsked = Boolean(item.my_loan_id);
@@ -71,7 +72,7 @@ export default function ItemPage() {
   const maxDays = item.max_days === 1 ? t(lang, 'item.maxDay') : t(lang, 'item.maxDays', { n: item.max_days });
 
   return (
-    <section>
+    <section className="narrow-page surface-card">
       {backLink}
       <header className="item-header">
         {item.photo_url ? (
@@ -101,7 +102,13 @@ export default function ItemPage() {
 function AskForItem({ item, onRefused }) {
   const { lang } = useUser();
   if (item.status !== 'available' || item.paused) return <p className="notice">{t(lang, 'borrow.notAvailable')}</p>;
-  if (!item.allowed_for_me) return <p className="notice">🔒 {t(lang, 'trust.explain')}</p>;
+  if (!item.allowed_for_me) {
+    return (
+      <p className="notice inline-icon-text">
+        <LockIcon className="icon-sm" /> {t(lang, 'trust.explain')}
+      </p>
+    );
+  }
   return <BorrowForm item={item} onRefused={onRefused} />;
 }
 
@@ -145,8 +152,10 @@ function BorrowForm({ item, onRefused }) {
     }));
 
   const availableSlots = openSlotsForDate(dateKey);
-  const activeSlot = availableSlots.includes(slot) ? slot : (availableSlots[0] ?? 'morning');
-  const slotOptions = availableSlots.map((name) => ({
+  const effectiveDateKey = availableSlots.length > 0 ? dateKey : minDateKey;
+  const effectiveSlots = openSlotsForDate(effectiveDateKey);
+  const activeSlot = effectiveSlots.includes(slot) ? slot : (effectiveSlots[0] ?? 'morning');
+  const slotOptions = effectiveSlots.map((name) => ({
     value: name,
     label: `${t(lang, `borrow.${name}`)} ${formatHour(lang, TIME_SLOTS[name])}`,
   }));
@@ -156,13 +165,14 @@ function BorrowForm({ item, onRefused }) {
   }));
 
   function chooseDate(nextKey) {
-    if (!nextKey || nextKey < minDateKey || nextKey > maxDateKey) return;
-    setDateKey(nextKey);
-    const slots = openSlotsForDate(nextKey);
+    if (!nextKey) return;
+    const clamped = nextKey < minDateKey ? minDateKey : nextKey > maxDateKey ? maxDateKey : nextKey;
+    setDateKey(clamped);
+    const slots = openSlotsForDate(clamped);
     if (slots.length > 0 && !slots.includes(slot)) setSlot(slots[0]);
   }
 
-  const startAt = japanTimeForDate(dateKey, TIME_SLOTS[activeSlot]);
+  const startAt = japanTimeForDate(effectiveDateKey, TIME_SLOTS[activeSlot]);
   const endAt = new Date(Date.parse(startAt) + days * DAY_MS).toISOString();
   const params = { item: item.item_key, spot: item.spot, start: startAt, end: endAt, name: user.nickname };
 
@@ -186,13 +196,18 @@ function BorrowForm({ item, onRefused }) {
       <div className="field">
         <p className="label">{t(lang, 'borrow.when')}</p>
         <div className="chip-stack">
-          <ChipGroup label={t(lang, 'borrow.when')} options={quickDayOptions} value={dateKey} onChange={chooseDate} />
+          <ChipGroup
+            label={t(lang, 'borrow.when')}
+            options={quickDayOptions}
+            value={effectiveDateKey}
+            onChange={chooseDate}
+          />
           <label className="date-picker-row">
             <span className="hint">{t(lang, 'borrow.pickDate')}</span>
             <input
               type="date"
               className="text-input date-input"
-              value={dateKey}
+              value={effectiveDateKey}
               min={minDateKey}
               max={maxDateKey}
               onChange={(event) => chooseDate(event.target.value)}
@@ -205,20 +220,25 @@ function BorrowForm({ item, onRefused }) {
       <div className="field">
         <p className="label">{t(lang, 'borrow.howLong')}</p>
         <ChipGroup label={t(lang, 'borrow.howLong')} options={lengthOptions} value={days} onChange={setDays} />
-        <p className="period">
+        <p className="period period-pill">
           {t(lang, 'loan.period', { start: formatDate(lang, startAt), end: formatDate(lang, endAt) })}
         </p>
       </div>
 
       <div className="preview">
-        <p className="label">{t(lang, 'borrow.preview')}</p>
+        <div className="preview-header">
+          <p className="label" style={{ margin: 0 }}>
+            {t(lang, 'borrow.preview')}
+          </p>
+          <span className="badge badge-available">{meta(item.owner_lang).name}</span>
+        </div>
         <p className="preview-bubble" lang={item.owner_lang === 'ja-easy' ? 'ja' : item.owner_lang}>
           {renderPhrase(item.owner_lang, 'request', params)}
         </p>
       </div>
 
       {failed && <p className="error">{t(lang, 'common.error')}</p>}
-      <button type="button" className="button-primary" disabled={busy || availableSlots.length === 0} onClick={send}>
+      <button type="button" className="button-primary" disabled={busy || effectiveSlots.length === 0} onClick={send}>
         {t(lang, 'borrow.send')}
       </button>
     </>

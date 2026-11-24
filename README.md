@@ -13,7 +13,7 @@ Otonari (お隣, "next door") is an installable neighborhood sharing web app (PW
 - **Handover, return, issues & thank-you stamps.** Pinned handover spot card, cancel-before-handover protection, side-by-side EXIF-stripped condition photos, structured non-confrontational issue/damage reports (with optional photo), and warm Japanese thank-you stamps (`🙇`, `✨`, `🍪`, `🤝`) on completed loans.
 - **3-Layer Notification Pipeline.**
   1. **Persistent Notification Center (🔔):** All piled-up unread alerts stay queued in PostgreSQL until opened or cleared with "Mark all read".
-  2. **Instant Live SSE (`/api/events`):** Authenticated header-based Server-Sent Events push updates in `<100ms` (with 30s fallback poll) + persistent sticky return-due / overdue bar.
+  2. **Instant Live SSE (`/api/events`):** Authenticated header-based Server-Sent Events push updates in `<100ms` (with 10s fallback poll) + persistent sticky return-due / overdue bar.
   3. **Background Web Push (`web-push` + custom `sw.js`):** Zero-config auto-persisted VAPID keys deliver localized OS notifications even when the app is closed.
 - **Building Manager Portal (`/manager`).** Email + `scrypt` password authentication, multi-device sessions, group creation, join code rotation, optional new-member approval toggle (with manager-only private verification note), safe member moderation, reported issues feed, and **Lost-Phone Restore** (rotates & revokes the lost phone's token).
 - **Multi-device transfer (Settings).** Residents can generate a 10-minute single-use code + QR to open the same account on another phone or installed PWA.
@@ -103,7 +103,7 @@ otonari/
 │   └── src/
 │       ├── sw.js             Custom injectManifest Service Worker (precaching + Web Push)
 │       ├── pages/            Join, Manager, Shelf, ItemPage, MyItems, Loans, LoanPage, Settings, Poster
-│       ├── components/       Banner (Notification Center + SSE + sticky due bar), PhraseBubble, SpeakButton, PhotoCapture, TrustLine, TipCard, ChipGroup
+│       ├── components/       Banner (Notification Center + SSE + sticky due bar), Icons (@heroicons/react), PhraseBubble, SpeakButton, PhotoCapture, TrustLine, TipCard, ChipGroup
 │       ├── i18n/             en.json, ja.json, ja-easy.json, bn.json, index.js
 │       └── data/catalog.js   Fixed catalog, spots, quick replies, issues, stamps, durations
 └── server/                   Modular Express 5 + PostgreSQL API

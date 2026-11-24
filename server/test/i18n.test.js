@@ -26,7 +26,7 @@ function extractPlaceholders(text) {
 describe('Slice 4: Catalog & 4-language i18n parity (T39)', () => {
   const locales = Object.fromEntries(LANGUAGES.map((code) => [code, loadLocale(code)]));
 
-  it('keeps server/allowedKeys.js and client/src/data/catalog.js strictly identical', () => {
+  it('keeps server/config/constants.js and client/src/data/catalog.js strictly identical', () => {
     assert.deepEqual(
       ITEM_KEYS,
       CLIENT_ITEMS.map((item) => item.key)
@@ -83,6 +83,9 @@ describe('Slice 4: Catalog & 4-language i18n parity (T39)', () => {
       const target = locales[lang];
       for (const section of sections) {
         const baseKeys = Object.keys(base[section]);
+        const targetKeys = Object.keys(target[section] || {});
+        const extras = targetKeys.filter((k) => !Object.hasOwn(base[section], k));
+        assert.deepEqual(extras, [], `Extra orphan keys in ${lang}.${section}: ${extras.join(', ')}`);
         for (const key of baseKeys) {
           assert.ok(target[section]?.[key]?.trim(), `${lang}.${section}.${key} missing`);
           assert.deepEqual(

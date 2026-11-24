@@ -171,5 +171,5 @@ export function servePhoto(req, res) {
   res.setHeader('Content-Type', MIME_BY_EXT[ext]);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
-  return res.sendFile(resolved);
+  return res.sendFile(filename, { root: getUploadsDir() });
 }

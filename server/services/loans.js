@@ -103,6 +103,7 @@ export function publicUser(user) {
     lang: user.lang,
     elder_mode: Boolean(user.elder_mode),
     status: user.status ?? 'approved',
+    is_demo: Boolean(user.is_demo),
   };
 }
 
