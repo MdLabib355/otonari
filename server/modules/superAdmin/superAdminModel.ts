@@ -13,7 +13,7 @@ import type {
 } from '../../../shared/types.ts';
 import { found, query, queryOne, transaction } from '../../core/database.ts';
 import type { CountRow, GroupRow, LoanRow } from '../../types.ts';
-import { photoUrl } from '../loan/photoFiles.ts';
+import { photoUrl } from '../../core/photoFiles.ts';
 import { createMessage } from '../message/messageModel.ts';
 
 export async function getPlatformCounters() {

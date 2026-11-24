@@ -2,6 +2,22 @@
   "meta": { "lang": "bn", "name": "বাংলা", "locale": "bn-BD", "speech": "bn-BD" },
 
   "ui": {
+    "auth.forgot": "পাসওয়ার্ড ভুলে গেছেন?",
+    "auth.resetTitle": "নতুন পাসওয়ার্ড দিন",
+    "profile.title": "আপনার প্রোফাইল",
+    "profile.edit": "প্রোফাইল সম্পাদনা",
+    "profile.save": "সংরক্ষণ",
+    "profile.choosePhoto": "ছবি বেছে নিন",
+    "profile.removePhoto": "ছবি সরান",
+    "profile.password": "পাসওয়ার্ড",
+    "profile.currentPassword": "বর্তমান পাসওয়ার্ড",
+    "profile.newPassword": "নতুন পাসওয়ার্ড",
+    "profile.changePassword": "পাসওয়ার্ড পরিবর্তন করুন",
+    "profile.passwordChanged": "পাসওয়ার্ড বদলানো হয়েছে। অন্য ডিভাইসগুলো লগ আউট হয়েছে।",
+    "profile.wrongPassword": "বর্তমান পাসওয়ার্ড ভুল, অথবা এই অ্যাকাউন্টে বদলানো যায় না।",
+    "profile.googleOnly": "আপনি Google দিয়ে লগ ইন করেন, তাই এখানে পাসওয়ার্ড নেই।",
+    "profile.noPassword": "আপনার এখনো পাসওয়ার্ড নেই। দিতে চাইলে লগ আউট করে “পাসওয়ার্ড ভুলে গেছেন?” চাপুন।",
+
     "auth.codeTitle": "৬ সংখ্যার কোডটি লিখুন",
     "auth.codeSentTo": "কোড পাঠানো হয়েছে:",
     "auth.codeHelp": "কোডটি ১০ মিনিট কাজ করবে। ইনবক্সে ইমেইল না পেলে স্প্যাম ফোল্ডার দেখুন।",

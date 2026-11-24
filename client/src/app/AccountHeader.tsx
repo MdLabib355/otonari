@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import Avatar from '../components/Avatar.tsx';
 import { useUser } from '../core/UserContext.ts';
 import { t } from '../i18n/index.ts';
 
@@ -23,6 +24,9 @@ export default function AccountHeader() {
               </Link>
             </>
           )}
+          <Link to="/profile" aria-label={t(lang, 'profile.title')} title={t(lang, 'profile.title')} className="account-avatar">
+            <Avatar url={user?.avatar ?? null} />
+          </Link>
           <button type="button" className="button-secondary" onClick={logout}>
             {t(lang, 'auth.logout')}
           </button>

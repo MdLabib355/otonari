@@ -1,4 +1,4 @@
-// Receives one uploaded condition photo (at handover and at return): images only, max 5 MB.
+// Receives one uploaded photo (condition photos, profile photos): images only, max 5 MB.
 
 import type { NextFunction, Request, Response } from 'express';
 import multer from 'multer';

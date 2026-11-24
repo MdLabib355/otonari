@@ -16,6 +16,7 @@ import Shelf from '../features/item/Shelf.tsx';
 import Landing from '../features/landing/Landing.tsx';
 import LoanPage from '../features/loan/LoanPage.tsx';
 import Loans from '../features/loan/Loans.tsx';
+import Profile from '../features/user/Profile.tsx';
 import Settings from '../features/user/Settings.tsx';
 import { t } from '../i18n/index.ts';
 import AccountHeader from './AccountHeader.tsx';
@@ -154,6 +155,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/forgot-password" element={<AuthPage mode="reset" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
         {/* From the QR code on a poster: log in first. The ?code= stays in the address. */}
         <Route path="/join" element={<Navigate to={{ pathname: '/register', search }} replace />} />
@@ -167,6 +169,7 @@ export default function App() {
     page = (
       <Routes>
         <Route path="/join" element={<Join />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/poster" element={<Poster />} />
         <Route
           path="*"
@@ -175,7 +178,7 @@ export default function App() {
       </Routes>
     );
   } else if (isPendingMember) {
-    page = <PendingApproval />;
+    page = pathname === '/profile' ? <Profile /> : <PendingApproval />;
   } else {
     page = (
       <Routes>
@@ -186,6 +189,7 @@ export default function App() {
         <Route path="/loan/:id" element={<LoanPage />} />
         <Route path="/group-admin" element={<GroupAdminPage onAlertCountChange={setAdminAlertCount} />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/poster" element={<Poster />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

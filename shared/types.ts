@@ -44,6 +44,9 @@ export interface User {
   muted_until: string | null;
   is_trusted: boolean;
   trust_override: TrustOverride;
+  avatar: string | null; // URL of the profile photo
+  has_password: boolean; // false: logs in with Google, or with a code
+  google_only: boolean;
 }
 
 export interface Group {
@@ -64,7 +67,7 @@ export interface Me {
   group: Group | null; // null before joining one
 }
 
-// POST /api/v1/auth/email-codes/verify
+// POST /api/v1/auth/email-codes/verify: for registering, or for a new password
 export interface RegistrationTicket {
   ticket: string;
 }
@@ -77,7 +80,7 @@ export interface AuthConfig {
   mailbox_url: string | null; // the test mailbox, if emails go there
 }
 
-// POST /api/v1/auth/register, /login, /login-with-code and /google
+// POST /api/v1/auth/register, /login, /login-with-code, /reset-password and /google
 export interface Login extends Me {
   token: string;
 }
@@ -97,6 +100,7 @@ export interface GroupMember {
   id: number;
   nickname: string;
   lang: Lang;
+  avatar: string | null;
   role: Role;
   joined_at: string | null;
 }
@@ -176,7 +180,7 @@ export interface MyLoans {
   lending: LoanSummary[];
 }
 
-export type Person = Pick<User, 'id' | 'nickname' | 'lang'>;
+export type Person = Pick<User, 'id' | 'nickname' | 'lang'> & { avatar?: string | null };
 export type LoanItem = Pick<MyItem, 'id' | 'item_key' | 'max_days' | 'spot' | 'status'>;
 
 export interface Message {

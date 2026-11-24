@@ -9,12 +9,12 @@ import { hashSecret } from './modules/auth/password.ts';
 import { ensureSuperAdmin } from './modules/auth/superAdmin.ts';
 import { listGroups } from './modules/group/groupModel.ts';
 import { createItem, setItemStatus } from './modules/item/itemModel.ts';
-import { deletePhotos } from './modules/loan/photoFiles.ts';
+import { deletePhotos } from './core/photoFiles.ts';
 import { createMessage } from './modules/message/messageModel.ts';
 import type { ItemRow, LoanRow, UserRow } from './types.ts';
 
 // Shared password for the seeded demo accounts (only works when DEMO_MODE=true).
-export const DEMO_PASSWORD = 'demo-password';
+export const DEMO_PASSWORD = 'otonari2611';
 
 type SeedItem = [itemKey: string, maxDays: number, spot: string, trustedOnly?: boolean];
 

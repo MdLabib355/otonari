@@ -5,9 +5,9 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { NextFunction, Request, Response } from 'express';
-import { putObject, signedUrl, usesS3 } from '../../core/s3.ts';
+import { deleteObject, putObject, signedUrl, usesS3 } from './s3.ts';
 
-const uploadsDir = path.join(import.meta.dirname, '..', '..', 'uploads');
+const uploadsDir = path.join(import.meta.dirname, '..', 'uploads');
 const CONTENT_TYPES: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 const S3_PREFIX = 's3:';
 
@@ -48,6 +48,16 @@ export async function storePhoto(req: Request, res: Response, next: NextFunction
 // The URL for the browser. A signed S3 URL works for an hour, so it is made for every answer, never stored.
 export async function photoUrl(photo: string | null): Promise<string | null> {
   return photo?.startsWith(S3_PREFIX) ? signedUrl(photo.slice(S3_PREFIX.length)) : photo;
+}
+
+// For a photo that has been replaced. If it can't be deleted, it is only an unused file.
+export async function deletePhoto(photo: string | null) {
+  try {
+    if (photo?.startsWith(S3_PREFIX)) await deleteObject(photo.slice(S3_PREFIX.length));
+    else if (photo) await fs.unlink(path.join(uploadsDir, path.basename(photo)));
+  } catch (error) {
+    console.error('Old photo could not be deleted:', (error as Error).message);
+  }
 }
 
 // Deletes the photos in server/uploads (used by seedData.ts). .gitkeep stays: it keeps the empty folder in git.

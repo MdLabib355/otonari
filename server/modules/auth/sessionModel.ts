@@ -32,6 +32,11 @@ export async function deleteSession(token: string) {
   await query('DELETE FROM sessions WHERE token_hash = $1', [hashToken(token)]);
 }
 
+// Log out on all other devices.
+export async function deleteOtherSessions(userId: number, token: string) {
+  await query('DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2', [userId, hashToken(token)]);
+}
+
 // Log out everywhere.
 export async function deleteSessionsOf(userId: number) {
   await query('DELETE FROM sessions WHERE user_id = $1', [userId]);

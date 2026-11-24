@@ -53,7 +53,10 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
 - `user`: a neighbor. `group_admin`: also sees and removes members and makes a new join code (whoever starts a group; if
   the last one leaves, the longest-standing member takes over). `super_admin`: all groups and accounts, roles,
   deactivating; the first one comes from the settings.
-- Neighbors see only nicknames. Emails are seen by their owner and by super admins.
+- **Profile** (`/profile`, every role, also without a group): photo, nickname, and a new password (the old one is
+  needed; other devices are logged out). **Forgot password?**: email → code → new password twice (all devices are logged
+  out). Not for Google-only accounts; not for the passwords of demo accounts.
+- Neighbors see only nicknames and profile photos. Emails are seen by their owner and by super admins.
 - Seeded accounts have a public password, so they work only in demo mode. There is no "continue as".
 
 ### Must-have 1 — Neighborhood shelf
@@ -185,16 +188,17 @@ otonari/
 │       │   ├── api.ts          # fetch wrapper; adds "Authorization: Bearer <token>"
 │       │   ├── UserContext.ts  # useUser() / useMember(): me, my group, my language and my inbox
 │       │   ├── usePolling.ts   # loads again every few seconds (the shelf)
+│       │   ├── shrinkPhoto.ts  # smaller JPEG without GPS, before every upload
 │       │   └── useInbox.ts     # my unread messages (banner, Loans badge, loan page)
 │       ├── components/     # used by several features: ChipGroup  FilterStrip  Icons  SpeakButton  TipCard
-│       │                   # TrustLine
+│       │                   # TrustLine  Avatar
 │       ├── features/       # one folder per feature, like the modules of the server
 │       │   ├── landing/    # Landing (/ for visitors)  SamplePhrase
 │       │   ├── group/      # Join (/join)  NewGroup  Poster (/poster)
 │       │   ├── auth/       # AuthPage (/login, /register)  LoginForm  RegisterForm  CodeStep  AuthField
 │       │   │               # GoogleButton  authErrors
 │       │   ├── admin/      # GroupAdmin (/group-admin)  SuperAdmin (/admin)  ConfirmButton
-│       │   ├── user/       # Settings (/settings)
+│       │   ├── user/       # Settings (/settings)  Profile (/profile)  AvatarEditor  ChangePassword
 │       │   ├── item/       # Shelf (/)  NeighborShelf  ItemCard  ItemPage (/item/:id)  BorrowForm  borrowTimes
 │       │   │               # MyItems (/my-items)  MyItemRow  Catalog  AddItemDialog  TrustedSwitch
 │       │   ├── loan/       # Loans (/loans)  LoanPage (/loan/:id)  LoanHeader  LoanStepper  PendingActions  HandoverStep
@@ -219,6 +223,7 @@ otonari/
     │   ├── database.ts     # PostgreSQL: query(), transaction(), creates tables
     │   ├── http.ts         # read() / write(): steps → answer
     │   ├── allowedKeys.ts  # the keys and values the server accepts (copied from catalog.ts)
+    │   ├── receivePhoto.ts photoFiles.ts   # uploads: receive, store, URL, delete
     │   ├── s3.ts           # puts photos into S3, signed URLs
     │   ├── settings.ts     # everything from .env
     │   ├── limiter.ts      # counts login attempts
@@ -233,7 +238,7 @@ otonari/
     │   ├── user/           # userRoutes  userController  userModel  userView  leaveGroup
     │   ├── item/           # itemRoutes  itemController  itemModel  itemView  removeItem
     │   ├── loan/           # loanRoutes  loanController  loanModel  loanView
-    │   │                   # loanRole (check), receivePhoto (middleware), photoFiles, reminders
+    │   │                   # loanRole (check), reminders
     │   ├── message/        # messageRoutes  messageController  messageModel  messageView (the inbox)
     │   └── demo/           # demoRoutes  demoController (fast-forward)
     ├── uploads/.gitkeep
@@ -266,6 +271,7 @@ CREATE TABLE users (
   group_id INTEGER REFERENCES groups(id),  -- NULL = in no group
   joined_at TIMESTAMPTZ,              -- when they joined that group
   nickname TEXT NOT NULL DEFAULT '',  -- max 20 chars, asked when joining a group
+  avatar TEXT,                        -- profile photo, like handover_photo; NULL = none
   lang TEXT NOT NULL CHECK (lang IN ('en','ja','ja-easy','bn')),
   elder_mode BOOLEAN NOT NULL DEFAULT false,
   is_demo BOOLEAN NOT NULL DEFAULT false, -- seeded; its password is public, so it works only in demo mode
@@ -372,8 +378,10 @@ and `group_id` becomes NULL: they are no longer counted or listed as a member.
 | Method & path | Who | Does | Message created |
 |---|---|---|---|
 | `GET /api/v1/auth/config` | anyone | what the login page can offer `{google_client_id,email_code,demo_mode}` | – |
-| `POST /api/v1/auth/email-codes` `{email,purpose:'register'\|'login',lang}` | anyone | sends a 6-digit code (`409` email taken / `404` no account, `429` too many attempts) | – |
-| `POST /api/v1/auth/email-codes/verify` `{email,code}` / `POST /api/v1/auth/register` `{ticket,password,lang}` | anyone | registering: → `{ticket}` (15 minutes) / → `{token,user,group}` | – |
+| `POST /api/v1/auth/email-codes` `{email,purpose:'register'\|'login'\|'reset',lang}` | anyone | sends a 6-digit code (`409` email taken / `404` no account, `429` too many attempts) | – |
+| `POST /api/v1/auth/email-codes/verify` `{email,code,purpose}` / `POST /api/v1/auth/register` or `/auth/reset-password` `{ticket,password}` | anyone | → `{ticket}` (15 minutes) / new account or new password → `{token,user,group}` | – |
+| `POST /api/v1/me/password` `{current_password,password}` | user | new password (`403` wrong or demo account) | – |
+| `POST /api/v1/me/avatar` (multipart `photo`) / `DELETE /api/v1/me/avatar` | user | profile photo → `{user,group}` | – |
 | `POST /api/v1/auth/login` `{email,password}` / `POST /api/v1/auth/login-with-code` `{email,code}` | anyone | → `{token,user,group}` (`401` wrong, `403` deactivated, `409 {use_google}`) | – |
 | `POST /api/v1/auth/google` `{credential,lang}` | anyone | checks Google's ID token, logs in (creates the account if new) | – |
 | `DELETE /api/v1/auth/session` | user | log out on this device | – |
@@ -382,7 +390,7 @@ and `group_id` becomes NULL: they are no longer counted or listed as a member.
 | `GET /api/v1/groups/:code` | anyone | group preview `{name,type,city,member_count}` | – |
 | `POST /api/v1/groups` `{name,type,city,nickname,lang,create_anyway?}` | user in no group | creates a group with a random, unique join code → `{user,group}`; the creator is its admin. `409 {error,existing_name}` if the same city has a group with the same name (ignoring case and spaces), unless `create_anyway` is `true` | – |
 | `POST /api/v1/groups/:code/members` `{nickname,lang}` | user in no group | join → `{user,group}` | – |
-| `GET /api/v1/me` / `PATCH /api/v1/me` `{lang,elder_mode}` | user | read/update me | – |
+| `GET /api/v1/me` / `PATCH /api/v1/me` `{nickname,lang,elder_mode}` | user | read/update me | – |
 | `DELETE /api/v1/me/group` | member | leave the group, see section 5 (`409` with an accepted or active loan, `403` for seeded demo users) | `decline` → borrowers waiting for my items; `cancel` → lenders of my pending requests |
 | `GET /api/v1/items` | user | items in my group + owner nickname + status + `trusted_only` | – |
 | `GET /api/v1/items/:id` | user (same group) | one item + owner nickname + owner lang (the item page previews the request in the owner's language) + `my_loan_id` + `allowed_for_me` (`false`: trusted neighbors only, and I'm not one) | – |

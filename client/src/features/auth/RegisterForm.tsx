@@ -11,13 +11,15 @@ const MIN_PASSWORD = 8;
 type Step = 'email' | 'code' | 'password';
 
 interface Props {
+  purpose: 'register' | 'reset';
   config: AuthConfig;
   onLogin: (answer: Login) => void;
   onCodeStep: (now: boolean) => void; // the code has the page for itself
 }
 
 // Three steps: the email address, the code that was sent to it, and then the password (twice).
-export default function RegisterForm({ config, onLogin, onCodeStep }: Props) {
+// For a new account, and for a new password ("Forgot password?").
+export default function RegisterForm({ purpose, config, onLogin, onCodeStep }: Props) {
   const { lang } = useUser();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -42,18 +44,19 @@ export default function RegisterForm({ config, onLogin, onCodeStep }: Props) {
   }
 
   async function sendCode() {
-    await api.post('/auth/email-codes', { email, purpose: 'register', lang });
+    await api.post('/auth/email-codes', { email, purpose, lang });
     setStep('code');
   }
 
   async function checkCode(code: string) {
-    const answer = await api.post<RegistrationTicket>('/auth/email-codes/verify', { email, code });
+    const answer = await api.post<RegistrationTicket>('/auth/email-codes/verify', { email, code, purpose });
     setTicket(answer.ticket);
     setStep('password');
   }
 
-  async function register() {
-    onLogin(await api.post<Login>('/auth/register', { ticket, password, lang }));
+  async function savePassword() {
+    const path = purpose === 'register' ? '/auth/register' : '/auth/reset-password';
+    onLogin(await api.post<Login>(path, { ticket, password, lang }));
   }
 
   function handleSubmit(event: FormEvent) {
@@ -62,7 +65,7 @@ export default function RegisterForm({ config, onLogin, onCodeStep }: Props) {
       setProblem('auth.passwordsDiffer');
       return;
     }
-    tryTo(step === 'email' ? sendCode : register, 'auth.startAgain');
+    tryTo(step === 'email' ? sendCode : savePassword, 'auth.startAgain');
   }
 
   function startAgain() {
@@ -70,6 +73,7 @@ export default function RegisterForm({ config, onLogin, onCodeStep }: Props) {
     setProblem(null);
   }
 
+  const finalButton: UiKey = purpose === 'register' ? 'auth.register' : 'profile.changePassword';
   if (!config.email_code) return <p className="notice">{t(lang, 'auth.noEmail')}</p>;
 
   if (step === 'code') {
@@ -125,7 +129,7 @@ export default function RegisterForm({ config, onLogin, onCodeStep }: Props) {
       {problem && <p className="error">{t(lang, problem)}</p>}
       <div className="actions">
         <button type="submit" className="button-primary" disabled={busy}>
-          {t(lang, step === 'email' ? 'auth.sendCode' : 'auth.register')}
+          {t(lang, step === 'email' ? 'auth.sendCode' : finalButton)}
         </button>
         {step !== 'email' && (
           <button type="button" className="button-secondary" onClick={startAgain}>

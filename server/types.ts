@@ -36,6 +36,7 @@ export interface UserRow {
   group_id: number | null;
   joined_at: string | null;
   nickname: string;
+  avatar: string | null;
   lang: Lang;
   elder_mode: boolean;
   is_demo: boolean;

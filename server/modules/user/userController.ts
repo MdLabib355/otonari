@@ -4,9 +4,18 @@ import type { Request } from 'express';
 import { LANGUAGES, isOneOf } from '../../core/allowedKeys.ts';
 import { refuse, reply, toText } from '../../core/http.ts';
 import { findGroupByCode } from '../group/groupModel.ts';
+import { deletePhoto } from '../../core/photoFiles.ts';
 import { hasUnfinishedLoan } from '../loan/loanModel.ts';
 import { leaveGroup } from './leaveGroup.ts';
-import { countActiveGroupAdmins, getUser, joinGroup, setElderMode, setLang } from './userModel.ts';
+import {
+  countActiveGroupAdmins,
+  getUser,
+  joinGroup,
+  setAvatar,
+  setElderMode,
+  setLang,
+  setNickname,
+} from './userModel.ts';
 import { meView } from './userView.ts';
 
 export async function showMe(req: Request) {
@@ -14,15 +23,35 @@ export async function showMe(req: Request) {
 }
 
 export async function updateMe(req: Request) {
-  const { lang, elder_mode }: Record<string, unknown> = req.body ?? {};
+  const { lang, elder_mode, nickname }: Record<string, unknown> = req.body ?? {};
+  const cleanNickname = toText(nickname);
 
   if (lang !== undefined && !isOneOf(LANGUAGES, lang)) return refuse(400, 'Unknown language');
   if (elder_mode !== undefined && !isOneOf([true, false, 0, 1], elder_mode)) {
     return refuse(400, 'elder_mode must be true or false');
   }
 
+  if (nickname !== undefined && (cleanNickname.length < 1 || cleanNickname.length > 20)) {
+    return refuse(400, 'Nickname must be 1 to 20 characters');
+  }
+
+  if (nickname !== undefined) await setNickname(req.user.id, cleanNickname);
   if (lang !== undefined) await setLang(req.user.id, lang);
   if (elder_mode !== undefined) await setElderMode(req.user.id, Boolean(elder_mode));
+  return reply(200, await meView(await getUser(req.user.id)));
+}
+
+// The profile photo. (It has been stored by storePhoto.)
+export async function changeAvatar(req: Request) {
+  const old = (await getUser(req.user.id)).avatar;
+  await setAvatar(req.user.id, req.photo);
+  await deletePhoto(old); // afterwards, so there is never a missing photo
+  return reply(200, await meView(await getUser(req.user.id)));
+}
+
+export async function removeAvatar(req: Request) {
+  await setAvatar(req.user.id, null);
+  await deletePhoto(req.user.avatar);
   return reply(200, await meView(await getUser(req.user.id)));
 }
 

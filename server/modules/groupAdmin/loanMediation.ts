@@ -7,7 +7,7 @@ import { found, query, queryOne, transaction } from '../../core/database.ts';
 import { refuse, type Answer } from '../../core/http.ts';
 import type { LoanRow, UserRow } from '../../types.ts';
 import { setItemStatus } from '../item/itemModel.ts';
-import { photoUrl } from '../loan/photoFiles.ts';
+import { photoUrl } from '../../core/photoFiles.ts';
 import { createMessage } from '../message/messageModel.ts';
 
 interface GroupLoanQueryRow extends LoanRow {
