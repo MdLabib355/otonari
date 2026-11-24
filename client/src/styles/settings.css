@@ -1,6 +1,11 @@
-/* ---------- Settings ---------- */
+/* ---------- Settings & Stats ---------- */
 
-/* The whole row is the tap target, not only the small switch. */
+.settings-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
 .switch-row {
   display: flex;
   align-items: center;
@@ -19,7 +24,6 @@
   margin-top: 2px;
 }
 
-/* A checkbox that looks like a switch. Sizes are in em, so it grows with elder mode. */
 .switch {
   position: relative;
   flex: none;
@@ -30,6 +34,7 @@
   background: var(--muted);
   appearance: none;
   cursor: pointer;
+  transition: background-color 150ms ease;
 }
 
 .switch::before {
@@ -41,6 +46,7 @@
   border-radius: 50%;
   background: #fff;
   content: "";
+  transition: left 150ms ease;
 }
 
 .switch:checked {
@@ -51,7 +57,6 @@
   left: 1.5em;
 }
 
-/* A link that looks like a button */
 .button-link {
   display: flex;
   align-items: center;
@@ -61,8 +66,23 @@
   text-decoration: none;
 }
 
+.button-primary.button-link {
+  color: #fff;
+}
+
 .button-danger {
   border-color: var(--danger);
   color: var(--danger);
   font-weight: 600;
+}
+
+.button-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }

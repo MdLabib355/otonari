@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Lang, LoanSummary, MyLoans } from '../../../../shared/types.ts';
+import type { Lang, LoanStatus, LoanSummary, MyLoans } from '../../../../shared/types.ts';
 import { api } from '../../core/api.ts';
+import { useUser } from '../../core/UserContext.ts';
 import { findItem } from '../../data/catalog.ts';
 import { displayName, formatDate, itemName, t } from '../../i18n/index.ts';
-import { useUser } from '../../core/UserContext.ts';
 
-// All my loans, as borrower and as lender, newest first.
+const OPEN_STATUSES: LoanStatus[] = ['pending', 'accepted', 'active'];
+
+// All my loans, as borrower and as lender, newest first; the ones still going on above the finished ones.
 export default function Loans() {
   const { lang, inbox } = useUser();
   const [loans, setLoans] = useState<MyLoans | null>(null); // { borrowing, lending }, null = still loading
@@ -25,26 +27,40 @@ export default function Loans() {
   }, [unreadIds]);
 
   return (
-    <section>
+    <section className="loans-page">
       <h1>{t(lang, 'loans.title')}</h1>
       {failed && <p className="error">{t(lang, 'common.error')}</p>}
       {!loans && !failed && <p>{t(lang, 'common.loading')}</p>}
       {loans && (
-        <>
+        <div className="loans-vertical">
           <LoanList title={t(lang, 'loans.borrowing')} loans={loans.borrowing} lang={lang} />
           <LoanList title={t(lang, 'loans.lending')} loans={loans.lending} lang={lang} />
-        </>
+        </div>
       )}
     </section>
   );
 }
 
 function LoanList({ title, loans, lang }: { title: string; loans: LoanSummary[]; lang: Lang }) {
+  const unread = loans.reduce((sum, loan) => sum + loan.unread, 0);
+  const open = loans.filter((loan) => OPEN_STATUSES.includes(loan.status));
+  const past = loans.filter((loan) => !OPEN_STATUSES.includes(loan.status));
+
   return (
     <div className="loan-list">
-      <h2>{title}</h2>
-      {loans.length === 0 && <p className="muted">{t(lang, 'loans.empty')}</p>}
-      {loans.map((loan) => (
+      <div className="loan-section-header">
+        <h2>
+          {title} <span className="section-count">{loans.length}</span>
+        </h2>
+        {unread > 0 && <span className="count-badge">{unread}</span>}
+      </div>
+      {loans.length === 0 && <p className="loan-empty-row">{t(lang, 'loans.empty')}</p>}
+      {open.length > 0 && <h3 className="catalog-heading">{t(lang, 'loans.activeSection')}</h3>}
+      {open.map((loan) => (
+        <LoanCard key={loan.id} loan={loan} lang={lang} />
+      ))}
+      {past.length > 0 && <h3 className="catalog-heading">{t(lang, 'loans.pastSection')}</h3>}
+      {past.map((loan) => (
         <LoanCard key={loan.id} loan={loan} lang={lang} />
       ))}
     </div>

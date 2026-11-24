@@ -26,25 +26,26 @@ import {
   showMyLoans,
 } from './loanController.ts';
 import { requireUser } from '../../core/auth.ts';
+import { check, read, write } from '../../core/http.ts';
 import { loanRole } from './loanRole.ts';
 import { receivePhoto } from './receivePhoto.ts';
 
 const router = express.Router();
 
-router.get('/loans', requireUser, showMyLoans);
-router.post('/loans', requireUser, requestLoan);
-router.get('/loans/:id', requireUser, loanRole('participant'), showLoan);
+router.get('/loans', read(requireUser, showMyLoans));
+router.post('/loans', write(requireUser, requestLoan));
+router.get('/loans/:id', read(requireUser, loanRole('participant'), showLoan));
 
-router.post('/loans/:id/accept', requireUser, loanRole('lender'), accept);
-router.post('/loans/:id/decline', requireUser, loanRole('lender'), decline);
-router.post('/loans/:id/cancel', requireUser, loanRole('borrower'), cancel);
-router.post('/loans/:id/received', requireUser, loanRole('borrower'), received);
-router.post('/loans/:id/return-confirmed', requireUser, loanRole('lender'), returnConfirmed);
-router.post('/loans/:id/quick-reply', requireUser, loanRole('participant'), quickReply);
+router.post('/loans/:id/accept', write(requireUser, loanRole('lender'), accept));
+router.post('/loans/:id/decline', write(requireUser, loanRole('lender'), decline));
+router.post('/loans/:id/cancel', write(requireUser, loanRole('borrower'), cancel));
+router.post('/loans/:id/received', write(requireUser, loanRole('borrower'), received));
+router.post('/loans/:id/return-confirmed', write(requireUser, loanRole('lender'), returnConfirmed));
+router.post('/loans/:id/quick-reply', write(requireUser, loanRole('participant'), quickReply));
 
 // Uploads can be slow, so the loan is loaded and checked AFTER the photo has arrived: its status may
 // have changed in the meantime.
-router.post('/loans/:id/handover', requireUser, receivePhoto, loanRole('lender'), handover);
-router.post('/loans/:id/return', requireUser, receivePhoto, loanRole('borrower'), giveBack);
+router.post('/loans/:id/handover', check(requireUser), receivePhoto, write(requireUser, loanRole('lender'), handover));
+router.post('/loans/:id/return', check(requireUser), receivePhoto, write(requireUser, loanRole('borrower'), giveBack));
 
 export default router;

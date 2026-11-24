@@ -1,4 +1,5 @@
 import type { Lang } from '../../../shared/types.ts';
+import { TipIcon } from './Icons.tsx';
 import { tip, type TipKey } from '../i18n/index.ts';
 
 // A small etiquette tip shown at the right moment:  <TipCard lang={lang} tipKey="beforeRequest" />
@@ -6,7 +7,7 @@ import { tip, type TipKey } from '../i18n/index.ts';
 export default function TipCard({ lang, tipKey }: { lang: Lang; tipKey: TipKey }) {
   return (
     <aside className="tip-card">
-      <span aria-hidden="true">💡</span>
+      <TipIcon className="tip-icon" />
       <p>{tip(lang, tipKey)}</p>
     </aside>
   );

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { Lang, Me } from '../../../../shared/types.ts';
 import { api, errorStatus } from '../../core/api.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
+import { BlockIcon, BuildingIcon } from '../../components/Icons.tsx';
 import { LANGUAGES } from '../../data/catalog.ts';
 import { meta, t, type UiKey } from '../../i18n/index.ts';
 import { useMember } from '../../core/UserContext.ts';
@@ -54,62 +55,70 @@ export default function Settings() {
   }
 
   const languageOptions = LANGUAGES.map((language) => ({ value: language, label: meta(language).name }));
+  const GroupIcon = group.type === 'block' ? BlockIcon : BuildingIcon;
   const confirming = leaveTappedAt !== null;
 
   return (
-    <section>
+    <section className="settings-page">
       <h1>{t(lang, 'settings.title')}</h1>
 
-      <div className="field">
-        <p className="label">{t(lang, 'settings.language')}</p>
-        <ChipGroup
-          label={t(lang, 'settings.language')}
-          options={languageOptions}
-          value={lang}
-          onChange={(language) => save({ lang: language })}
-        />
-      </div>
+      <div className="settings-columns">
+        <div className="surface-card">
+          <div className="field">
+            <p className="label">{t(lang, 'settings.language')}</p>
+            <ChipGroup
+              label={t(lang, 'settings.language')}
+              options={languageOptions}
+              value={lang}
+              onChange={(language) => save({ lang: language })}
+            />
+          </div>
 
-      <div className="field">
-        <label className="switch-row">
-          <span>
-            <strong>{t(lang, 'settings.elderMode')}</strong>
-            <span className="hint">{t(lang, 'settings.elderModeHint')}</span>
-          </span>
-          <input
-            type="checkbox"
-            role="switch"
-            className="switch"
-            checked={user.elder_mode}
-            onChange={() => save({ elder_mode: !user.elder_mode })}
-          />
-        </label>
-        {failed && <p className="error">{t(lang, 'common.error')}</p>}
-      </div>
-
-      <div className="field">
-        <p className="label">{t(lang, 'settings.group')}</p>
-        <div className="group-preview">
-          <div>
-            <strong>{group.name}</strong>
-            <p>{t(lang, `groupType.${group.type}`)}</p>
+          <div className="field">
+            <label className="switch-row">
+              <span>
+                <strong>{t(lang, 'settings.elderMode')}</strong>
+                <span className="hint">{t(lang, 'settings.elderModeHint')}</span>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="switch"
+                checked={user.elder_mode}
+                onChange={() => save({ elder_mode: !user.elder_mode })}
+              />
+            </label>
+            {failed && <p className="error">{t(lang, 'common.error')}</p>}
           </div>
         </div>
-      </div>
 
-      <div className="actions">
-        <Link to="/poster" className="button-secondary button-link">
-          {t(lang, 'settings.poster')}
-        </Link>
-        <button
-          type="button"
-          className={confirming ? 'button-secondary button-danger' : 'button-secondary'}
-          disabled={leaving}
-          onClick={tapLeave}
-        >
-          {t(lang, confirming ? 'settings.leaveConfirm' : 'settings.leave')}
-        </button>
-        {leaveProblem && <p className="error">{t(lang, leaveProblem)}</p>}
+        <div className="surface-card">
+          <div className="field">
+            <p className="label">{t(lang, 'settings.group')}</p>
+            <div className="group-preview">
+              <GroupIcon className="group-icon-svg" />
+              <div>
+                <strong>{group.name}</strong>
+                <p>{t(lang, `groupType.${group.type}`)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="actions">
+            <Link to="/poster" className="button-secondary button-link">
+              {t(lang, 'settings.poster')}
+            </Link>
+            <button
+              type="button"
+              className={confirming ? 'button-secondary button-danger' : 'button-secondary'}
+              disabled={leaving}
+              onClick={tapLeave}
+            >
+              {t(lang, confirming ? 'settings.leaveConfirm' : 'settings.leave')}
+            </button>
+            {leaveProblem && <p className="error">{t(lang, leaveProblem)}</p>}
+          </div>
+        </div>
       </div>
     </section>
   );

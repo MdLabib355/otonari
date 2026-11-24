@@ -2,6 +2,19 @@
   "meta": { "lang": "en", "name": "English", "locale": "en-US", "speech": "en-US" },
 
   "ui": {
+    "shelf.addFirst": "Share an item",
+    "shelf.searchPlaceholder": "Search items…",
+    "shelf.availableOnly": "Available only",
+    "loans.activeSection": "Active & waiting",
+    "loans.pastSection": "Past history",
+    "loan.handoverSummary": "Meet at {spot} · {start}",
+    "notifications.title": "Notifications",
+    "notifications.empty": "You're all caught up.",
+    "notifications.markAllRead": "Mark all read",
+    "common.cancel": "Cancel",
+    "common.close": "Close",
+    "shelf.noMatch": "No items match.",
+
     "appName": "Otonari",
     "tagline": "Borrow from next door — in your own language.",
 

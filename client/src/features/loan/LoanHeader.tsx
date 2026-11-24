@@ -1,5 +1,6 @@
 import type { Lang, Loan, LoanItem, Person } from '../../../../shared/types.ts';
 import { findItem } from '../../data/catalog.ts';
+import LoanStepper from './LoanStepper.tsx';
 import { displayName, formatDate, itemName, t } from '../../i18n/index.ts';
 
 interface Props {
@@ -25,6 +26,7 @@ export default function LoanHeader({ loan, item, other, lang }: Props) {
         {t(lang, 'loan.period', { start: formatDate(lang, loan.start_at), end: formatDate(lang, loan.end_at) })}
       </p>
       <span className={`badge badge-${loan.status}`}>{t(lang, `status.${loan.status}`)}</span>
+      <LoanStepper status={loan.status} lang={lang} />
     </>
   );
 }

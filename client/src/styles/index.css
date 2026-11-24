@@ -1,5 +1,9 @@
-/* The order matters: later files win (e.g. elder mode and printing must stay at the end). */
+/* The order matters: later files win (wide screens, elder mode and printing must stay at the end). */
 @import './base.css';
+@import './icons.css';
+@import './shell.css';
+@import './header.css';
+@import './bottom-nav.css';
 @import './controls.css';
 @import './join.css';
 @import './shared.css';
@@ -11,6 +15,10 @@
 @import './loan-page.css';
 @import './settings.css';
 @import './poster.css';
+@import './details.css';
+@import './dialog.css';
+@import './portal-card.css';
+@import './wide.css';
 @import './elder.css';
 @import './narrow.css';
 @import './print.css';

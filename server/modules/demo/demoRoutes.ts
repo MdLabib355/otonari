@@ -6,11 +6,12 @@
 import express from 'express';
 import { demoLogin, fastForward, showDemoUsers } from './demoController.ts';
 import { requireUser } from '../../core/auth.ts';
+import { read, write } from '../../core/http.ts';
 
 const router = express.Router();
 
-router.get('/demo/users', showDemoUsers);
-router.post('/demo/login', demoLogin);
-router.post('/demo/fast-forward/:loanId', requireUser, fastForward);
+router.get('/demo/users', read(showDemoUsers));
+router.post('/demo/login', read(demoLogin));
+router.post('/demo/fast-forward/:loanId', write(requireUser, fastForward));
 
 export default router;

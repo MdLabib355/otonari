@@ -1,91 +1,63 @@
 // The neighborhood shelf, and managing my own items.
 
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
 import { DURATIONS, ITEM_KEYS, SPOT_KEYS, isOneOf } from '../../core/allowedKeys.ts';
-import {
-  createItem,
-  findItem,
-  findItemDetails,
-  getMyItem,
-  listItemsOf,
-  listShelf,
-  setTrustedOnly,
-} from './itemModel.ts';
-import { removeItem } from './removeItem.ts';
+import { refuse, reply, toId } from '../../core/http.ts';
 import { findOpenLoan } from '../loan/loanModel.ts';
 import { isTrusted } from '../user/userModel.ts';
-import { itemDetailsView, myItemView, shelfItemView } from './itemView.ts';
+import { createItem, findItem, findItemWithOwner, listItemsOf, listShelf, setTrustedOnly } from './itemModel.ts';
+import { itemDetailsView } from './itemView.ts';
+import { removeItem } from './removeItem.ts';
 
-export function showShelf(req: Request, res: Response) {
-  res.json(listShelf(req.user.group_id).map(shelfItemView));
+export async function showShelf(req: Request) {
+  return reply(200, await listShelf(req.user.group_id));
 }
 
-export function showMyItems(req: Request, res: Response) {
-  res.json(listItemsOf(req.user.id).map(myItemView));
+export async function showMyItems(req: Request) {
+  return reply(200, await listItemsOf(req.user.id));
 }
 
-export function showItem(req: Request, res: Response) {
-  const item = findItemDetails(Number(req.params.id));
-  if (!item) {
-    return res.status(404).json({ error: 'Item not found' });
-  }
-  if (item.group_id !== req.user.group_id) {
-    return res.status(403).json({ error: 'Not in your neighborhood' });
-  }
-  const myLoanId = findOpenLoan(item.id, req.user.id)?.id ?? null;
-  const allowedForMe = item.trusted_only === 0 || isTrusted(req.user.id);
-  res.json(itemDetailsView(item, myLoanId, allowedForMe));
+export async function showItem(req: Request) {
+  const item = await findItemWithOwner(toId(req.params.id));
+  if (!item) return refuse(404, 'Item not found');
+  if (item.group_id !== req.user.group_id) return refuse(403, 'Not in your neighborhood');
+
+  const myLoan = await findOpenLoan(item.id, req.user.id);
+  const allowedForMe = !item.trusted_only || (await isTrusted(req.user.id));
+  return reply(200, itemDetailsView(item, myLoan?.id ?? null, allowedForMe));
 }
 
-export function addItem(req: Request, res: Response) {
+export async function addItem(req: Request) {
   const { item_key, max_days, spot, trusted_only = false }: Record<string, unknown> = req.body ?? {};
 
   // Only keys from the catalog: that is what makes every item name translatable.
-  if (!isOneOf(ITEM_KEYS, item_key)) {
-    return res.status(400).json({ error: 'Unknown item' });
-  }
-  if (!isOneOf(DURATIONS, max_days)) {
-    return res.status(400).json({ error: `max_days must be one of ${DURATIONS.join(', ')}` });
-  }
-  if (!isOneOf(SPOT_KEYS, spot)) {
-    return res.status(400).json({ error: 'Unknown handover spot' });
-  }
-  if (typeof trusted_only !== 'boolean') {
-    return res.status(400).json({ error: 'trusted_only must be true or false' });
-  }
+  if (!isOneOf(ITEM_KEYS, item_key)) return refuse(400, 'Unknown item');
+  if (!isOneOf(DURATIONS, max_days)) return refuse(400, `max_days must be one of ${DURATIONS.join(', ')}`);
+  if (!isOneOf(SPOT_KEYS, spot)) return refuse(400, 'Unknown handover spot');
+  if (typeof trusted_only !== 'boolean') return refuse(400, 'trusted_only must be true or false');
 
-  const itemId = createItem(req.user.id, req.user.group_id, item_key, max_days, spot, trusted_only);
-  res.status(201).json(myItemView(getMyItem(itemId)));
+  return reply(201, await createItem(req.user.id, req.user.group_id, item_key, max_days, spot, trusted_only));
 }
 
 // Requests that are already waiting stay: the owner can still answer them with No.
-export function updateItem(req: Request, res: Response) {
+export async function updateItem(req: Request) {
   const trustedOnly: unknown = req.body?.trusted_only;
-  if (typeof trustedOnly !== 'boolean') {
-    return res.status(400).json({ error: 'trusted_only must be true or false' });
-  }
-  const item = findItem(Number(req.params.id));
-  if (!item) {
-    return res.status(404).json({ error: 'Item not found' });
-  }
-  if (item.owner_id !== req.user.id) {
-    return res.status(403).json({ error: 'Not your item' });
-  }
-  setTrustedOnly(item.id, trustedOnly);
-  res.status(204).end();
+  if (typeof trustedOnly !== 'boolean') return refuse(400, 'trusted_only must be true or false');
+
+  const item = await findItem(toId(req.params.id));
+  if (!item) return refuse(404, 'Item not found');
+  if (item.owner_id !== req.user.id) return refuse(403, 'Not your item');
+
+  await setTrustedOnly(item.id, trustedOnly);
+  return reply(204);
 }
 
-export function deleteItem(req: Request, res: Response) {
-  const item = findItem(Number(req.params.id));
-  if (!item) {
-    return res.status(404).json({ error: 'Item not found' });
-  }
-  if (item.owner_id !== req.user.id) {
-    return res.status(403).json({ error: 'Not your item' });
-  }
-  if (item.status !== 'available') {
-    return res.status(409).json({ error: 'Items that are reserved or lent cannot be removed' });
-  }
-  removeItem(item.id);
-  res.status(204).end();
+export async function deleteItem(req: Request) {
+  const item = await findItem(toId(req.params.id));
+  if (!item) return refuse(404, 'Item not found');
+  if (item.owner_id !== req.user.id) return refuse(403, 'Not your item');
+  if (item.status !== 'available') return refuse(409, 'Items that are reserved or lent cannot be removed');
+
+  await removeItem(item.id);
+  return reply(204);
 }

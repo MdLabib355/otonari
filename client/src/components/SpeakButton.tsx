@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Lang } from '../../../shared/types.ts';
+import { SpeakerIcon } from './Icons.tsx';
 import { meta, t } from '../i18n/index.ts';
 
 // 🔊 Reads a text aloud with the browser's own voices. Hidden if it has no voice for the language.
@@ -20,7 +21,7 @@ export default function SpeakButton({ lang, text }: { lang: Lang; text: string }
 
   return (
     <button type="button" className="speak-button" aria-label={t(lang, 'speak.button')} onClick={() => speak(voice)}>
-      <span aria-hidden="true">🔊</span>
+      <SpeakerIcon />
       <span className="speak-text">{t(lang, 'speak.button')}</span>
     </button>
   );

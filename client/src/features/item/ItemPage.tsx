@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { ItemDetails } from '../../../../shared/types.ts';
+import { ArrowLeftIcon, LockIcon } from '../../components/Icons.tsx';
 import { api, errorStatus } from '../../core/api.ts';
 import { findItem } from '../../data/catalog.ts';
 import { displayName, itemName, spotName, t } from '../../i18n/index.ts';
@@ -27,20 +28,20 @@ export default function ItemPage() {
 
   const backLink = (
     <Link to="/" className="back-link">
-      ← {t(lang, 'common.back')}
+      <ArrowLeftIcon className="icon-sm" /> {t(lang, 'common.back')}
     </Link>
   );
 
   if (problem === 'missing') {
     return (
-      <section>
+      <section className="narrow-page surface-card">
         {backLink}
         <p className="notice">{t(lang, 'borrow.notAvailable')}</p>
       </section>
     );
   }
-  if (problem === 'failed') return <p className="error">{t(lang, 'common.error')}</p>;
-  if (!item) return <p>{t(lang, 'common.loading')}</p>;
+  if (problem === 'failed') return <p className="error narrow-page">{t(lang, 'common.error')}</p>;
+  if (!item) return <p className="narrow-page">{t(lang, 'common.loading')}</p>;
 
   const mine = item.owner_id === user.id;
   const alreadyAsked = Boolean(item.my_loan_id);
@@ -48,7 +49,7 @@ export default function ItemPage() {
   const maxDays = item.max_days === 1 ? t(lang, 'item.maxDay') : t(lang, 'item.maxDays', { n: item.max_days });
 
   return (
-    <section>
+    <section className="narrow-page surface-card">
       {backLink}
       <header className="item-header">
         <span className="item-header-emoji" aria-hidden="true">
@@ -80,7 +81,13 @@ interface AskProps {
 function AskForItem({ item, onRefused }: AskProps) {
   const { lang } = useUser();
   if (item.status !== 'available') return <p className="notice">{t(lang, 'borrow.notAvailable')}</p>;
-  if (!item.allowed_for_me) return <p className="notice">🔒 {t(lang, 'trust.explain')}</p>;
+  if (!item.allowed_for_me) {
+    return (
+      <p className="notice inline-icon-text">
+        <LockIcon className="icon-sm" /> {t(lang, 'trust.explain')}
+      </p>
+    );
+  }
   return <BorrowForm item={item} onRefused={onRefused} />;
 }
 

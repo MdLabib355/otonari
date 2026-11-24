@@ -6,10 +6,11 @@
 import express from 'express';
 import { readMessages, showInbox } from './messageController.ts';
 import { requireUser } from '../../core/auth.ts';
+import { read, write } from '../../core/http.ts';
 
 const router = express.Router();
 
-router.get('/inbox', requireUser, showInbox);
-router.post('/inbox/read', requireUser, readMessages);
+router.get('/inbox', read(requireUser, showInbox));
+router.post('/inbox/read', write(requireUser, readMessages));
 
 export default router;

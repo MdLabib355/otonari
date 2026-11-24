@@ -2,11 +2,14 @@
 // allowed right now; loanModel.ts then saves it and sends the matching phrase to the other person.
 // (Who may do it is checked before, by loanRole.ts, which also fills req.loan.)
 
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
 import type { LoanStatus, MyLoans } from '../../../shared/types.ts';
 import { DURATIONS, QUICK_REPLY_KEYS, isOneOf } from '../../core/allowedKeys.ts';
 import { found } from '../../core/database.ts';
+import { refuse, reply, toId } from '../../core/http.ts';
 import { findItem, getItem } from '../item/itemModel.ts';
+import { createMessage } from '../message/messageModel.ts';
+import { isTrusted } from '../user/userModel.ts';
 import {
   acceptLoan,
   cancelLoan,
@@ -20,63 +23,50 @@ import {
   saveHandoverPhoto,
   saveReturnPhoto,
 } from './loanModel.ts';
-import { createMessage } from '../message/messageModel.ts';
-import { isTrusted } from '../user/userModel.ts';
-import { savePhoto } from './photoFiles.ts';
 import { loanDetailsView } from './loanView.ts';
+import { savePhoto } from './photoFiles.ts';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 // Once the lender has said yes (the client shows the quick replies at the same moments).
 const QUICK_REPLY_STATUSES: LoanStatus[] = ['accepted', 'active', 'returned'];
 
-export function showMyLoans(req: Request, res: Response) {
-  const answer: MyLoans = { borrowing: listBorrowing(req.user.id), lending: listLending(req.user.id) };
-  res.json(answer);
+export async function showMyLoans(req: Request) {
+  const answer: MyLoans = {
+    borrowing: await listBorrowing(req.user.id),
+    lending: await listLending(req.user.id),
+  };
+  return reply(200, answer);
 }
 
-export function showLoan(req: Request, res: Response) {
-  res.json(loanDetailsView(req.loan.id, req.user.id));
+export async function showLoan(req: Request) {
+  return reply(200, await loanDetailsView(req.loan.id, req.user.id));
 }
 
-export function requestLoan(req: Request, res: Response) {
+export async function requestLoan(req: Request) {
   const { item_id, start_at, end_at }: Record<string, unknown> = req.body ?? {};
 
-  const itemId = Number(item_id);
-  if (!Number.isInteger(itemId)) {
-    return res.status(400).json({ error: 'item_id must be a number' });
-  }
-  const item = findItem(itemId);
-  if (!item) {
-    return res.status(404).json({ error: 'Item not found' });
-  }
-  if (item.group_id !== req.user.group_id) {
-    return res.status(403).json({ error: 'Not in your neighborhood' });
-  }
-  if (item.owner_id === req.user.id) {
-    return res.status(403).json({ error: "You can't borrow your own item" });
-  }
+  if (!Number.isInteger(Number(item_id))) return refuse(400, 'item_id must be a number');
+  const item = await findItem(toId(item_id));
+  if (!item) return refuse(404, 'Item not found');
+  if (item.group_id !== req.user.group_id) return refuse(403, 'Not in your neighborhood');
+  if (item.owner_id === req.user.id) return refuse(403, "You can't borrow your own item");
+
   // Checked before the item status: once my request is accepted, the item is reserved (for me).
-  const openLoan = findOpenLoan(item.id, req.user.id);
-  if (openLoan) {
-    return res.status(409).json({ error: 'You already asked for this item', loan_id: openLoan.id });
-  }
-  if (item.status !== 'available') {
-    return res.status(409).json({ error: 'This item is not available right now' });
-  }
-  if (item.trusted_only === 1 && !isTrusted(req.user.id)) {
-    return res.status(403).json({ error: 'Only for neighbors who have returned something on time' });
+  const openLoan = await findOpenLoan(item.id, req.user.id);
+  if (openLoan) return reply(409, { error: 'You already asked for this item', loan_id: openLoan.id });
+  if (item.status !== 'available') return refuse(409, 'This item is not available right now');
+  if (item.trusted_only && !(await isTrusted(req.user.id))) {
+    return refuse(403, 'Only for neighbors who have returned something on time');
   }
 
   const start = typeof start_at === 'string' ? Date.parse(start_at) : NaN;
   const end = typeof end_at === 'string' ? Date.parse(end_at) : NaN;
   const problem = problemWithDates(start, end, item.max_days);
-  if (problem) {
-    return res.status(400).json({ error: problem });
-  }
+  if (problem) return refuse(400, problem);
 
-  const loanId = createLoan(item, req.user.id, new Date(start).toISOString(), new Date(end).toISOString());
-  res.status(201).json(loanDetailsView(loanId, req.user.id));
+  const loanId = await createLoan(item, req.user.id, new Date(start).toISOString(), new Date(end).toISOString());
+  return reply(201, await loanDetailsView(loanId, req.user.id));
 }
 
 // The tap-only picker always asks for whole days (1, 2, 3 or 7), never more than the owner allows,
@@ -94,97 +84,83 @@ function problemWithDates(start: number, end: number, maxDays: number): string |
   return null;
 }
 
-export function accept(req: Request, res: Response) {
+export async function accept(req: Request) {
   const loan = req.loan;
-  if (loan.status !== 'pending') {
-    return res.status(409).json({ error: 'Only a waiting request can be accepted' });
-  }
-  if (Date.parse(loan.end_at) <= Date.now()) {
-    return res.status(409).json({ error: 'The dates of this request are over' });
-  }
-  const item = getItem(loan.item_id);
-  if (item.status !== 'available' || item.removed_at) {
-    return res.status(409).json({ error: 'The item is not available' });
-  }
-  acceptLoan(loan);
-  res.json(loanDetailsView(loan.id, req.user.id));
+  if (loan.status !== 'pending') return refuse(409, 'Only a waiting request can be accepted');
+  if (Date.parse(loan.end_at) <= Date.now()) return refuse(409, 'The dates of this request are over');
+  const item = await getItem(loan.item_id);
+  if (item.status !== 'available' || item.removed_at) return refuse(409, 'The item is not available');
+
+  await acceptLoan(loan);
+  return showLoan(req);
 }
 
 // No (reason 'default'), or "No – I need it those days" (reason 'busy').
-export function decline(req: Request, res: Response) {
-  const loan = req.loan;
+export async function decline(req: Request) {
   const reason: unknown = req.body?.reason ?? 'default';
-  if (!isOneOf(['default', 'busy'], reason)) {
-    return res.status(400).json({ error: "reason must be 'default' or 'busy'" });
-  }
-  if (loan.status !== 'pending') {
-    return res.status(409).json({ error: 'Only a waiting request can be declined' });
-  }
-  declineLoan(loan, reason === 'busy' ? 'declineBusy' : 'decline');
-  res.json(loanDetailsView(loan.id, req.user.id));
+  if (!isOneOf(['default', 'busy'], reason)) return refuse(400, "reason must be 'default' or 'busy'");
+  if (req.loan.status !== 'pending') return refuse(409, 'Only a waiting request can be declined');
+
+  await declineLoan(req.loan, reason === 'busy' ? 'declineBusy' : 'decline');
+  return showLoan(req);
 }
 
 // The borrower changes their mind (only while nobody has answered yet).
-export function cancel(req: Request, res: Response) {
-  const loan = req.loan;
-  if (loan.status !== 'pending') {
-    return res.status(409).json({ error: 'Only a waiting request can be cancelled' });
-  }
-  cancelLoan(loan);
-  res.json(loanDetailsView(loan.id, req.user.id));
+export async function cancel(req: Request) {
+  if (req.loan.status !== 'pending') return refuse(409, 'Only a waiting request can be cancelled');
+
+  await cancelLoan(req.loan);
+  return showLoan(req);
 }
 
 // Handover, part 1: the lender's condition photo.
-export function handover(req: Request, res: Response) {
+export async function handover(req: Request) {
   const loan = req.loan;
   if (loan.status !== 'accepted' || loan.handover_photo) {
-    return res.status(409).json({ error: 'The handover photo is taken once, after accepting' });
+    return refuse(409, 'The handover photo is taken once, after accepting');
   }
-  saveHandoverPhoto(loan, savePhoto(found(req.file))); // receivePhoto has checked that there is one
-  res.json(loanDetailsView(loan.id, req.user.id));
+  await saveHandoverPhoto(loan, savePhoto(found(req.file))); // receivePhoto has checked that there is one
+  return showLoan(req);
 }
 
 // Handover, part 2: the borrower has the item.
-export function received(req: Request, res: Response) {
+export async function received(req: Request) {
   const loan = req.loan;
   if (loan.status !== 'accepted' || !loan.handover_photo) {
-    return res.status(409).json({ error: 'Only possible after the handover photo' });
+    return refuse(409, 'Only possible after the handover photo');
   }
-  receiveItem(loan);
-  res.json(loanDetailsView(loan.id, req.user.id));
+  await receiveItem(loan);
+  return showLoan(req);
 }
 
 // Return, part 1: the borrower's photo of the item they bring back.
-export function giveBack(req: Request, res: Response) {
+export async function giveBack(req: Request) {
   const loan = req.loan;
   if (loan.status !== 'active' || loan.return_photo) {
-    return res.status(409).json({ error: 'The return photo is taken once, while borrowing' });
+    return refuse(409, 'The return photo is taken once, while borrowing');
   }
-  saveReturnPhoto(loan, savePhoto(found(req.file))); // receivePhoto has checked that there is one
-  res.json(loanDetailsView(loan.id, req.user.id));
+  await saveReturnPhoto(loan, savePhoto(found(req.file))); // receivePhoto has checked that there is one
+  return showLoan(req);
 }
 
 // Return, part 2: the lender has it back.
-export function returnConfirmed(req: Request, res: Response) {
+export async function returnConfirmed(req: Request) {
   const loan = req.loan;
-  if (loan.status !== 'active' || !loan.return_photo) {
-    return res.status(409).json({ error: 'Only possible after the return photo' });
-  }
-  confirmReturn(loan);
-  res.json(loanDetailsView(loan.id, req.user.id));
+  if (loan.status !== 'active' || !loan.return_photo) return refuse(409, 'Only possible after the return photo');
+
+  await confirmReturn(loan);
+  return showLoan(req);
 }
 
 // One of the five fixed quick replies, to the other person. Only these keys: never free text.
-export function quickReply(req: Request, res: Response) {
+export async function quickReply(req: Request) {
   const loan = req.loan;
   const phraseKey: unknown = req.body?.phrase_key;
-  if (!isOneOf(QUICK_REPLY_KEYS, phraseKey)) {
-    return res.status(400).json({ error: 'Unknown quick reply' });
-  }
+  if (!isOneOf(QUICK_REPLY_KEYS, phraseKey)) return refuse(400, 'Unknown quick reply');
   if (!QUICK_REPLY_STATUSES.includes(loan.status)) {
-    return res.status(409).json({ error: 'Quick replies are possible once the request is accepted' });
+    return refuse(409, 'Quick replies are possible once the request is accepted');
   }
   const otherId = loan.borrower_id === req.user.id ? loan.lender_id : loan.borrower_id;
-  createMessage(loan, req.user.id, otherId, phraseKey);
-  res.json(loanDetailsView(loan.id, req.user.id));
+  await createMessage(loan, req.user.id, otherId, phraseKey);
+  return showLoan(req);
 }

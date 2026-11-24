@@ -6,12 +6,13 @@
 import express from 'express';
 import { join, leave, showMe, updateMe } from './userController.ts';
 import { requireUser } from '../../core/auth.ts';
+import { read, write } from '../../core/http.ts';
 
 const router = express.Router();
 
-router.post('/join', join);
-router.get('/me', requireUser, showMe);
-router.patch('/me', requireUser, updateMe);
-router.post('/leave', requireUser, leave);
+router.post('/join', write(join));
+router.get('/me', read(requireUser, showMe));
+router.patch('/me', write(requireUser, updateMe));
+router.post('/leave', write(requireUser, leave));
 
 export default router;

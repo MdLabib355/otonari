@@ -1,21 +1,19 @@
-/* ---------- Elder mode (<body class="elder">) ---------- */
+/* ---------- Elder Mode (<body class="elder">) ---------- */
 
-/* Text sizes are in em and tap targets use --tap, so these two values scale almost everything. */
 body.elder {
   --tap: 64px;
   font-size: 22px;
-  overflow-wrap: anywhere; /* safety net: on a very narrow phone a long word breaks, but never sticks out */
+  overflow-wrap: anywhere;
 }
 
-/* More space: easier to read, and neighboring buttons are not tapped by accident. */
 body.elder .page {
-  padding: 24px 16px;
+  padding: 24px 16px 36px;
 }
 
 body.elder .field,
 body.elder .step,
 body.elder .quick-replies {
-  margin-bottom: 36px;
+  margin-bottom: 32px;
 }
 
 body.elder .label {
@@ -46,9 +44,8 @@ body.elder .chip {
   padding: 10px 20px;
 }
 
-/* Big words need more width: fewer columns, and buttons below the text instead of beside it. */
 body.elder .item-grid {
-  grid-template-columns: repeat(auto-fill, minmax(8em, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(9.5em, 1fr));
 }
 
 body.elder .catalog-grid {
@@ -61,7 +58,7 @@ body.elder .banner {
 }
 
 body.elder .my-item-text {
-  flex-basis: 8em; /* if the badge doesn't fit beside that, it moves to the next line */
+  flex-basis: 8em;
 }
 
 body.elder .my-item .button-secondary {
@@ -72,7 +69,38 @@ body.elder .badge {
   white-space: normal;
 }
 
-/* Read aloud: a big button with text, below the message (and beside "Open" in the banner) */
+body.elder .shelf-search-row,
+body.elder .page-header-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+body.elder .app-header-inner {
+  height: auto;
+  min-height: 74px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+body.elder .bottom-nav a {
+  height: 76px;
+}
+
+body.elder .search-input,
+body.elder .available-toggle,
+body.elder .filter-chip {
+  height: auto;
+  min-height: var(--tap);
+}
+
+body.elder .available-toggle {
+  align-self: flex-start;
+}
+
+body.elder .filter-strip {
+  flex-wrap: wrap;
+}
+
 body.elder .speak-button {
   gap: 10px;
   width: auto;
@@ -82,6 +110,7 @@ body.elder .speak-button {
   background: var(--surface);
   color: var(--accent);
   font-weight: 600;
+  opacity: 1;
 }
 
 body.elder .speak-text {
@@ -106,4 +135,34 @@ body.elder .banner-buttons {
 body.elder .banner-buttons > * {
   flex: auto;
   justify-content: center;
+}
+
+body.elder .modal-footer {
+  flex-direction: column-reverse;
+  align-items: stretch;
+}
+
+body.elder .icon-close-btn,
+body.elder .search-clear-btn {
+  min-width: var(--tap);
+  min-height: var(--tap);
+}
+
+body.elder .desktop-nav-link {
+  min-height: var(--tap);
+}
+
+body.elder .header-user-pill {
+  min-height: var(--tap);
+}
+
+body.elder .loan-stepper {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Not enough room for the group name beside the tabs. */
+@media (min-width: 768px) and (max-width: 959px) {
+  body.elder .header-group {
+    display: none;
+  }
 }

@@ -4,11 +4,12 @@ import type { DemoUser, GroupPreview, Login } from '../../../../shared/types.ts'
 import { api, errorStatus } from '../../core/api.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
 import NewGroup from './NewGroup.tsx';
+import { BlockIcon, BuildingIcon, UsersIcon } from '../../components/Icons.tsx';
 import { LANGUAGES } from '../../data/catalog.ts';
 import { meta, t } from '../../i18n/index.ts';
 import { useUser } from '../../core/UserContext.ts';
 
-const GROUP_ICONS = { building: '🏢', block: '🏘️' };
+const GROUP_ICONS = { building: BuildingIcon, block: BlockIcon };
 
 // The join screen. The QR code on the poster opens /join?code=SAKURA-2611.
 // No account, no password: pick a nickname and a language, and you're in.
@@ -90,8 +91,10 @@ export default function Join() {
   // With a valid code, only offer the neighbors of that group.
   const visibleDemoUsers = preview ? demoUsers.filter((user) => user.group_code === cleanCode) : demoUsers;
 
+  const GroupIcon = GROUP_ICONS[preview?.type ?? 'building'];
+
   return (
-    <section>
+    <section className="narrow-page surface-card">
       <header className="brand">
         <p className="brand-name">{t(lang, 'appName')}</p>
         <p className="brand-tagline">{t(lang, 'tagline')}</p>
@@ -117,13 +120,11 @@ export default function Join() {
           <div aria-live="polite">
             {preview && (
               <div className="group-preview">
-                <span className="group-icon" aria-hidden="true">
-                  {GROUP_ICONS[preview.type]}
-                </span>
+                <GroupIcon className="group-icon-svg" />
                 <div>
                   <strong>{t(lang, 'join.groupFound', { group: preview.name, city: preview.city })}</strong>
-                  <p>
-                    {t(lang, `groupType.${preview.type}`)} · 👥 {preview.memberCount}
+                  <p className="inline-icon-text">
+                    {t(lang, `groupType.${preview.type}`)} · <UsersIcon className="icon-xs" /> {preview.memberCount}
                   </p>
                 </div>
               </div>

@@ -2,6 +2,19 @@
   "meta": { "lang": "ja-easy", "name": "やさしい にほんご", "locale": "ja-JP", "speech": "ja-JP" },
 
   "ui": {
+    "shelf.addFirst": "ものを だす",
+    "shelf.searchPlaceholder": "ものを さがす…",
+    "shelf.availableOnly": "かせます だけ",
+    "loans.activeSection": "いまの かりる・かす",
+    "loans.pastSection": "まえの きろく",
+    "loan.handoverSummary": "あう ばしょ：{spot}・{start}",
+    "notifications.title": "おしらせ",
+    "notifications.empty": "あたらしい おしらせは ありません。",
+    "notifications.markAllRead": "ぜんぶ よんだ",
+    "common.cancel": "やめる",
+    "common.close": "とじる",
+    "shelf.noMatch": "ありません。",
+
     "tagline": "となりの ひとに かりる。じぶんの ことばで。",
     "nav.shelf": "たな",
     "nav.myItems": "かせる もの",

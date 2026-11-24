@@ -4,12 +4,13 @@ import type { InboxMessage, Lang } from '../../../../shared/types.ts';
 import { findItem } from '../../data/catalog.ts';
 import { displayName, renderPhrase, t } from '../../i18n/index.ts';
 import { useUser } from '../../core/UserContext.ts';
+import { BellIcon } from '../../components/Icons.tsx';
 import SpeakButton from '../../components/SpeakButton.tsx';
 import TrustLine from '../../components/TrustLine.tsx';
 
 const POLL_EVERY_MS = 5000;
 
-// The new-message banner at the top of every page. It asks the server for unread messages every
+// The new-message banner, below the header of every page. It asks the server for unread messages every
 // 5 seconds (simple polling) and shows the newest one in my language.
 // "Open" goes to the loan page, which marks that loan's messages as read.
 export default function Banner() {
@@ -27,7 +28,7 @@ export default function Banner() {
 
   // The empty "status" box is always there, so screen readers notice when a message appears in it.
   return (
-    <div className="banner-area" role="status">
+    <div className="alerts-container" role="status">
       {message && <BannerMessage message={message} lang={lang} />}
     </div>
   );
@@ -38,7 +39,7 @@ function BannerMessage({ message, lang }: { message: InboxMessage; lang: Lang })
   const isReminder = message.from_nickname === null; // reminders have no sender
   const title =
     message.from_nickname === null
-      ? `🔔 ${t(lang, 'banner.reminder')}`
+      ? t(lang, 'banner.reminder')
       : t(lang, 'banner.new', { name: displayName(lang, message.from_nickname) });
 
   return (
@@ -47,7 +48,10 @@ function BannerMessage({ message, lang }: { message: InboxMessage; lang: Lang })
         {findItem(message.item_key)?.emoji}
       </span>
       <div className="banner-text">
-        <strong>{title}</strong>
+        <strong className="inline-icon-text">
+          {isReminder && <BellIcon className="icon-sm" />}
+          {title}
+        </strong>
         <p>{text}</p>
         {message.borrower_trust && <TrustLine lang={lang} trust={message.borrower_trust} />}
       </div>

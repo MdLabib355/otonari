@@ -1,0 +1,123 @@
+/* ---------- Responsive Breakpoints (Tablet & Desktop) ---------- */
+
+@media (min-width: 768px) {
+  .desktop-nav {
+    display: flex;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .app-header-inner {
+    padding: 0 24px;
+    min-height: 58px;
+  }
+
+  .header-group-name {
+    max-width: 170px;
+  }
+
+  .alerts-container {
+    padding: 12px 24px 0;
+  }
+
+  .page {
+    padding: 24px 24px 44px;
+  }
+
+  .surface-card {
+    padding: 26px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .page-header-row {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .page-header-row .subtitle {
+    margin-bottom: 0;
+  }
+
+  .filter-strip {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .item-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .settings-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+    align-items: start;
+  }
+}
+
+@media (min-width: 960px) {
+  .header-user-pill {
+    display: inline-flex;
+  }
+
+  .item-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .loan-workspace {
+    grid-template-columns: 330px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .loan-sidebar {
+    position: sticky;
+    top: 78px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .loan-thread {
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .two-col-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .add-item-panel {
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .section-title-mobile {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .catalog-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

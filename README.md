@@ -35,6 +35,25 @@ Otonari (お隣, "next door") is an installable web app (PWA) that lets neighbor
 
 ## How to run
 
+### With Docker: everything at once
+
+You need only [Docker](https://www.docker.com/products/docker-desktop/).
+
+```bash
+docker compose up
+```
+
+Then open <http://localhost:8088>. This starts the PostgreSQL database, the server and the app, with the demo data. The first start takes a few minutes. If port 8088 is taken, set `OTONARI_PORT` to another one.
+
+| Command | What it does |
+|---|---|
+| `docker compose up` | Starts everything. `Ctrl+C` stops it; the data stays. |
+| `docker compose up --build` | The same, after changing the code. |
+| `docker compose exec server node seed.ts` | Resets the demo data. |
+| `docker compose down -v` | Removes everything, including the data. |
+
+### Without Docker for the app (development)
+
 You need [Node.js](https://nodejs.org) 22.18 or newer. There are no API keys and nothing to sign up for.
 
 **1. Install** (once)
@@ -53,9 +72,10 @@ cp server/.env.example server/.env
 
 (In the Windows command prompt: `copy server\.env.example server\.env`)
 
-**2. Fill the database**
+**2. Start and fill the database** (PostgreSQL in Docker, port 5433; or put the address of your own in `DATABASE_URL`)
 
 ```bash
+npm run db
 npm run seed
 ```
 
@@ -88,12 +108,13 @@ To install the app, choose "Install app" in the browser's menu ("Add to Home Scr
 |---|---|
 | `npm run seed` | Resets the database, deletes all photos, and adds the demo neighbors with their items. |
 | `npm run seed:empty` | The same reset, but with only the two groups and nobody in them: for a demo with real people. |
+| `npm run db` | Starts only the database, in Docker. |
 | `npm run dev` | Server (port 3001) and client (port 5173) with automatic reload. |
 | `npm run build` | Builds the client. Run it again after every change. |
 | `npm run typecheck` | Checks the types of client and server. |
 | `npm start` | Runs the server with the built client on port 3001. |
 
-Settings in `server/.env`: `PORT`, and `DEMO_MODE`. With `DEMO_MODE=true`, an active loan has fast-forward buttons for the reminders, and the join page offers "continue as a neighbor": only for the demo neighbors from `npm run seed`, never for people who joined with a code. `DEMO_MODE=false` hides both.
+Settings in `server/.env`: `PORT`, `DATABASE_URL`, and `DEMO_MODE`. With `DEMO_MODE=true`, an active loan has fast-forward buttons for the reminders, and the join page offers "continue as a neighbor": only for the demo neighbors from `npm run seed`, never for people who joined with a code. `DEMO_MODE=false` hides both.
 
 ## Deploy on Render
 
@@ -103,15 +124,16 @@ Otonari runs on [Render](https://render.com) as one free Web Service (Node). Cre
 |---|---|
 | Build Command | `npm run render-build` |
 | Start Command | `npm start` |
-| Environment variables | `NODE_VERSION` = `22` and `DEMO_MODE` = `true` |
+| Environment variables | `NODE_VERSION` = `22`, `DEMO_MODE` = `true`, and `DATABASE_URL` = the internal URL of a Render PostgreSQL database |
 
-The address is HTTPS, so phones can install the app. The free plan sleeps after 15 minutes without visitors, and it resets the database and all photos whenever it restarts. The server then starts again with the demo data: everybody who had joined has to join again, and neighborhoods that people started themselves are gone. Anyone can act as the demo neighbors, so this is for demos, not for real lending.
+The address is HTTPS, so phones can install the app. The free plan sleeps after 15 minutes without visitors, and it loses all photos whenever it restarts. An empty database gets the demo data. Anyone can act as the demo neighbors, so this is for demos, not for real lending.
 
 ## Tech stack
 
 - **Client:** React 18, Vite, react-router-dom, TypeScript and plain CSS, `qrcode` for the poster, `vite-plugin-pwa` to make it installable
-- **Server:** Node.js (runs the TypeScript files directly), TypeScript, Express, better-sqlite3, multer for photo uploads, cors, dotenv
-- **Database:** one SQLite file (`server/otonari.db`); photos in `server/uploads/`
+- **Server:** Node.js (runs the TypeScript files directly), TypeScript, Express, pg, multer for photo uploads, cors, dotenv
+- **Database:** PostgreSQL 17; photos in `server/uploads/`
+- **Docker:** docker compose with PostgreSQL, Node and nginx
 - **Development:** concurrently, nodemon
 
 No CSS framework or state library: the code is meant to be read and explained by everyone on the team.
@@ -124,9 +146,9 @@ otonari/
 ├── client/                   the React app
 │   ├── public/               the app icons (drawn by make-icons.ps1)
 │   └── src/
-│       ├── app/              routes, bottom navigation, service worker
+│       ├── app/              routes, header, navigation, service worker
 │       ├── core/             calls to the server, the logged-in user, unread messages
-│       ├── components/       used by several features: ChipGroup, SpeakButton, TipCard, TrustLine
+│       ├── components/       used by several features: ChipGroup, FilterStrip, Icons, SpeakButton, TipCard, TrustLine
 │       ├── features/         one folder per feature, like the server: group, user, item, loan, message, demo
 │       ├── i18n/             en.json, ja.json, ja-easy.json, bn.json, and index.ts, which renders the phrases
 │       ├── data/catalog.ts   the items, handover spots, quick replies and loan lengths to choose from

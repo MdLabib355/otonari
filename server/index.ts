@@ -1,38 +1,35 @@
 // Otonari API server (Express).
 // Development: Vite serves the React app on :5173 and forwards /api and /uploads to this server.
-// Production (`npm run build`, then `npm start`): this server also serves the built React app,
-// so the whole app runs on one port.
+// `npm run build`, then `npm start`: this server also serves the built React app, on one port.
+// Docker: nginx serves the React app and forwards /api and /uploads (client/nginx.conf).
 
+import './core/env.ts'; // first: the others need the settings
 import fs from 'node:fs';
 import path from 'node:path';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { createV1 } from './api/v1.ts';
+import { createTables, query, waitForDatabase } from './core/database.ts';
 import { startReminders } from './modules/loan/reminders.ts';
 import { countGroups } from './modules/group/groupModel.ts';
-
-// Load server/.env by its full path, because `npm start` runs from the project root
-// while `npm run dev` runs from the server folder.
-// Note: the imports above run BEFORE this line, so other files must read process.env
-// inside their functions, not at the top of the file.
-dotenv.config({ path: path.join(import.meta.dirname, '.env'), quiet: true });
+import { seed } from './seedData.ts';
 
 const PORT = process.env.PORT || 3001;
 const uploadsDir = path.join(import.meta.dirname, 'uploads');
 const clientDist = path.join(import.meta.dirname, '..', 'client', 'dist');
 
 const app = express();
-app.set('trust proxy', 1); // on Render, every request comes through one proxy
+app.set('trust proxy', 1); // behind nginx or on Render, every request comes through one proxy
 app.use(cors());
 app.use(express.json());
 
 // Handover and return photos, e.g. /uploads/3f9c1a.jpg
 app.use('/uploads', express.static(uploadsDir));
 
-// Not versioned: it only says that the server is running.
-app.get('/api/health', (req, res) => {
+// Not versioned: it only says that the server and its database are running.
+app.get('/api/health', async (req, res) => {
+  await query('SELECT 1');
   res.json({ ok: true });
 });
 
@@ -70,9 +67,11 @@ app.use((err: Error & { status?: number }, req: Request, res: Response, next: Ne
 });
 
 // An empty database (e.g. after a fresh deploy) gets the demo data, exactly like `npm run seed`.
-if (countGroups() === 0) {
+await waitForDatabase();
+await createTables();
+if ((await countGroups()) === 0) {
   console.log('The database is empty, so it gets the demo data.');
-  await import('./seed.ts'); // importing it runs it
+  await seed(false);
 }
 
 // Express 5 also calls this function when the server can NOT start (e.g. the port is taken).

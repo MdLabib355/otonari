@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { GroupType, Lang, NewGroupAnswer } from '../../../../shared/types.ts';
 import { api, ApiError } from '../../core/api.ts';
+import { ArrowRightIcon, BuildingIcon } from '../../components/Icons.tsx';
 import { t } from '../../i18n/index.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
 
@@ -60,16 +61,19 @@ export default function NewGroup({ lang }: { lang: Lang }) {
 
   return (
     <section className="new-group">
-      <button type="button" className="text-button" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {t(lang, 'newGroup.link')}
+      <button type="button" className="portal-card" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="portal-card-icon">
+          <BuildingIcon />
+        </span>
+        <span className="portal-card-text">
+          <strong>{t(lang, 'newGroup.link')}</strong>
+          <span className="muted">{t(lang, 'newGroup.hint')}</span>
+        </span>
+        <ArrowRightIcon className="portal-card-arrow icon-sm" />
       </button>
 
       {open && (
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <p className="hint">{t(lang, 'newGroup.hint')}</p>
-          </div>
-
+        <form className="new-group-form" onSubmit={handleSubmit}>
           <div className="field">
             <label className="label" htmlFor="new-group-name">
               {t(lang, 'newGroup.name')}

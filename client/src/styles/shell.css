@@ -1,0 +1,58 @@
+/* ---------- Responsive App Shell ---------- */
+
+.app-shell {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 16px 16px 28px;
+}
+
+.wide-page {
+  width: 100%;
+}
+
+.narrow-page {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.settings-page {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.loans-page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* On mobile, surface-card is lightweight; on tablet/desktop it becomes a polished elevated card. */
+.surface-card {
+  width: 100%;
+}
+
+h1 {
+  font-family: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  font-size: 1.5em;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  margin: 4px 0 10px;
+}
+
+h2 {
+  font-size: 1.1em;
+  line-height: 1.3;
+  margin: 0 0 12px;
+}

@@ -109,23 +109,30 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 
 - **Client**: React 18 + Vite, **TypeScript (strict)**, `react-router-dom`, plain CSS
   (`client/src/styles/`), `vite-plugin-pwa`, `qrcode` (for the poster).
-- **Server**: Node.js 22.18+ (runs the `.ts` files directly, no build step), TypeScript, Express, `better-sqlite3`, `multer` (photo upload), `cors`, `dotenv`,
+- **Server**: Node.js 22.18+ (runs the `.ts` files directly, no build step), TypeScript, Express, `pg`,
+  `multer` (photo upload), `cors`, `dotenv`,
   `nodemon` (dev only: restarts the server when a server `.ts` file is saved).
-- **Database**: SQLite file `server/otonari.db` (git-ignored). Recreated + seeded with `npm run seed`.
+- **Database**: PostgreSQL 17, at `DATABASE_URL`. Recreated + seeded with `npm run seed`. Every request that changes
+  something is one transaction (`write()` in `core/http.ts`), and they run one after the other (a lock in
+  `transaction()`), so what a controller has checked stays true.
+- **Docker**: `docker compose up` starts everything: `db` (PostgreSQL, not reachable from outside), `server`, and
+  `client` (nginx: the built app, and `/api` and `/uploads` passed on to the server) on http://localhost:8088.
+  Database and photos are volumes; `docker compose down -v` starts from zero.
 - **Photos**: saved to `server/uploads/` (git-ignored, keep `.gitkeep`), served at `/uploads/...`.
-- **Dev**: root `package.json` runs both with `concurrently` → `npm run dev`.
+- **Dev**: `npm run db` starts only the database in Docker (port 5433). The root `package.json` runs both with `concurrently` → `npm run dev`.
   Client on port 5173, server on port 3001, Vite proxies `/api` and `/uploads` to 3001.
   The server runs under `nodemon` (config in `server/package.json`): it watches only server `.ts` files and
   ignores `node_modules`, `uploads/` and the database files, so database writes, seeding and photo uploads
   never restart it. (Not `node --watch`: on Windows it restarts when files are merely read.)
 - **For the demo, always use `npm run build` + `npm start` (no file watcher).**
 - **Deploy** (Render.com, one free Node web service): build `npm run render-build`, start `npm start`,
-  environment `NODE_VERSION=22` and `DEMO_MODE=true` (Render sets `PORT`). The free plan loses the database
-  and the photos on every restart, so a server that starts without any groups runs the normal seed.
+  environment `NODE_VERSION=22`, `DEMO_MODE=true` and `DATABASE_URL` of a Render PostgreSQL database (Render sets
+  `PORT`). The free plan loses the photos on every restart. A server that starts without any groups runs the normal seed.
 - **Types**: `shared/types.ts` (the API answers, used by both sides with `import type`) and `server/types.ts`
   (database rows). `typescript` and the `@types/*` packages are dev dependencies; `npm run typecheck` checks
   both sides. Vite and Node only remove the types, they don't check them.
-- **No API keys or secrets exist in this project.** `.env` holds only `PORT` and `DEMO_MODE`.
+- **No API keys or secrets exist in this project.** `.env` holds only `PORT`, `DEMO_MODE` and `DATABASE_URL` (the
+  password of the local database in Docker is not a secret; the one on Render is, and is set only there).
   `.env` is in `.gitignore`; commit `.env.example`.
 
 ---
@@ -136,32 +143,36 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 otonari/
 ├── CLAUDE.md
 ├── README.md
-├── package.json            # root: "dev", "seed", "seed:empty", "build", "render-build", "typecheck", "start" scripts
-├── .gitignore              # node_modules, .env, server/otonari.db, server/uploads/*, client/dist
+├── package.json            # root: "dev", "db", "seed", "seed:empty", "build", "render-build", "typecheck", "start" scripts
+├── .gitignore              # node_modules, .env, server/uploads/*, client/dist
+├── docker-compose.yml      # db + server + client;  docker-compose.dev.yml: only the database, for development
+├── .dockerignore
 ├── docs/screenshots/       # the pictures in README.md
 ├── shared/types.ts         # types of the API answers, used by client and server
 ├── client/
 │   ├── index.html
 │   ├── tsconfig.json       # type checking only
+│   ├── Dockerfile  nginx.conf
 │   ├── vite.config.ts      # react plugin, PWA plugin, proxy /api and /uploads → :3001
 │   ├── make-icons.ps1      # draws the icons in public/
 │   ├── public/             # icons for PWA (icon-192.png, icon-512.png, icon-maskable-512.png)
 │   └── src/
 │       ├── main.tsx        # starts the app, loads the styles
-│       ├── app/            # App (routes), BottomNav, serviceWorker (reloads an open app after a deploy)
+│       ├── app/            # App (routes), Header, BottomNav, navTabs, serviceWorker (reloads an open app after a deploy)
 │       ├── core/           # used by all features
 │       │   ├── api.ts          # fetch wrapper; adds "Authorization: Bearer <token>"
 │       │   ├── UserContext.ts  # useUser() / useMember(): me, my group, my language and my inbox
 │       │   └── useInbox.ts     # my unread messages (banner, Loans badge, loan page)
-│       ├── components/     # used by several features: ChipGroup  SpeakButton  TipCard  TrustLine
+│       ├── components/     # used by several features: ChipGroup  FilterStrip  Icons  SpeakButton  TipCard
+│       │                   # TrustLine
 │       ├── features/       # one folder per feature, like the modules of the server
 │       │   ├── group/      # Join (/join)  NewGroup  Poster (/poster)
 │       │   ├── user/       # Settings (/settings)
-│       │   ├── item/       # Shelf (/)  ItemPage (/item/:id)  BorrowForm  borrowTimes
-│       │   │               # MyItems (/my-items)  MyItemRow  TrustedSwitch
-│       │   ├── loan/       # Loans (/loans)  LoanPage (/loan/:id)  LoanHeader  PendingActions  HandoverStep
+│       │   ├── item/       # Shelf (/)  NeighborShelf  ItemCard  ItemPage (/item/:id)  BorrowForm  borrowTimes
+│       │   │               # MyItems (/my-items)  MyItemRow  Catalog  AddItemDialog  TrustedSwitch
+│       │   ├── loan/       # Loans (/loans)  LoanPage (/loan/:id)  LoanHeader  LoanStepper  PendingActions  HandoverStep
 │       │   │               # ReturnStep  QuickReplies  LoanPhotos  PhotoCapture  loanProps
-│       │   ├── message/    # Banner (polling)  PhraseBubble ("show original" + 🔊)
+│       │   ├── message/    # Banner (polling)  NotificationBell  PhraseBubble ("show original" + 🔊)
 │       │   └── demo/       # DemoButtons (fast-forward)
 │       ├── i18n/
 │       │   ├── index.ts    # t(), renderPhrase(), formatDate(), useLang()
@@ -173,36 +184,38 @@ otonari/
     ├── tsconfig.json       # type checking only
     ├── types.ts            # types of the database rows, req.user and req.loan
     ├── index.ts            # express app: mounts the API versions, starts the reminder job
-    ├── seed.ts             # resets DB and inserts demo data
+    ├── Dockerfile
+    ├── seed.ts             # npm run seed;  seedData.ts: resets DB and inserts demo data
     ├── api/v1.ts           # version 1 of the API: which routes belong to it
     ├── core/               # used by all modules
-    │   ├── database.ts     # opens SQLite, creates tables
+    │   ├── env.ts          # loads .env
+    │   ├── database.ts     # PostgreSQL: query(), transaction(), creates tables
+    │   ├── http.ts         # read() / write(): steps → answer
     │   ├── allowedKeys.ts  # the keys and values the server accepts (copied from catalog.ts)
-    │   └── auth.ts         # middleware: token → req.user
+    │   └── auth.ts         # requireUser: token → req.user
     ├── modules/            # modular MVC: one folder per feature. In each of them:
-    │   │                   #   Routes = URL → middleware → controller, Controller = input + rules,
+    │   │                   #   Routes = URL → steps (checks, controller), Controller = input + rules,
     │   │                   #   Model = the SQL of one table, View = the JSON the client gets
     │   ├── group/          # groupRoutes  groupController  groupModel  groupView
     │   ├── user/           # userRoutes  userController  userModel  userView  leaveGroup
     │   ├── item/           # itemRoutes  itemController  itemModel  itemView  removeItem
     │   ├── loan/           # loanRoutes  loanController  loanModel  loanView
-    │   │                   # loanRole (middleware), receivePhoto (middleware), photoFiles, reminders
+    │   │                   # loanRole (check), receivePhoto (middleware), photoFiles, reminders
     │   ├── message/        # messageRoutes  messageController  messageModel  messageView (the inbox)
     │   └── demo/           # demoRoutes  demoController (no table and no view of its own)
     ├── uploads/.gitkeep
-    ├── .npmrc              # ignore-scripts: better-sqlite3 has ready-made binaries, npm must not compile it
-    └── .env.example        # PORT=3001  DEMO_MODE=true
+    └── .env.example        # PORT=3001  DEMO_MODE=true  DATABASE_URL=...
 ```
 
 Keep files small and readable. One concern per file. Prefer simple functions over abstractions.
 
 ---
 
-## 5. Data model (SQLite)
+## 5. Data model (PostgreSQL)
 
 ```sql
 CREATE TABLE groups (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   code TEXT UNIQUE NOT NULL,          -- join code, e.g. 'SAKURA-2611'
   name TEXT NOT NULL,                 -- shown as-is (proper noun)
   type TEXT NOT NULL CHECK (type IN ('building','block')),
@@ -210,56 +223,56 @@ CREATE TABLE groups (
 );
 
 CREATE TABLE users (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   group_id INTEGER NOT NULL REFERENCES groups(id),
   nickname TEXT NOT NULL,             -- max 20 chars
   lang TEXT NOT NULL CHECK (lang IN ('en','ja','ja-easy','bn')),
-  elder_mode INTEGER NOT NULL DEFAULT 0,
+  elder_mode BOOLEAN NOT NULL DEFAULT false,
   token TEXT UNIQUE NOT NULL,         -- crypto.randomUUID()
-  is_demo INTEGER NOT NULL DEFAULT 0, -- 1 = seeded demo neighbor: anyone may "continue as" them in demo mode
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  left_at TEXT                        -- set when they leave (their token stops working); NULL = member
+  is_demo BOOLEAN NOT NULL DEFAULT false, -- seeded demo neighbor: anyone may "continue as" them in demo mode
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  left_at TIMESTAMPTZ                 -- set when they leave (their token stops working); NULL = member
 );
 
 CREATE TABLE items (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   owner_id INTEGER NOT NULL REFERENCES users(id),
   group_id INTEGER NOT NULL REFERENCES groups(id),
   item_key TEXT NOT NULL,             -- key from catalog.ts, e.g. 'futon_dryer'
   max_days INTEGER NOT NULL DEFAULT 3,
   spot TEXT NOT NULL,                 -- key from SPOTS, e.g. 'entrance'
-  trusted_only INTEGER NOT NULL DEFAULT 0,  -- 1 = only for people with an on-time return
+  trusted_only BOOLEAN NOT NULL DEFAULT false,  -- true = only for people with an on-time return
   status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','lent')),
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  removed_at TEXT                     -- set when the owner removes it (soft delete); NULL = on the shelf
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  removed_at TIMESTAMPTZ              -- set when the owner removes it (soft delete); NULL = on the shelf
 );
 
 CREATE TABLE loans (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   item_id INTEGER NOT NULL REFERENCES items(id),
   borrower_id INTEGER NOT NULL REFERENCES users(id),
   lender_id INTEGER NOT NULL REFERENCES users(id),
-  start_at TEXT NOT NULL,             -- ISO 8601
-  end_at TEXT NOT NULL,               -- ISO 8601
+  start_at TIMESTAMPTZ NOT NULL,
+  end_at TIMESTAMPTZ NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','accepted','declined','cancelled','active','returned')),
   handover_photo TEXT,                -- '/uploads/xxx.jpg'
   return_photo TEXT,
-  returned_at TEXT,                   -- ISO 8601, when the borrower sent the return photo
-  reminded_soon_at TEXT,
-  reminded_overdue_at TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  returned_at TIMESTAMPTZ,            -- when the borrower sent the return photo
+  reminded_soon_at TIMESTAMPTZ,
+  reminded_overdue_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 
 CREATE TABLE messages (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   loan_id INTEGER NOT NULL REFERENCES loans(id),
   from_user_id INTEGER REFERENCES users(id),   -- NULL = system message (reminders)
   to_user_id INTEGER NOT NULL REFERENCES users(id),
   phrase_key TEXT NOT NULL,           -- e.g. 'request', 'accept', 'sys.dueSoon'
-  params TEXT NOT NULL DEFAULT '{}',  -- JSON: { item, start, end, spot, name }
-  read_at TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  params JSONB NOT NULL DEFAULT '{}', -- { item, start, end, spot, name }
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 ```
 
@@ -378,15 +391,21 @@ The phrase files and item catalog are hand-written and will be reviewed by a nat
 
 ## 8. UI / design rules
 
-- Mobile-first, single column, max width 480 px centered on desktop.
-- Bottom navigation: Shelf · My items · Loans (badge with unread count) · Settings.
-- Warm, calm, neighborly look: off-white background, one accent color (indigo `#3f51b5` or similar
-  Japanese indigo 藍色 `#264d73`), rounded cards, emoji item icons (from catalog, no image assets).
+- Mobile-first and responsive (content up to 1024 px): one column on phones; from 768 px cards and more columns, from
+  960 px two columns on My items and the loan page.
+- Header on every member page: app and group name, my name (wide screens), a bell with the list of unread messages.
+- Navigation: Shelf · My items · Loans (badge with unread count) · Settings. At the bottom on phones, in the header
+  from 768 px.
+- The shelf has a search field, "Available only" and category filters (all on the device, nothing is sent). My own
+  items are below the neighbors' items.
+- Warm, calm, neighborly look: off-white background, one accent color (Japanese indigo 藍色
+  `#1f4b6e`), rounded cards, emoji item icons (from catalog), inline SVG icons for controls (`Icons.tsx`). No web
+  fonts from other servers.
 - Big tap targets (min 44 px; **elder mode: min 64 px and base font 22 px**).
 - Elder mode is a class on `<body>` (`elder`) that CSS uses to scale everything.
-- Message bubbles: mine on the right, theirs on the left, system reminders centered with 🔔.
+- Message bubbles: mine on the right, theirs on the left, system reminders centered with a bell.
 - Show the handover / return photos inside the loan page.
-- No modals that block (keep it simple: inline sections).
+- Inline sections instead of dialogs. The only dialog is adding an item (`AddItemDialog`).
 
 ---
 

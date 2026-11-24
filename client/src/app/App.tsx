@@ -5,8 +5,8 @@ import { api, clearToken, errorStatus, getToken, saveToken } from '../core/api.t
 import { t } from '../i18n/index.ts';
 import { useInbox } from '../core/useInbox.ts';
 import BottomNav from './BottomNav.tsx';
+import Header from './Header.tsx';
 import { UserContext, browserLanguage, type SharedValues } from '../core/UserContext.ts';
-import Banner from '../features/message/Banner.tsx';
 import Join from '../features/group/Join.tsx';
 import Shelf from '../features/item/Shelf.tsx';
 import ItemPage from '../features/item/ItemPage.tsx';
@@ -66,9 +66,9 @@ export default function App() {
 
   let page;
   if (loading) {
-    page = <p>{t(lang, 'common.loading')}</p>;
+    page = <p className="narrow-page">{t(lang, 'common.loading')}</p>;
   } else if (loadFailed) {
-    page = <p className="error">{t(lang, 'common.error')}</p>;
+    page = <p className="error narrow-page">{t(lang, 'common.error')}</p>;
   } else if (!me && pathname !== '/join' && pathname !== '/poster') {
     // No token yet (not a member): only the join page, and a poster opened by its code.
     page = <Navigate to="/join" replace />;
@@ -93,8 +93,8 @@ export default function App() {
 
   return (
     <UserContext.Provider value={shared}>
-      <div className="app">
-        {showNav && <Banner />}
+      <div className="app-shell">
+        {showNav && <Header />}
         <main className="page">{page}</main>
         {showNav && <BottomNav lang={lang} unreadCount={inbox.length} />}
       </div>

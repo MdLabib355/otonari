@@ -57,11 +57,11 @@ export default function Poster() {
   }, [code]);
 
   if (!code) return <Navigate to="/join" replace />;
-  if (problem) return <p className="error">{t(lang, problem)}</p>;
-  if (!poster) return <p>{t(lang, 'common.loading')}</p>;
+  if (problem) return <p className="error narrow-page">{t(lang, problem)}</p>;
+  if (!poster) return <p className="narrow-page">{t(lang, 'common.loading')}</p>;
 
   return (
-    <section>
+    <section className="narrow-page">
       <button type="button" className="button-primary print-button" onClick={() => window.print()}>
         {t(lang, 'poster.print')}
       </button>

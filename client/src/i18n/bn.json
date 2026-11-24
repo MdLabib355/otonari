@@ -2,6 +2,19 @@
   "meta": { "lang": "bn", "name": "বাংলা", "locale": "bn-BD", "speech": "bn-BD" },
 
   "ui": {
+    "shelf.addFirst": "একটি জিনিস শেয়ার করুন",
+    "shelf.searchPlaceholder": "জিনিস খুঁজুন…",
+    "shelf.availableOnly": "শুধু পাওয়া যাচ্ছে",
+    "loans.activeSection": "চলমান ও অপেক্ষমাণ",
+    "loans.pastSection": "আগের ইতিহাস",
+    "loan.handoverSummary": "দেওয়া-নেওয়া: {spot} · {start}",
+    "notifications.title": "নোটিফিকেশন",
+    "notifications.empty": "কোনো অপঠিত নোটিফিকেশন নেই।",
+    "notifications.markAllRead": "সব পঠিত করুন",
+    "common.cancel": "বাতিল",
+    "common.close": "বন্ধ করুন",
+    "shelf.noMatch": "কোনো জিনিস পাওয়া যায়নি।",
+
     "appName": "Otonari",
     "tagline": "পাশের বাসা থেকে ধার নিন — নিজের ভাষায়।",
 

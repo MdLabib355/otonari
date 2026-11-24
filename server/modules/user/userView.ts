@@ -1,29 +1,23 @@
 // What the client may see about people.
 
 import type { DemoUser, Login, Me, User } from '../../../shared/types.ts';
+import type { UserRow } from '../../types.ts';
 import { getGroup } from '../group/groupModel.ts';
 import type { DemoUserRow } from './userModel.ts';
-import type { UserRow } from '../../types.ts';
 
 // Everything except the token.
-function publicUser(user: UserRow): User {
-  return {
-    id: user.id,
-    group_id: user.group_id,
-    nickname: user.nickname,
-    lang: user.lang,
-    elder_mode: user.elder_mode === 1,
-  };
+function publicUser({ id, group_id, nickname, lang, elder_mode }: UserRow): User {
+  return { id, group_id, nickname, lang, elder_mode };
 }
 
 // "Me" as the client sees it: { user, group }.
-export function meView(user: UserRow): Me {
-  return { user: publicUser(user), group: getGroup(user.group_id) };
+export async function meView(user: UserRow): Promise<Me> {
+  return { user: publicUser(user), group: await getGroup(user.group_id) };
 }
 
 // After joining and after the demo login: the only answers with a token.
-export function loginView(user: UserRow): Login {
-  return { token: user.token, ...meView(user) };
+export async function loginView(user: UserRow): Promise<Login> {
+  return { token: user.token, ...(await meView(user)) };
 }
 
 export function demoUserView(user: DemoUserRow): DemoUser {

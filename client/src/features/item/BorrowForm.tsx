@@ -6,7 +6,7 @@ import TipCard from '../../components/TipCard.tsx';
 import { api, errorStatus } from '../../core/api.ts';
 import { useMember } from '../../core/UserContext.ts';
 import { DURATIONS, START_DAYS, TIME_SLOTS, type TimeSlot } from '../../data/catalog.ts';
-import { formatDate, renderPhrase, t, type UiKey } from '../../i18n/index.ts';
+import { formatDate, meta, renderPhrase, t, type UiKey } from '../../i18n/index.ts';
 import { japanTime, openSlots } from './borrowTimes.ts';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -86,13 +86,16 @@ export default function BorrowForm({ item, onRefused }: Props) {
       <div className="field">
         <p className="label">{t(lang, 'borrow.howLong')}</p>
         <ChipGroup label={t(lang, 'borrow.howLong')} options={lengthOptions} value={days} onChange={setDays} />
-        <p className="period">
+        <p className="period-pill">
           {t(lang, 'loan.period', { start: formatDate(lang, startAt), end: formatDate(lang, endAt) })}
         </p>
       </div>
 
       <div className="preview">
-        <p className="label">{t(lang, 'borrow.preview')}</p>
+        <div className="preview-header">
+          <p className="label">{t(lang, 'borrow.preview')}</p>
+          <span className="badge badge-available">{meta(item.owner_lang).name}</span>
+        </div>
         <p className="preview-bubble" lang={item.owner_lang === 'ja-easy' ? 'ja' : item.owner_lang}>
           {renderPhrase(item.owner_lang, 'request', params)}
         </p>

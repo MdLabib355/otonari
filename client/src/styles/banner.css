@@ -1,22 +1,14 @@
-/* ---------- New-message banner ---------- */
-
-/* Stays at the top while the page scrolls. It is part of the layout, so it never hides content. */
-.banner-area {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
+/* ---------- Banners (Live Message & Due/Overdue) ---------- */
 
 .banner {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 8px 8px 0;
-  padding: 12px;
+  padding: 12px 14px;
   border-radius: var(--radius);
   background: var(--accent);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-md);
 }
 
 .banner-emoji {
@@ -36,11 +28,10 @@
 
 .banner-buttons {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  gap: 8px;
 }
 
-/* How reliable the borrower has been: on the loan page, and in the banner of a new request */
 .trust-line {
   margin: 0;
   color: var(--muted);

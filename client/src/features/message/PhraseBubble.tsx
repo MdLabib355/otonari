@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type { Lang, Message, Person } from '../../../../shared/types.ts';
 import { displayName, meta, renderPhrase, t } from '../../i18n/index.ts';
+import { BellIcon } from '../../components/Icons.tsx';
 import SpeakButton from '../../components/SpeakButton.tsx';
 
 // One message of a loan, in MY language. Messages are stored as phrase_key + params, so the same
 // message can be rendered in any language at any time.
-//   mine → right, theirs → left, system reminders (no sender) → centered with 🔔
+//   mine → right, theirs → left, system reminders (no sender) → centered with a bell
 // "Show original" renders the same phrase in the sender's language, which proves that both sides
 // saw the same meaning. It is hidden when that would be the identical text (my own messages, and
 // neighbors who use the same language as me).
@@ -31,7 +32,11 @@ export default function PhraseBubble({ message, lang, myId, other }: Props) {
 
   return (
     <li className={`bubble bubble-${side}`}>
-      {isSystem && <p className="bubble-label">🔔 {t(lang, 'loan.system')}</p>}
+      {isSystem && (
+        <p className="bubble-label inline-icon-text">
+          <BellIcon className="icon-sm" /> {t(lang, 'loan.system')}
+        </p>
+      )}
       <div className="bubble-main">
         <p className="bubble-text">{text}</p>
         <SpeakButton lang={lang} text={text} />

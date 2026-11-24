@@ -1,0 +1,87 @@
+/* ---------- Portal card ---------- */
+
+.portal-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+}
+
+.portal-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+
+.portal-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex: none;
+}
+
+.portal-card:hover .portal-card-icon {
+  background: var(--surface);
+}
+
+.portal-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.portal-card-text strong {
+  font-size: 0.94em;
+  color: var(--text);
+}
+
+.portal-card-text .muted {
+  font-size: 0.83em;
+  line-height: 1.35;
+}
+
+.portal-card-arrow {
+  color: var(--muted);
+  flex: none;
+  transition: transform 140ms ease, color 140ms ease;
+}
+
+.portal-card:hover .portal-card-arrow {
+  color: var(--accent);
+  transform: translateX(2px);
+}
+
+
+.new-group {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.new-group-form {
+  margin-top: 16px;
+}
+
+.add-item-panel > .hint {
+  margin: -6px 0 12px;
+}
+
+.bubble-system .bubble-label {
+  justify-content: center;
+}

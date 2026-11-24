@@ -1,14 +1,14 @@
-/* ---------- Join poster (how it prints: see print.css) ---------- */
+/* ---------- Join Poster ---------- */
 
-/* Looks like a sheet of paper. Sizes are in em, so printing mostly needs just a bigger font size. */
 .poster {
   margin-top: 20px;
   padding: 20px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
   text-align: center;
-  text-wrap: balance; /* no single word or character left alone on the last line */
+  text-wrap: balance;
 }
 
 .poster h1 {
@@ -38,7 +38,6 @@
   margin: 0 auto;
 }
 
-/* The code stays on one line, also in elder mode on a narrow phone. */
 .poster .big-code {
   margin: 0 0 0.6em;
   font-size: min(2em, 9vw);
@@ -51,7 +50,6 @@
   border-top: 1px solid var(--border);
 }
 
-/* The app's name, and the address to type: in small letters at the bottom */
 .poster-footer {
   padding-bottom: 0;
   font-size: 0.8em;

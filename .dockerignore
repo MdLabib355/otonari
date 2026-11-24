@@ -1,0 +1,11 @@
+# What the images must not contain (and what would make the build slow)
+.git
+**/node_modules
+**/.env
+**/dist
+**/*.db*
+server/uploads/*
+!server/uploads/.gitkeep
+docs
+old_client
+*.md

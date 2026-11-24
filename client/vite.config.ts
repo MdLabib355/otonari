@@ -13,8 +13,8 @@ const pwa = VitePWA({
     short_name: 'Otonari',
     start_url: '/',
     display: 'standalone',
-    theme_color: '#264d73', // --accent in src/styles/base.css
-    background_color: '#faf8f3', // --bg in src/styles/base.css
+    theme_color: '#1f4b6e', // --accent in src/styles/base.css
+    background_color: '#f6f2ea', // --bg in src/styles/base.css
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },

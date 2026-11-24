@@ -10,7 +10,6 @@ import loanRoutes from '../modules/loan/loanRoutes.ts';
 import messageRoutes from '../modules/message/messageRoutes.ts';
 import userRoutes from '../modules/user/userRoutes.ts';
 
-// A function, because DEMO_MODE is only known after index.ts has loaded the .env file.
 export function createV1(): express.Router {
   const v1 = express.Router();
 

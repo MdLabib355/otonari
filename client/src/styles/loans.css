@@ -1,7 +1,35 @@
-/* ---------- Loans ---------- */
+/* ---------- Loans (Segmented Tabs + Focused Single Column) ---------- */
 
 .loan-list {
-  margin-bottom: 28px;
+  min-width: 0;
+}
+
+.loans-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.loan-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.loan-section-header h2 {
+  margin: 0;
+  font-size: 1.05em;
+}
+
+.loan-empty-row {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--muted);
+  font-size: 0.9em;
 }
 
 .loan-card {
@@ -9,12 +37,20 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 10px;
-  padding: 12px 14px;
+  padding: 13px 15px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
   color: inherit;
   text-decoration: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.loan-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .loan-card:active {

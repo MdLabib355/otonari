@@ -1,4 +1,4 @@
-// Rows exactly as SQLite returns them (the tables are in core/database.ts). SQLite has no booleans: 0 / 1.
+// Rows exactly as PostgreSQL returns them (the tables are in core/database.ts). Times are ISO 8601 text.
 
 import type { ItemStatus, Lang, Loan } from '../shared/types.ts';
 
@@ -7,9 +7,9 @@ export interface UserRow {
   group_id: number;
   nickname: string;
   lang: Lang;
-  elder_mode: number;
+  elder_mode: boolean;
   token: string;
-  is_demo: number;
+  is_demo: boolean;
   created_at: string;
   left_at: string | null;
 }
@@ -21,7 +21,7 @@ export interface ItemRow {
   item_key: string;
   max_days: number;
   spot: string;
-  trusted_only: number;
+  trusted_only: boolean;
   status: ItemStatus;
   created_at: string;
   removed_at: string | null;
@@ -29,12 +29,12 @@ export interface ItemRow {
 
 export type LoanRow = Loan; // all columns go to the client as they are
 
-// SELECT COUNT(*) AS count
+// SELECT COUNT(*)::int AS count
 export interface CountRow {
   count: number;
 }
 
-// What our middleware adds to requests: requireUser (core/auth.ts) and loanRole (modules/loan).
+// What the steps add to requests: requireUser (core/auth.ts) and loanRole (modules/loan).
 declare global {
   namespace Express {
     interface Request {

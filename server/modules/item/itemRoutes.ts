@@ -11,14 +11,15 @@
 import express from 'express';
 import { addItem, deleteItem, showItem, showMyItems, showShelf, updateItem } from './itemController.ts';
 import { requireUser } from '../../core/auth.ts';
+import { read, write } from '../../core/http.ts';
 
 const router = express.Router();
 
-router.get('/shelf', requireUser, showShelf);
-router.get('/my-items', requireUser, showMyItems);
-router.get('/items/:id', requireUser, showItem);
-router.post('/items', requireUser, addItem);
-router.patch('/items/:id', requireUser, updateItem);
-router.delete('/items/:id', requireUser, deleteItem);
+router.get('/shelf', read(requireUser, showShelf));
+router.get('/my-items', read(requireUser, showMyItems));
+router.get('/items/:id', read(requireUser, showItem));
+router.post('/items', write(requireUser, addItem));
+router.patch('/items/:id', write(requireUser, updateItem));
+router.delete('/items/:id', write(requireUser, deleteItem));
 
 export default router;

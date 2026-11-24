@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import type { Lang } from '../../../../shared/types.ts';
+import { CameraIcon } from '../../components/Icons.tsx';
 import { t } from '../../i18n/index.ts';
 
 const MAX_SIDE = 1280; // pixels
@@ -78,7 +79,7 @@ export default function PhotoCapture({ lang, busy, onSend }: Props) {
     <div className="actions">
       {/* The label is the visible button: the file input itself can't be styled or translated. */}
       <label className={photo ? 'photo-button button-secondary' : 'photo-button button-primary'}>
-        <span aria-hidden="true">📷</span> {t(lang, 'loan.takePhoto')}
+        <CameraIcon /> {t(lang, 'loan.takePhoto')}
         <input
           type="file"
           accept="image/*"
