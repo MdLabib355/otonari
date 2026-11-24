@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import type { Lang, LoanStatus, LoanSummary, MyLoans } from '../../../../shared/types.ts';
 import { api } from '../../core/api.ts';
 import { useUser } from '../../core/UserContext.ts';
-import { findItem } from '../../data/catalog.ts';
-import { displayName, formatDate, itemName, t } from '../../i18n/index.ts';
+import ItemVisual from '../../components/ItemVisual.tsx';
+import { displayName, formatDate, itemDisplayTitle, t } from '../../i18n/index.ts';
 
 const OPEN_STATUSES: LoanStatus[] = ['pending', 'accepted', 'active'];
 
@@ -71,11 +71,9 @@ function LoanList({ title, loans, lang }: { title: string; loans: LoanSummary[];
 function LoanCard({ loan, lang }: { loan: LoanSummary; lang: Lang }) {
   return (
     <Link to={`/loan/${loan.id}`} className="loan-card">
-      <span className="item-emoji" aria-hidden="true">
-        {findItem(loan.item_key)?.emoji}
-      </span>
+      <ItemVisual itemKey={loan.item_key} categoryKey={loan.category_key} photo={loan.item_photo} alt="" />
       <div className="loan-card-text">
-        <strong>{itemName(lang, loan.item_key)}</strong>
+        <strong>{itemDisplayTitle(lang, loan.item_key, loan.custom_title)}</strong>
         <span className="muted">{t(lang, 'loans.with', { name: displayName(lang, loan.other_nickname) })}</span>
         <span className="muted">
           {t(lang, 'loan.period', { start: formatDate(lang, loan.start_at), end: formatDate(lang, loan.end_at) })}

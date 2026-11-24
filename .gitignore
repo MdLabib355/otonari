@@ -3,6 +3,7 @@ node_modules/
 
 # Local settings (commit server/.env.example instead)
 .env
+docker.env
 
 # Uploaded photos (the folder itself stays, thanks to .gitkeep)
 server/uploads/*

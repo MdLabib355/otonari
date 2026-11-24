@@ -1,0 +1,82 @@
+/* ---------- Item photo or drawing ---------- */
+
+.item-visual {
+  --side: 48px;
+  display: inline-flex;
+  flex: none;
+  width: var(--side);
+  height: var(--side);
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.item-visual-xs {
+  --side: 30px;
+  border-radius: 8px;
+}
+
+.item-visual-sm {
+  --side: 40px;
+  border-radius: 10px;
+}
+
+.item-visual-lg {
+  --side: 96px;
+  border-radius: var(--radius);
+}
+
+.item-visual-card {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  border-radius: 0;
+}
+
+.item-visual-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-visual-icon {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.item-svg {
+  display: block;
+  width: 62%;
+  height: 62%;
+  flex: none;
+}
+
+.item-visual-card .item-svg {
+  width: 46%;
+  height: 60%;
+}
+
+body.elder .item-visual-sm {
+  --side: 52px;
+}
+
+body.elder .item-visual-md {
+  --side: 64px;
+}
+
+body.elder .item-visual-lg {
+  --side: 116px;
+}
+
+.item-emoji-icon {
+  font-size: calc(var(--side) * 0.5);
+  line-height: 1;
+}
+
+.item-visual-card .item-emoji-icon {
+  font-size: 3.4em;
+}

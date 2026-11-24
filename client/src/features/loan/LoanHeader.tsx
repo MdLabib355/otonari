@@ -1,7 +1,8 @@
 import type { Lang, Loan, LoanItem, Person } from '../../../../shared/types.ts';
-import { findItem } from '../../data/catalog.ts';
+import Avatar from '../../components/Avatar.tsx';
+import ItemVisual from '../../components/ItemVisual.tsx';
 import LoanStepper from './LoanStepper.tsx';
-import { displayName, formatDate, itemName, t } from '../../i18n/index.ts';
+import { displayName, formatDate, itemDisplayTitle, t } from '../../i18n/index.ts';
 
 interface Props {
   loan: Loan;
@@ -14,12 +15,13 @@ export default function LoanHeader({ loan, item, other, lang }: Props) {
   return (
     <>
       <header className="item-header">
-        <span className="item-header-emoji" aria-hidden="true">
-          {findItem(item.item_key)?.emoji}
-        </span>
+        <ItemVisual itemKey={item.item_key} categoryKey={item.category_key} photo={item.photo} alt="" size="lg" />
         <div>
-          <h1>{itemName(lang, item.item_key)}</h1>
-          <p className="muted">{t(lang, 'loans.with', { name: displayName(lang, other.nickname) })}</p>
+          <h1>{itemDisplayTitle(lang, item.item_key, item.custom_title)}</h1>
+          <p className="muted inline-icon-text">
+            <Avatar url={other.avatar ?? null} />
+            {t(lang, 'loans.with', { name: displayName(lang, other.nickname) })}
+          </p>
         </div>
       </header>
       <p className="loan-facts">

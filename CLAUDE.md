@@ -22,7 +22,7 @@ lend and borrow rarely-used household items, **without any language barrier**.
 language**, and Japanese is always polite (keigo). Translations are pre-written by humans and stored in
 JSON files. No AI, no translation API, no API keys.
 
-The only free text a user ever types is their **nickname** (max 20 chars), plus the **group name** and
+The only free text a user ever types is their login (email, password, code), their **nickname** (max 20 chars), plus the **group name** and
 **city** when starting a new neighborhood (max 60 and 40 chars). Messages never contain free text.
 
 ### Supported languages
@@ -42,16 +42,31 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
 ### Landing page
 - Visitors (not a member on this device) see the landing page at `/`: the vision, how it works, a real phrase in two
   languages, and the buttons Register and Log in. Members see the shelf at `/`.
-- `/register` is the Join page (same as `/join`). `/login` has **no password**: it explains that this device remembers
-  its members, leads to the join code, and in demo mode offers the demo neighbors.
+- `/login` and `/register` offer the three ways to log in. The QR code's `/join?code=...` leads there first.
+
+### Accounts and roles
+- **Everyone logs in first**, then joins a group (with its code) or starts one. **Registering**: email → 6-digit
+  code by email (10 minutes, 5 attempts) → password twice; or "Continue with Google". **Logging in**: "Continue with
+  Google" (creates the account if there is none), or with email: with the password, or without it (code by email). One email = one account: who registered with Google
+  logs in with Google only; for an account that was made another way, Google is one more way in. One account is in one
+  group at a time.
+- `user`: a neighbor. `group_admin`: also sees and removes members and makes a new join code (whoever starts a group; if
+  the last one leaves, the longest-standing member takes over). `super_admin`: all groups and accounts, roles,
+  deactivating; the first one comes from the settings.
+- **Profile** (`/profile`, every role, also without a group): photo, nickname, and a new password (the old one is
+  needed; other devices are logged out). **Forgot password?**: email → code → new password twice (all devices are logged
+  out). Not for Google-only accounts; not for the passwords of demo accounts.
+- **Group image**: group admins choose or remove it (`/group-admin`); it is the icon of the group in the header, in
+  Settings, on the admin page and on the join page. Without one: a building or block icon.
+- Neighbors see only nicknames and profile photos. Emails are seen by their owner and by super admins.
+- Seeded accounts have a public password, so they work only in demo mode. There is no "continue as".
 
 ### Must-have 1 — Neighborhood shelf
 - Join a **neighborhood group** (type `building` or `block`) with a **join code** (from the QR poster).
-  No account, no password, no email. User picks nickname + language. Identity is a random token
-  stored in `localStorage`.
+  User picks nickname + language. The session token is stored in `localStorage`.
 - **Start a new neighborhood**: the Join page has a link "Set up Otonari for your building or block", for a
-  building manager or neighborhood association leader. They enter a group name, type and city, and get a
-  random join code (`XXXX-XXXX`) and a button to the group's poster. The creator does not become a member.
+  building manager or neighborhood association leader. They enter a group name, type and city, become its first member
+  and admin, and get the poster with a random join code (`XXXX-XXXX`).
   If a group with a similar name exists in the same city, they are asked to look for its poster first
   ("Create anyway" is possible). Another group's code is never shown.
 - Add items to share by picking from the **fixed item catalog** (`client/src/data/catalog.ts`),
@@ -78,7 +93,7 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
   explains it instead of showing the time picker.
 - **Safe leaving** (Settings): refused while the user has an accepted or active loan ("Please finish your
   current loans first"). Otherwise their items leave the shelf, their pending requests are cancelled, and
-  their token stops working.
+  they are in no group. The account stays.
 
 ### Must-have 3 — Handover & return loop
 - Handover: lender takes a **condition photo** → borrower taps **"I received it"** → loan becomes active.
@@ -108,7 +123,7 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
 
 ### NOT in scope (roadmap only — do not build)
 Thank-you stamps, more languages, stronger verification (code rotation / management company),
-push notifications, maps, payments, SMS/email, real accounts, admin panel.
+push notifications, maps, payments, SMS.
 
 ---
 
@@ -117,15 +132,18 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 - **Client**: React 18 + Vite, **TypeScript (strict)**, `react-router-dom`, plain CSS
   (`client/src/styles/`), `vite-plugin-pwa`, `qrcode` (for the poster).
 - **Server**: Node.js 22.18+ (runs the `.ts` files directly, no build step), TypeScript, Express, `pg`,
-  `multer` (photo upload), `cors`, `dotenv`,
+  `nodemailer` (codes by email), `jose` (checks Google's tokens), `multer` (photo upload), `cors`, `dotenv`,
   `nodemon` (dev only: restarts the server when a server `.ts` file is saved).
 - **Database**: PostgreSQL 17, at `DATABASE_URL`. Recreated + seeded with `npm run seed`. Every request that changes
   something is one transaction (`write()` in `core/http.ts`), and they run one after the other (a lock in
   `transaction()`), so what a controller has checked stays true.
-- **Docker**: `docker compose up` starts everything: `db` (PostgreSQL, not reachable from outside), `server`, and
+- **Docker**: `docker compose up` starts everything: `db` (PostgreSQL, not reachable from outside), `server`, `mail` (a
+  test mailbox on http://localhost:8089, used unless `server/.env` has a mail server), and
   `client` (nginx: the built app, and `/api` and `/uploads` passed on to the server) on http://localhost:8088.
   Database and photos are volumes; `docker compose down -v` starts from zero.
-- **Photos**: saved to `server/uploads/` (git-ignored, keep `.gitkeep`), served at `/uploads/...`.
+- **Photos**: in a private AWS S3 bucket if `S3_BUCKET` is set (`@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`):
+  the database keeps `s3:photos/<name>`, and the answers contain a signed URL that works for an hour. Otherwise saved to
+  `server/uploads/` (git-ignored, keep `.gitkeep`), served at `/uploads/...`. Seeding never deletes photos in S3.
 - **Dev**: `npm run db` starts only the database in Docker (port 5433). The root `package.json` runs both with `concurrently` → `npm run dev`.
   Client on port 5173, server on port 3001, Vite proxies `/api` and `/uploads` to 3001.
   The server runs under `nodemon` (config in `server/package.json`): it watches only server `.ts` files and
@@ -134,12 +152,14 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 - **For the demo, always use `npm run build` + `npm start` (no file watcher).**
 - **Deploy** (Render.com, one free Node web service): build `npm run render-build`, start `npm start`,
   environment `NODE_VERSION=22`, `DEMO_MODE=true` and `DATABASE_URL` of a Render PostgreSQL database (Render sets
-  `PORT`). The free plan loses the photos on every restart. A server that starts without any groups runs the normal seed.
+  `PORT`). The free plan loses the photos on every restart
+  (unless they are in S3). A server that starts without any groups runs the normal seed.
 - **Types**: `shared/types.ts` (the API answers, used by both sides with `import type`) and `server/types.ts`
   (database rows). `typescript` and the `@types/*` packages are dev dependencies; `npm run typecheck` checks
   both sides. Vite and Node only remove the types, they don't check them.
-- **No API keys or secrets exist in this project.** `.env` holds only `PORT`, `DEMO_MODE` and `DATABASE_URL` (the
-  password of the local database in Docker is not a secret; the one on Render is, and is set only there).
+- **Secrets** (mail password, super admin password, AWS key) exist only in `server/.env` or in the settings of the host, never in
+  Git. `server/.env.example` lists all settings. `server/docker.env` has a public super admin password for trying the app
+  out on one's own computer.
   `.env` is in `.gitignore`; commit `.env.example`.
 
 ---
@@ -165,24 +185,28 @@ otonari/
 │   ├── public/             # icons for PWA (icon-192.png, icon-512.png, icon-maskable-512.png)
 │   └── src/
 │       ├── main.tsx        # starts the app, loads the styles
-│       ├── app/            # App (routes), Header, PublicHeader, BottomNav, navTabs, serviceWorker (reloads an open app after a deploy)
+│       ├── app/            # App (routes), Header, PublicHeader, AccountHeader, BottomNav, navTabs, serviceWorker (reloads an open app after a deploy)
 │       ├── core/           # used by all features
 │       │   ├── api.ts          # fetch wrapper; adds "Authorization: Bearer <token>"
 │       │   ├── UserContext.ts  # useUser() / useMember(): me, my group, my language and my inbox
 │       │   ├── usePolling.ts   # loads again every few seconds (the shelf)
+│       │   ├── shrinkPhoto.ts  # smaller JPEG without GPS, before every upload
 │       │   └── useInbox.ts     # my unread messages (banner, Loans badge, loan page)
 │       ├── components/     # used by several features: ChipGroup  FilterStrip  Icons  SpeakButton  TipCard
-│       │                   # TrustLine
+│       │                   # TrustLine  Avatar  GroupIcon  ImageEditor
 │       ├── features/       # one folder per feature, like the modules of the server
 │       │   ├── landing/    # Landing (/ for visitors)  SamplePhrase
-│       │   ├── group/      # Join (/join, /register)  NewGroup  Poster (/poster)
-│       │   ├── user/       # Settings (/settings)  Login (/login)
+│       │   ├── group/      # Join (/join)  NewGroup  Poster (/poster)
+│       │   ├── auth/       # AuthPage (/login, /register)  LoginForm  RegisterForm  CodeStep  AuthField
+│       │   │               # GoogleButton  authErrors
+│       │   ├── admin/      # GroupAdmin (/group-admin)  SuperAdmin (/admin)  ConfirmButton
+│       │   ├── user/       # Settings (/settings)  Profile (/profile)  AvatarEditor  ChangePassword
 │       │   ├── item/       # Shelf (/)  NeighborShelf  ItemCard  ItemPage (/item/:id)  BorrowForm  borrowTimes
 │       │   │               # MyItems (/my-items)  MyItemRow  Catalog  AddItemDialog  TrustedSwitch
 │       │   ├── loan/       # Loans (/loans)  LoanPage (/loan/:id)  LoanHeader  LoanStepper  PendingActions  HandoverStep
 │       │   │               # ReturnStep  QuickReplies  LoanPhotos  PhotoCapture  loanProps
 │       │   ├── message/    # Banner (polling)  NotificationBell  PhraseBubble ("show original" + 🔊)
-│       │   └── demo/       # DemoButtons (fast-forward)  DemoUsers ("continue as")
+│       │   └── demo/       # DemoButtons (fast-forward)
 │       ├── i18n/
 │       │   ├── index.ts    # t(), renderPhrase(), formatDate(), useLang()
 │       │   ├── en.json  ja.json  ja-easy.json  bn.json
@@ -201,19 +225,26 @@ otonari/
     │   ├── database.ts     # PostgreSQL: query(), transaction(), creates tables
     │   ├── http.ts         # read() / write(): steps → answer
     │   ├── allowedKeys.ts  # the keys and values the server accepts (copied from catalog.ts)
-    │   └── auth.ts         # requireUser: token → req.user
+    │   ├── receivePhoto.ts photoFiles.ts   # uploads: receive, store, URL, delete
+    │   ├── s3.ts           # puts photos into S3, signed URLs
+    │   ├── settings.ts     # everything from .env
+    │   ├── limiter.ts      # counts login attempts
+    │   └── auth.ts         # requireUser / requireMember / requireGroupAdmin / requireSuperAdmin
     ├── modules/            # modular MVC: one folder per feature. In each of them:
     │   │                   #   Routes = URL → steps (checks, controller), Controller = input + rules,
     │   │                   #   Model = the SQL of one table, View = the JSON the client gets
+    │   ├── auth/           # authRoutes  authController  sessionModel  emailCodeModel  registrationModel  password  mailer  google
+    │   │                   # superAdmin
+    │   ├── admin/          # adminRoutes  adminController
     │   ├── group/          # groupRoutes  groupController  groupModel  groupView
     │   ├── user/           # userRoutes  userController  userModel  userView  leaveGroup
     │   ├── item/           # itemRoutes  itemController  itemModel  itemView  removeItem
     │   ├── loan/           # loanRoutes  loanController  loanModel  loanView
-    │   │                   # loanRole (check), receivePhoto (middleware), photoFiles, reminders
+    │   │                   # loanRole (check), reminders
     │   ├── message/        # messageRoutes  messageController  messageModel  messageView (the inbox)
-    │   └── demo/           # demoRoutes  demoController (no table and no view of its own)
+    │   └── demo/           # demoRoutes  demoController (fast-forward)
     ├── uploads/.gitkeep
-    └── .env.example        # PORT=3001  DEMO_MODE=true  DATABASE_URL=...
+    └── .env.example        # all settings;  docker.env: super admin for docker compose
 ```
 
 Keep files small and readable. One concern per file. Prefer simple functions over abstractions.
@@ -228,19 +259,47 @@ CREATE TABLE groups (
   code TEXT UNIQUE NOT NULL,          -- join code, e.g. 'SAKURA-2611'
   name TEXT NOT NULL,                 -- shown as-is (proper noun)
   type TEXT NOT NULL CHECK (type IN ('building','block')),
-  city TEXT NOT NULL
+  city TEXT NOT NULL,
+  image TEXT                          -- the group's icon, like users.avatar; NULL = none
 );
 
 CREATE TABLE users (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  group_id INTEGER NOT NULL REFERENCES groups(id),
-  nickname TEXT NOT NULL,             -- max 20 chars
+  email TEXT UNIQUE NOT NULL,         -- lowercase
+  email_verified BOOLEAN NOT NULL DEFAULT false, -- proved with a code or Google
+  password_hash TEXT,                 -- scrypt; NULL = logs in with a code or Google
+  google_sub TEXT UNIQUE,             -- Google's id of the account
+  google_only BOOLEAN NOT NULL DEFAULT false, -- registered with Google: no other way to log in
+  role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('super_admin','group_admin','user')),
+  group_id INTEGER REFERENCES groups(id),  -- NULL = in no group
+  joined_at TIMESTAMPTZ,              -- when they joined that group
+  nickname TEXT NOT NULL DEFAULT '',  -- max 20 chars, asked when joining a group
+  avatar TEXT,                        -- profile photo, like handover_photo; NULL = none
   lang TEXT NOT NULL CHECK (lang IN ('en','ja','ja-easy','bn')),
   elder_mode BOOLEAN NOT NULL DEFAULT false,
-  token TEXT UNIQUE NOT NULL,         -- crypto.randomUUID()
-  is_demo BOOLEAN NOT NULL DEFAULT false, -- seeded demo neighbor: anyone may "continue as" them in demo mode
+  is_demo BOOLEAN NOT NULL DEFAULT false, -- seeded; its password is public, so it works only in demo mode
+  deactivated_at TIMESTAMPTZ,         -- set by a super admin: can't log in
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-  left_at TIMESTAMPTZ                 -- set when they leave (their token stops working); NULL = member
+  CHECK (role <> 'group_admin' OR group_id IS NOT NULL)
+);
+
+CREATE TABLE sessions (
+  token_hash TEXT PRIMARY KEY,        -- SHA-256 of the token; the token itself is only on the device
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE email_codes (
+  email TEXT PRIMARY KEY,
+  code_hash TEXT NOT NULL,            -- scrypt of the 6-digit code
+  attempts INTEGER NOT NULL DEFAULT 0,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE registrations (
+  ticket_hash TEXT PRIMARY KEY,       -- SHA-256 of the ticket: the email was proved, the password comes next
+  email TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE items (
@@ -265,7 +324,7 @@ CREATE TABLE loans (
   end_at TIMESTAMPTZ NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','accepted','declined','cancelled','active','returned')),
-  handover_photo TEXT,                -- '/uploads/xxx.jpg'
+  handover_photo TEXT,                -- 's3:photos/xxx.jpg' or '/uploads/xxx.jpg'
   return_photo TEXT,
   returned_at TIMESTAMPTZ,            -- when the borrower sent the return photo
   reminded_soon_at TIMESTAMPTZ,
@@ -313,19 +372,30 @@ A user is *trusted* with at least one on-time return; `trusted_only` items can b
 
 **Leaving** is possible only without `accepted` or `active` loans. The user's available items are removed
 (soft delete, see above), their own pending requests become `cancelled` (lenders get the `cancel` phrase),
-and `left_at` is set: the token no longer works, and they are no longer counted or listed as a member.
+and `group_id` becomes NULL: they are no longer counted or listed as a member.
 
 ---
 
-## 6. API (all JSON, all under `/api/v1`, all require `Authorization: Bearer <token>` except groups + join + demo users/login)
+## 6. API (all JSON, all under `/api/v1`, all require `Authorization: Bearer <token>` except `GET /groups/:code` and logging in)
 
 | Method & path | Who | Does | Message created |
 |---|---|---|---|
+| `GET /api/v1/auth/config` | anyone | what the login page can offer `{google_client_id,email_code,demo_mode}` | – |
+| `POST /api/v1/auth/email-codes` `{email,purpose:'register'\|'login'\|'reset',lang}` | anyone | sends a 6-digit code (`409` email taken / `404` no account, `429` too many attempts) | – |
+| `POST /api/v1/auth/email-codes/verify` `{email,code,purpose}` / `POST /api/v1/auth/register` or `/auth/reset-password` `{ticket,password}` | anyone | → `{ticket}` (15 minutes) / new account or new password → `{token,user,group}` | – |
+| `POST /api/v1/me/password` `{current_password,password}` | user | new password (`403` wrong or demo account) | – |
+| `POST /api/v1/group-admin/image` (multipart `photo`) / `DELETE /api/v1/group-admin/image` | group admin | the group's icon → `group` | – |
+| `POST /api/v1/me/avatar` (multipart `photo`) / `DELETE /api/v1/me/avatar` | user | profile photo → `{user,group}` | – |
+| `POST /api/v1/auth/login` `{email,password}` / `POST /api/v1/auth/login-with-code` `{email,code}` | anyone | → `{token,user,group}` (`401` wrong, `403` deactivated, `409 {use_google}`) | – |
+| `POST /api/v1/auth/google` `{credential,lang}` | anyone | checks Google's ID token, logs in (creates the account if new) | – |
+| `DELETE /api/v1/auth/session` | user | log out on this device | – |
+| `GET /api/v1/me/group/members` / `DELETE /api/v1/me/group/members/:id` / `POST /api/v1/me/group/change-code` | group admin | members (no emails), remove one (`409` during a loan), new join code | like leaving |
+| `GET /api/v1/admin/groups` / `GET /api/v1/admin/users` / `PATCH /api/v1/admin/users/:id` `{role?,active?}` | super admin | all groups, all accounts, change a role, deactivate | – |
 | `GET /api/v1/groups/:code` | anyone | group preview `{name,type,city,member_count}` | – |
-| `POST /api/v1/groups` `{name,type,city,create_anyway?}` | anyone | creates a group with a random, unique join code → `{code,name,type,city}`; creates no user. `409 {error,existing_name}` if the same city has a group with the same name (ignoring case and spaces), unless `create_anyway` is `true` | – |
-| `POST /api/v1/groups/:code/members` `{nickname,lang}` | anyone | creates user → `{token,user,group}` | – |
-| `GET /api/v1/me` / `PATCH /api/v1/me` `{lang,elder_mode}` | user | read/update me | – |
-| `DELETE /api/v1/me` | user | leave the group, see section 5 (`409` with an accepted or active loan, `403` for seeded demo users) | `decline` → borrowers waiting for my items; `cancel` → lenders of my pending requests |
+| `POST /api/v1/groups` `{name,type,city,nickname,lang,create_anyway?}` | user in no group | creates a group with a random, unique join code → `{user,group}`; the creator is its admin. `409 {error,existing_name}` if the same city has a group with the same name (ignoring case and spaces), unless `create_anyway` is `true` | – |
+| `POST /api/v1/groups/:code/members` `{nickname,lang}` | user in no group | join → `{user,group}` | – |
+| `GET /api/v1/me` / `PATCH /api/v1/me` `{nickname,lang,elder_mode}` | user | read/update me | – |
+| `DELETE /api/v1/me/group` | member | leave the group, see section 5 (`409` with an accepted or active loan, `403` for seeded demo users) | `decline` → borrowers waiting for my items; `cancel` → lenders of my pending requests |
 | `GET /api/v1/items` | user | items in my group + owner nickname + status + `trusted_only` | – |
 | `GET /api/v1/items/:id` | user (same group) | one item + owner nickname + owner lang (the item page previews the request in the owner's language) + `my_loan_id` + `allowed_for_me` (`false`: trusted neighbors only, and I'm not one) | – |
 | `GET /api/v1/me/items` / `POST /api/v1/items` `{item_key,max_days,spot,trusted_only?}` / `PATCH /api/v1/items/:id` `{trusted_only}` / `DELETE /api/v1/items/:id` | owner | manage my items (can't delete if reserved/lent; delete = soft delete, see section 5) | `decline` → pending borrowers (on delete) |
@@ -342,8 +412,6 @@ and `left_at` is set: the token no longer works, and they are no longer counted 
 | `POST /api/v1/loans/:id/messages` `{phrase_key}` | participant | only keys in QUICK_REPLIES, only when `accepted`, `active` or `returned` (else `409`) | that phrase → other side |
 | `GET /api/v1/me/inbox` | user | unread messages to me (with loan + item info; a `request` also has `borrower_trust`) | – |
 | `POST /api/v1/me/inbox/mark-read` `{ids}` | user | mark read | – |
-| `GET /api/v1/demo/users` | DEMO_MODE only | seeded users (`is_demo`, for "continue as") | – |
-| `POST /api/v1/demo/login` `{user_id}` | DEMO_MODE only | returns that user's token; `403` unless the user is seeded (`is_demo`) | – |
 | `POST /api/v1/demo/loans/:id/fast-forward` `{to:'dueSoon'\|'overdue'}` | participant, DEMO_MODE only | moves `end_at` to now+12h or now−1h and `start_at` along with it (same loan length), also in that loan's messages, then runs the reminder check immediately | reminders |
 
 **Naming**: plural nouns for collections (`/items`, `/loans`), everything of my own under `/me`, kebab-case paths,
@@ -365,8 +433,9 @@ Write one helper `createMessage(loan, fromUserId, toUserId, phraseKey)` in `serv
 - Validate `phrase_key` against a whitelist; validate `item_key`/`spot` against the catalog
   (keep a copy of allowed keys in `server/core/allowedKeys.ts` — just arrays of strings).
 - Photo upload: images only, max 5 MB, random filename.
-- Demo routes are mounted only when `process.env.DEMO_MODE === 'true'`. "Continue as" works only for the seeded
-  users (`is_demo`), never for people who joined with a code.
+- Demo routes are mounted only when `DEMO_MODE=true`; only then can seeded users (`is_demo`) log in.
+- Passwords and codes are stored as scrypt hashes, session tokens as SHA-256. Attempts are limited. Whoever proves an
+  address (code or Google) locks out somebody who registered it before without proof.
 - Reminder job (`modules/loan/reminders.ts`): every 30 s, for `active` loans without a return photo:
   - `end_at > now`, `end_at - now <= 24h` and `reminded_soon_at IS NULL` → `sys.dueSoon` to borrower,
     set timestamp.
@@ -439,7 +508,8 @@ Seeded users in Sakura Heights (Rahim is NOT seeded — he joins live in the dem
 Hamaguchi-machi block: Inoue (ja, elder) lawn_mower (1, notice_board), hedge_trimmer (1, notice_board);
 Kobayashi (ja) high_pressure_washer (1, notice_board).
 
-All seeded users joined 30 days ago (`created_at`) and have `is_demo = 1`.
+All seeded users joined 30 days ago and have `is_demo`. They log in as `<nickname>@otonari.example` (lowercase), password
+`otonari2611`. Tanaka and Inoue are the group admins.
 
 Also seed one already-returned loan (Maria borrowed Tanaka's projector last week) so history isn't empty.
 
@@ -452,8 +522,8 @@ demo with real people. Both seeds also delete all photos in `server/uploads/` (`
 
 Two browser windows side by side. Left = Rahim (phone-sized), right = Sato (elder mode, Japanese).
 
-1. **Join** — Rahim scans the poster / opens `/join?code=SAKURA-2611`, picks nickname "Rahim",
-   language English → sees the Sakura Heights shelf. (Right window: "continue as Sato" via demo mode.)
+1. **Join** — Rahim scans the poster / opens `/join?code=SAKURA-2611`, registers, picks nickname "Rahim",
+   language English → sees the Sakura Heights shelf. (Right window: log in as `sato@otonari.example`.)
 2. **Request** — Rahim taps 🛏️ Futon dryer → Tomorrow · Morning · 3 days. Preview shows the polite
    Japanese Sato will see → taps "Can I borrow it?".
 3. **Answer** — Sato's banner pops up in polite Japanese, 🔊 reads it aloud. Sato taps はい →
@@ -462,7 +532,7 @@ Two browser windows side by side. Left = Rahim (phone-sized), right = Sato (elde
 4. **Handover** — Sato takes a condition photo; Rahim taps "I received it" (with an etiquette tip).
 5. **Return (the "after")** — demo fast-forward to overdue → Rahim gets a polite reminder, Sato gets
    "we reminded him for you". Rahim returns with a photo, Sato confirms → futon dryer back on the
-   shelf, both photos in the history, a thank-you exchanged — **no one typed a single word.**
+   shelf, both photos in the history, a thank-you exchanged — **no one typed a single message.**
 
 ---
 
@@ -476,5 +546,5 @@ Two browser windows side by side. Left = Rahim (phone-sized), right = Sato (elde
 - After finishing a step, tell the user exactly how to test it and suggest a commit message.
 - Ask before adding any new dependency not listed in section 3.
 - Ask before changing the data model, API, scope or anything in this file.
-- Never add free-text messaging, maps, logins, payments, AI calls or external APIs.
+- Never add free-text messaging, maps, payments, AI calls or other external APIs (only email, Google login and S3).
 - Never commit `.env`, the database file or uploaded photos.

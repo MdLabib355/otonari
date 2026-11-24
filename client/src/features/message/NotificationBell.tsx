@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import type { InboxMessage, Lang } from '../../../../shared/types.ts';
 import { BellIcon, CloseIcon } from '../../components/Icons.tsx';
 import { useMember } from '../../core/UserContext.ts';
-import { findItem } from '../../data/catalog.ts';
+import ItemVisual from '../../components/ItemVisual.tsx';
 import { displayName, renderPhrase, t } from '../../i18n/index.ts';
 
 // The bell in the header: opens a list of all my unread messages.
@@ -100,9 +100,7 @@ function NotificationItem({ message, lang, onOpen }: NotificationItemProps) {
   return (
     <li>
       <Link to={`/loan/${message.loan_id}`} className="notif-item-link" onClick={onOpen}>
-        <span className="notif-emoji" aria-hidden="true">
-          {findItem(message.item_key)?.emoji}
-        </span>
+        <ItemVisual itemKey={message.item_key} categoryKey={message.category_key} alt="" size="sm" />
         <div className="notif-item-text">
           <strong className="inline-icon-text">
             {message.from_nickname === null && <BellIcon className="icon-sm" />}

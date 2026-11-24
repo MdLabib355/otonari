@@ -36,6 +36,9 @@
   width: 100%;
   max-width: 19em;
   margin: 0 auto;
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 12px;
 }
 
 .poster .big-code {

@@ -6,6 +6,7 @@ import { t } from '../../i18n/index.ts';
 import AddItemDialog from './AddItemDialog.tsx';
 import Catalog from './Catalog.tsx';
 import MyItemRow from './MyItemRow.tsx';
+import RequestItemDialog from './RequestItemDialog.tsx';
 
 // My items: what I lend, and beside it (on a phone: below it) the catalog to add more. Tapping
 // something in the catalog opens a dialog with its settings. Items are picked, never typed.
@@ -13,6 +14,8 @@ export default function MyItems() {
   const { lang } = useUser();
   const [items, setItems] = useState<MyItem[] | null>(null); // null = still loading
   const [failed, setFailed] = useState(false);
+  const [editing, setEditing] = useState<MyItem | null>(null); // the item I'm about to change
+  const [requesting, setRequesting] = useState(false); // something that is not in the catalog
   const [itemKey, setItemKey] = useState<string | null>(null); // the item I'm about to add
 
   function loadItems() {
@@ -28,8 +31,14 @@ export default function MyItems() {
 
   function handleAdded() {
     setItemKey(null);
+    setRequesting(false);
     loadItems();
     window.scrollTo({ top: 0, behavior: 'smooth' }); // the new item appears in the list at the top
+  }
+
+  function handleEdited() {
+    setEditing(null);
+    loadItems();
   }
 
   async function removeItem(id: number) {
@@ -69,6 +78,7 @@ export default function MyItems() {
                   key={item.id}
                   item={item}
                   lang={lang}
+                  onEdit={setEditing}
                   onRemove={removeItem}
                   onTrustedOnly={changeTrustedOnly}
                 />
@@ -80,12 +90,28 @@ export default function MyItems() {
         <div className="add-item-panel">
           <h2 className="section-title-mobile">{t(lang, 'myItems.add')}</h2>
           <p className="hint">{t(lang, 'myItems.pick')}</p>
+          <div className="request-item">
+            <p className="hint">{t(lang, 'itemRequest.hint')}</p>
+            <button type="button" className="button-secondary" onClick={() => setRequesting(true)}>
+              {t(lang, 'itemRequest.button')}
+            </button>
+          </div>
           <Catalog lang={lang} onPick={setItemKey} />
         </div>
       </div>
 
       {itemKey && (
-        <AddItemDialog lang={lang} itemKey={itemKey} onAdded={handleAdded} onClose={() => setItemKey(null)} />
+        <AddItemDialog lang={lang} itemKey={itemKey} onSaved={handleAdded} onClose={() => setItemKey(null)} />
+      )}
+      {requesting && <RequestItemDialog lang={lang} onSent={handleAdded} onClose={() => setRequesting(false)} />}
+      {editing && (
+        <AddItemDialog
+          lang={lang}
+          itemKey={editing.item_key}
+          item={editing}
+          onSaved={handleEdited}
+          onClose={() => setEditing(null)}
+        />
       )}
     </section>
   );

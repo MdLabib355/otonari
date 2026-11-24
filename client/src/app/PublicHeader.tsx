@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { Lang } from '../../../shared/types.ts';
+import ThemeToggle from '../components/ThemeToggle.tsx';
 import { useUser } from '../core/UserContext.ts';
 import { LANGUAGES } from '../data/catalog.ts';
 import { meta, t } from '../i18n/index.ts';
@@ -15,6 +16,7 @@ export default function PublicHeader() {
           <span className="header-logo">{t(lang, 'appName')}</span>
         </Link>
         <div className="header-right">
+          <ThemeToggle />
           <select
             className="language-select"
             aria-label={t(lang, 'settings.language')}

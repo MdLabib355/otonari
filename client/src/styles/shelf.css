@@ -170,8 +170,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 5px;
-  padding: 14px;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
@@ -179,6 +178,17 @@
   color: inherit;
   text-decoration: none;
   transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.item-card-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  width: 100%;
+  padding: 12px 14px 14px;
+  overflow-wrap: anywhere;
 }
 
 .item-card:hover {
@@ -203,9 +213,4 @@
 
 .item-card .badge:not(.lock-badge) {
   margin-top: auto;
-}
-
-.item-emoji {
-  font-size: 2.2em;
-  line-height: 1.1;
 }

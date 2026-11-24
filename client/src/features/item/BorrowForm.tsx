@@ -52,7 +52,14 @@ export default function BorrowForm({ item, onRefused }: Props) {
   const startAt = japanTime(dayOffset, TIME_SLOTS[slot]);
   const endAt = new Date(Date.parse(startAt) + days * DAY).toISOString();
   // Exactly the params the server stores with the 'request' message (name = me, seen by the owner).
-  const params = { item: item.item_key, spot: item.spot, start: startAt, end: endAt, name: user.nickname };
+  const params = {
+    item: item.item_key,
+    item_label: item.custom_title ?? undefined,
+    spot: item.spot,
+    start: startAt,
+    end: endAt,
+    name: user.nickname,
+  };
 
   async function send() {
     setBusy(true);

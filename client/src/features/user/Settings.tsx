@@ -3,16 +3,18 @@ import { Link } from 'react-router-dom';
 import type { Lang, Me } from '../../../../shared/types.ts';
 import { api, errorStatus } from '../../core/api.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
-import { BlockIcon, BuildingIcon } from '../../components/Icons.tsx';
+import GroupIcon from '../../components/GroupIcon.tsx';
 import { LANGUAGES } from '../../data/catalog.ts';
 import { meta, t, type UiKey } from '../../i18n/index.ts';
 import { useMember } from '../../core/UserContext.ts';
+import { useTheme, type ThemePreference } from '../../core/theme.tsx';
 
 const DOUBLE_TAP_MS = 500;
 
 // Settings: language, elder mode, my neighborhood (with its poster), and leaving it.
 export default function Settings() {
   const { user, group, lang, setMe, logout } = useMember();
+  const { theme, setTheme } = useTheme();
   const [failed, setFailed] = useState(false);
   const [leaveTappedAt, setLeaveTappedAt] = useState<number | null>(null); // time of the first tap on "Leave"
   const [leaving, setLeaving] = useState(false);
@@ -29,7 +31,7 @@ export default function Settings() {
     }
   }
 
-  // Leaving can't be undone: my items leave the shelf, and nobody can come back as the same person.
+  // Leaving can't be undone: my items leave the shelf, and my open requests are cancelled.
   // So it takes two separate taps; an accidental double tap doesn't count.
   function tapLeave() {
     if (leaveTappedAt === null) {
@@ -43,8 +45,7 @@ export default function Settings() {
   async function leave() {
     setLeaving(true);
     try {
-      await api.delete('/me');
-      logout();
+      setMe(await api.delete<Me>('/me/group'));
     } catch (error) {
       // 409: there is still an accepted or active loan. 403: demo neighbors can't leave.
       const problems: Record<number, UiKey> = { 403: 'settings.leaveDemo', 409: 'settings.leaveBlocked' };
@@ -55,7 +56,6 @@ export default function Settings() {
   }
 
   const languageOptions = LANGUAGES.map((language) => ({ value: language, label: meta(language).name }));
-  const GroupIcon = group.type === 'block' ? BlockIcon : BuildingIcon;
   const confirming = leaveTappedAt !== null;
 
   return (
@@ -71,6 +71,20 @@ export default function Settings() {
               options={languageOptions}
               value={lang}
               onChange={(language) => save({ lang: language })}
+            />
+          </div>
+
+          <div className="field">
+            <p className="label">{t(lang, 'theme.title')}</p>
+            <ChipGroup
+              label={t(lang, 'theme.title')}
+              options={[
+                { value: 'system', label: t(lang, 'theme.system') },
+                { value: 'light', label: t(lang, 'theme.light') },
+                { value: 'dark', label: t(lang, 'theme.dark') },
+              ]}
+              value={theme}
+              onChange={(val) => setTheme(val as ThemePreference)}
             />
           </div>
 
@@ -96,7 +110,7 @@ export default function Settings() {
           <div className="field">
             <p className="label">{t(lang, 'settings.group')}</p>
             <div className="group-preview">
-              <GroupIcon className="group-icon-svg" />
+              <GroupIcon group={group} className="group-icon-svg" />
               <div>
                 <strong>{group.name}</strong>
                 <p>{t(lang, `groupType.${group.type}`)}</p>
@@ -104,7 +118,27 @@ export default function Settings() {
             </div>
           </div>
 
+          <div className="field">
+            <p className="label">{t(lang, 'settings.account')}</p>
+            <p className="muted">
+              {user.nickname} · {user.email} · {t(lang, `role.${user.role}`)}
+            </p>
+          </div>
+
           <div className="actions">
+            <Link to="/profile" className="button-secondary button-link">
+              {t(lang, 'profile.edit')}
+            </Link>
+            {user.role !== 'user' && (
+              <Link to="/group-admin" className="button-secondary button-link">
+                {t(lang, 'admin.manageGroup')}
+              </Link>
+            )}
+            {user.role === 'super_admin' && (
+              <Link to="/admin" className="button-secondary button-link">
+                {t(lang, 'admin.title')}
+              </Link>
+            )}
             <Link to="/poster" className="button-secondary button-link">
               {t(lang, 'settings.poster')}
             </Link>
@@ -115,6 +149,9 @@ export default function Settings() {
               onClick={tapLeave}
             >
               {t(lang, confirming ? 'settings.leaveConfirm' : 'settings.leave')}
+            </button>
+            <button type="button" className="button-secondary" onClick={logout}>
+              {t(lang, 'auth.logout')}
             </button>
             {leaveProblem && <p className="error">{t(lang, leaveProblem)}</p>}
           </div>

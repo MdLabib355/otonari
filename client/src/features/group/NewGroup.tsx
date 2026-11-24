@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import type { GroupType, Lang, NewGroupAnswer } from '../../../../shared/types.ts';
+import type { GroupType, Lang, Me } from '../../../../shared/types.ts';
 import { api, ApiError } from '../../core/api.ts';
 import { ArrowRightIcon, BuildingIcon } from '../../components/Icons.tsx';
 import { t } from '../../i18n/index.ts';
@@ -10,14 +9,12 @@ const GROUP_TYPES: GroupType[] = ['building', 'block'];
 const EMPTY_FORM: { name: string; type: GroupType; city: string } = { name: '', type: 'building', city: '' };
 
 // "Set up Otonari for your building or block", on the join page: for a building manager or a
-// neighborhood association leader. Creates the group and shows its new join code.
-// The creator does not become a member.
-export default function NewGroup({ lang }: { lang: Lang }) {
-  const navigate = useNavigate();
+// neighborhood association leader. Whoever starts the group is its first
+// member and its admin; then comes the poster.
+export default function NewGroup({ lang, nickname }: { lang: Lang; nickname: string }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [existingName, setExistingName] = useState<string | null>(null); // the similar group we warn about
-  const [created, setCreated] = useState<NewGroupAnswer | null>(null); // { code, name, type, city }
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -30,12 +27,13 @@ export default function NewGroup({ lang }: { lang: Lang }) {
     setBusy(true);
     setFailed(false);
     try {
-      setCreated(await api.post<NewGroupAnswer>('/groups', { ...form, create_anyway: createAnyway }));
+      await api.post<Me>('/groups', { ...form, nickname, lang, create_anyway: createAnyway });
+      // A real page load: the whole app starts again as a member of the new group.
+      window.location.assign('/poster');
     } catch (error) {
       // 409: a similar group exists. The server tells us its name (and never its code).
       if (error instanceof ApiError && error.status === 409) setExistingName(error.data?.existing_name ?? form.name);
       else setFailed(true);
-    } finally {
       setBusy(false);
     }
   }
@@ -43,18 +41,6 @@ export default function NewGroup({ lang }: { lang: Lang }) {
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     create(false);
-  }
-
-  if (created) {
-    return (
-      <section className="new-group">
-        <p>{t(lang, 'newGroup.done', { group: created.name })}</p>
-        <p className="big-code">{created.code}</p>
-        <button type="button" className="button-primary" onClick={() => navigate(`/poster?code=${created.code}`)}>
-          {t(lang, 'newGroup.poster')}
-        </button>
-      </section>
-    );
   }
 
   const typeOptions = GROUP_TYPES.map((type) => ({ value: type, label: t(lang, `groupType.${type}`) }));
@@ -112,18 +98,19 @@ export default function NewGroup({ lang }: { lang: Lang }) {
             />
           </div>
 
+          {!nickname && <p className="hint">{t(lang, 'newGroup.needNickname')}</p>}
           {failed && <p className="error">{t(lang, 'common.error')}</p>}
           {existingName ? (
             <div className="actions">
               <p className="notice">
                 {t(lang, 'newGroup.duplicate', { name: existingName, city: form.city.trim() })}
               </p>
-              <button type="button" className="button-secondary" disabled={busy} onClick={() => create(true)}>
+              <button type="button" className="button-secondary" disabled={busy || !nickname} onClick={() => create(true)}>
                 {t(lang, 'newGroup.createAnyway')}
               </button>
             </div>
           ) : (
-            <button type="submit" className="button-primary" disabled={!form.name.trim() || !form.city.trim() || busy}>
+            <button type="submit" className="button-primary" disabled={!nickname || !form.name.trim() || !form.city.trim() || busy}>
               {t(lang, 'newGroup.create')}
             </button>
           )}

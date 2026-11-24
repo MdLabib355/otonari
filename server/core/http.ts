@@ -47,12 +47,14 @@ export function write(...steps: Step[]) {
   return async (req: Request, res: Response) => send(res, await transaction(() => runSteps(steps, req)));
 }
 
-// One check as Express middleware, for what must be checked before an upload is received.
-export function check(step: Step) {
+// Checks as Express middleware, for what must be checked before an upload is received or stored.
+export function check(...steps: Step[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const answer = await step(req);
-    if (answer) send(res, answer);
-    else next();
+    for (const step of steps) {
+      const answer = await step(req);
+      if (answer) return send(res, answer);
+    }
+    next();
   };
 }
 
