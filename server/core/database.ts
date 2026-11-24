@@ -68,6 +68,11 @@ export function found<T>(value: T | undefined): T {
 // The schema, exactly as in CLAUDE.md section 5.
 // "IF NOT EXISTS" keeps the existing data when the server restarts.
 export async function createTables() {
+  // A database from before there were accounts can't be used anymore: nobody in it has an email.
+  const old = await query("SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'token'");
+  if (old.length > 0) {
+    throw new Error('This database is from an older version. Reset it: npm run seed (Docker: docker compose down -v)');
+  }
   await query(`
     CREATE TABLE IF NOT EXISTS groups (
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -79,14 +84,33 @@ export async function createTables() {
 
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-      group_id INTEGER NOT NULL REFERENCES groups(id),
-      nickname TEXT NOT NULL,             -- max 20 chars
+      email TEXT UNIQUE NOT NULL,         -- lowercase
+      email_verified BOOLEAN NOT NULL DEFAULT false, -- proved with a code or Google
+      password_hash TEXT,                 -- scrypt; NULL = logs in with a code or Google
+      google_sub TEXT UNIQUE,             -- Google's id of the account
+      role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('super_admin','group_admin','user')),
+      group_id INTEGER REFERENCES groups(id),  -- NULL = in no group
+      joined_at TIMESTAMPTZ,              -- when they joined that group
+      nickname TEXT NOT NULL DEFAULT '',  -- max 20 chars, asked when joining a group
       lang TEXT NOT NULL CHECK (lang IN ('en','ja','ja-easy','bn')),
       elder_mode BOOLEAN NOT NULL DEFAULT false,
-      token TEXT UNIQUE NOT NULL,         -- crypto.randomUUID()
-      is_demo BOOLEAN NOT NULL DEFAULT false, -- seeded demo neighbor: anyone may "continue as" them in demo mode
+      is_demo BOOLEAN NOT NULL DEFAULT false, -- seeded; its password is public, so it works only in demo mode
+      deactivated_at TIMESTAMPTZ,         -- set by a super admin: can't log in
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-      left_at TIMESTAMPTZ                 -- set when they leave (their token stops working); NULL = member
+      CHECK (role <> 'group_admin' OR group_id IS NOT NULL)
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      token_hash TEXT PRIMARY KEY,        -- SHA-256 of the token; the token itself is only on the device
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      expires_at TIMESTAMPTZ NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS email_codes (
+      email TEXT PRIMARY KEY,
+      code_hash TEXT NOT NULL,            -- scrypt of the 6-digit code
+      attempts INTEGER NOT NULL DEFAULT 0,
+      expires_at TIMESTAMPTZ NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS items (
@@ -134,7 +158,7 @@ export async function createTables() {
 
 // Start from empty tables: drop them all and create them again (used by seedData.ts).
 export async function resetDatabase() {
-  await query('DROP TABLE IF EXISTS messages, loans, items, users, groups');
+  await query('DROP TABLE IF EXISTS messages, loans, items, sessions, email_codes, users, groups');
   await createTables();
 }
 

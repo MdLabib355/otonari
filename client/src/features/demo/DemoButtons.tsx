@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Lang } from '../../../../shared/types.ts';
+import type { AuthConfig, Lang } from '../../../../shared/types.ts';
 import { api } from '../../core/api.ts';
 import { t } from '../../i18n/index.ts';
 
@@ -7,11 +7,10 @@ import { t } from '../../i18n/index.ts';
 export default function DemoButtons({ loanId, lang, onDone }: { loanId: number; lang: Lang; onDone: () => void }) {
   const [demoMode, setDemoMode] = useState(false);
 
-  // The demo routes only exist in demo mode, so an answer means it is on (like on the join page).
   useEffect(() => {
     api
-      .get('/demo/users')
-      .then(() => setDemoMode(true))
+      .get<AuthConfig>('/auth/config')
+      .then((config) => setDemoMode(config.demo_mode))
       .catch(() => setDemoMode(false));
   }, []);
 

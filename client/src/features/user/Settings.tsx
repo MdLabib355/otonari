@@ -29,7 +29,7 @@ export default function Settings() {
     }
   }
 
-  // Leaving can't be undone: my items leave the shelf, and nobody can come back as the same person.
+  // Leaving can't be undone: my items leave the shelf, and my open requests are cancelled.
   // So it takes two separate taps; an accidental double tap doesn't count.
   function tapLeave() {
     if (leaveTappedAt === null) {
@@ -43,8 +43,7 @@ export default function Settings() {
   async function leave() {
     setLeaving(true);
     try {
-      await api.delete('/me');
-      logout();
+      setMe(await api.delete<Me>('/me/group'));
     } catch (error) {
       // 409: there is still an accepted or active loan. 403: demo neighbors can't leave.
       const problems: Record<number, UiKey> = { 403: 'settings.leaveDemo', 409: 'settings.leaveBlocked' };
@@ -104,7 +103,24 @@ export default function Settings() {
             </div>
           </div>
 
+          <div className="field">
+            <p className="label">{t(lang, 'settings.account')}</p>
+            <p className="muted">
+              {user.email} · {t(lang, `role.${user.role}`)}
+            </p>
+          </div>
+
           <div className="actions">
+            {user.role !== 'user' && (
+              <Link to="/group-admin" className="button-secondary button-link">
+                {t(lang, 'admin.manageGroup')}
+              </Link>
+            )}
+            {user.role === 'super_admin' && (
+              <Link to="/admin" className="button-secondary button-link">
+                {t(lang, 'admin.title')}
+              </Link>
+            )}
             <Link to="/poster" className="button-secondary button-link">
               {t(lang, 'settings.poster')}
             </Link>
@@ -115,6 +131,9 @@ export default function Settings() {
               onClick={tapLeave}
             >
               {t(lang, confirming ? 'settings.leaveConfirm' : 'settings.leave')}
+            </button>
+            <button type="button" className="button-secondary" onClick={logout}>
+              {t(lang, 'auth.logout')}
             </button>
             {leaveProblem && <p className="error">{t(lang, leaveProblem)}</p>}
           </div>

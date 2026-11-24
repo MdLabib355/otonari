@@ -1,7 +1,7 @@
 // The groups table: neighborhoods and their join codes.
 
 import crypto from 'node:crypto';
-import type { Group, GroupType } from '../../../shared/types.ts';
+import type { AdminGroup, Group, GroupType } from '../../../shared/types.ts';
 import { found, query, queryOne } from '../../core/database.ts';
 import { toText } from '../../core/http.ts';
 import type { CountRow } from '../../types.ts';
@@ -20,6 +20,17 @@ export async function getGroup(groupId: number): Promise<Group> {
 
 export async function listGroups(): Promise<Group[]> {
   return query<Group>('SELECT * FROM groups ORDER BY id');
+}
+
+export async function listGroupsWithCounts(): Promise<AdminGroup[]> {
+  return query<AdminGroup>(
+    `SELECT groups.*, COUNT(users.id)::int AS member_count
+     FROM groups LEFT JOIN users ON users.group_id = groups.id GROUP BY groups.id ORDER BY groups.id`
+  );
+}
+
+export async function changeJoinCode(groupId: number) {
+  await query('UPDATE groups SET code = $1 WHERE id = $2', [await newJoinCode(), groupId]);
 }
 
 export async function countGroups(): Promise<number> {

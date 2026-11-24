@@ -27,6 +27,11 @@ services:
       context: .
       dockerfile: server/Dockerfile
     init: true # stops immediately on Ctrl+C
+    # docker.env: a super admin to try out. Your own settings (email, Google, super admin) in server/.env win.
+    env_file:
+      - path: server/docker.env
+      - path: server/.env
+        required: false
     environment:
       PORT: 3001
       DEMO_MODE: 'true'

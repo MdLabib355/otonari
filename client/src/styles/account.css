@@ -1,0 +1,47 @@
+/* ---------- Log in, register, and the admin pages ---------- */
+
+.auth-switch {
+  margin: 20px 0 0;
+}
+
+.auth-code {
+  font-size: 1.5em;
+  letter-spacing: 0.3em;
+}
+
+.auth-google {
+  margin-top: 20px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.admin-block {
+  margin-bottom: 20px;
+}
+
+.admin-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.admin-list li > div {
+  display: flex;
+  flex: 1 1 12em;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-role {
+  max-width: none;
+}

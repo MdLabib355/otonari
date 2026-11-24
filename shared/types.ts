@@ -2,6 +2,7 @@
 // Types only (no code): both sides use "import type", so nothing of this file is left at run time.
 
 export type Lang = 'en' | 'ja' | 'ja-easy' | 'bn';
+export type Role = 'super_admin' | 'group_admin' | 'user';
 export type GroupType = 'building' | 'block';
 export type ItemStatus = 'available' | 'reserved' | 'lent';
 export type LoanStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'active' | 'returned';
@@ -25,10 +26,12 @@ export interface Trust {
 
 export interface User {
   id: number;
-  group_id: number;
+  group_id: number | null;
   nickname: string;
   lang: Lang;
   elder_mode: boolean;
+  email: string;
+  role: Role;
 }
 
 export interface Group {
@@ -42,10 +45,17 @@ export interface Group {
 // GET /api/v1/me
 export interface Me {
   user: User;
-  group: Group;
+  group: Group | null; // null before joining one
 }
 
-// POST /api/v1/groups/:code/members and POST /api/v1/demo/login
+// GET /api/v1/auth/config
+export interface AuthConfig {
+  google_client_id: string | null; // null: no Google login
+  email_code: boolean;
+  demo_mode: boolean;
+}
+
+// POST /api/v1/auth/register, /login, /google and /email-codes/verify
 export interface Login extends Me {
   token: string;
 }
@@ -58,13 +68,29 @@ export interface GroupPreview {
   member_count: number;
 }
 
-// POST /api/v1/groups
-export type NewGroupAnswer = Omit<Group, 'id'>;
+// GET /api/v1/me/group/members
+export interface GroupMember {
+  id: number;
+  nickname: string;
+  lang: Lang;
+  role: Role;
+  joined_at: string | null;
+}
 
-// GET /api/v1/demo/users
-export interface DemoUser extends User {
-  group_name: string;
-  group_code: string;
+// GET /api/v1/admin/groups
+export interface AdminGroup extends Group {
+  member_count: number;
+}
+
+// GET /api/v1/admin/users
+export interface AdminUser {
+  id: number;
+  email: string;
+  nickname: string;
+  role: Role;
+  group_name: string | null;
+  created_at: string;
+  active: boolean;
 }
 
 // GET /api/v1/me/items

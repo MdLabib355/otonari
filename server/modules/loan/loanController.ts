@@ -49,7 +49,7 @@ export async function requestLoan(req: Request) {
   if (!Number.isInteger(Number(item_id))) return refuse(400, 'item_id must be a number');
   const item = await findItem(toId(item_id));
   if (!item) return refuse(404, 'Item not found');
-  if (item.group_id !== req.user.group_id) return refuse(403, 'Not in your neighborhood');
+  if (item.group_id !== req.groupId) return refuse(403, 'Not in your neighborhood');
   if (item.owner_id === req.user.id) return refuse(403, "You can't borrow your own item");
 
   // Checked before the item status: once my request is accepted, the item is reserved (for me).
