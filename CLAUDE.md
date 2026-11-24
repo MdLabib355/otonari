@@ -191,7 +191,7 @@ otonari/
 │       ├── features/       # one folder per feature, like the modules of the server
 │       │   ├── landing/    # Landing (/ for visitors)  SamplePhrase
 │       │   ├── group/      # Join (/join)  NewGroup  Poster (/poster)
-│       │   ├── auth/       # AuthPage (/login, /register)  LoginForm  RegisterForm  CodeField  AuthField
+│       │   ├── auth/       # AuthPage (/login, /register)  LoginForm  RegisterForm  CodeStep  AuthField
 │       │   │               # GoogleButton  authErrors
 │       │   ├── admin/      # GroupAdmin (/group-admin)  SuperAdmin (/admin)  ConfirmButton
 │       │   ├── user/       # Settings (/settings)
