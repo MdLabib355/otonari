@@ -1,0 +1,213 @@
+/* ---------- Loan page (conversation) ---------- */
+
+.loan-facts {
+  margin: 12px 0 8px;
+  color: var(--muted);
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Mine on the right, theirs on the left, reminders in the middle. */
+.bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius);
+}
+
+.bubble-mine {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.bubble-theirs {
+  align-self: flex-start;
+  border-color: var(--border);
+  border-bottom-left-radius: 4px;
+  background: var(--surface);
+}
+
+.bubble-system {
+  align-self: center;
+  background: var(--quiet);
+  text-align: center;
+}
+
+.bubble-text {
+  margin: 0;
+}
+
+/* The text, and 🔊 to its right */
+.bubble-main {
+  display: flex;
+  align-items: flex-start;
+}
+
+.bubble-main .bubble-text {
+  flex: auto;
+  min-width: 0;
+}
+
+/* 🔊 Read aloud: a small icon with a full-size tap target (a big button with text in elder mode) */
+.speak-button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.speak-text {
+  display: none;
+}
+
+/* The icon uses the padding of the bubble, so the bubble stays as low as without it. */
+.bubble-main .speak-button {
+  margin: -10px -14px -10px 0;
+}
+
+.bubble-label {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+.bubble-original {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+/* A small text link that is still easy to tap. */
+.bubble-toggle {
+  min-height: var(--tap);
+  margin-bottom: -8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.85em;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The answer buttons, below each other and as wide as the screen. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.actions .tip-card {
+  margin-bottom: 0;
+}
+
+.actions .button-secondary {
+  min-height: calc(var(--tap) + 8px);
+  border-radius: var(--radius);
+  white-space: normal;
+}
+
+.button-secondary:disabled,
+.chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Handover and return steps (above the quick replies) */
+.step {
+  margin-bottom: 24px;
+}
+
+.photo-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* The file input inside the button is invisible, so show the keyboard focus on the button itself. */
+.photo-button:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.photo-preview {
+  align-self: center;
+  max-width: 100%;
+  max-height: 45vh; /* leaves room for "Send photo" */
+  border-radius: var(--radius);
+}
+
+/* Before and after, side by side */
+.loan-photos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.loan-photos figure {
+  margin: 0;
+}
+
+.loan-photos img {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius);
+}
+
+.loan-photos figcaption {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.9em;
+  text-align: center;
+}
+
+/* Invisible, but still usable with the keyboard and by screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.quick-replies {
+  margin-bottom: 16px;
+}
+
+/* Demo mode only: deliberately small and grey, they are not part of the real app. */
+.demo-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.demo-buttons button {
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--quiet);
+  color: var(--muted);
+  font-size: 0.8em;
+  cursor: pointer;
+}

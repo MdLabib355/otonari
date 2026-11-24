@@ -3,7 +3,7 @@ import type { Lang } from '../../../shared/types.ts';
 import { meta, t } from '../i18n/index.ts';
 
 // 🔊 Reads a text aloud with the browser's own voices. Hidden if it has no voice for the language.
-// A small icon normally, a big button with text in elder mode (see styles.css).
+// A small icon normally, a big button with text in elder mode (see styles/elder.css).
 //
 //    <SpeakButton lang={lang} text="今から向かいます。" />
 export default function SpeakButton({ lang, text }: { lang: Lang; text: string }) {

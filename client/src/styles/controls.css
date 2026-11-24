@@ -1,0 +1,87 @@
+/* ---------- Shared building blocks ---------- */
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+h2 {
+  font-size: 1.1em;
+  margin: 0 0 12px;
+}
+
+.label {
+  display: block;
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.field {
+  margin-bottom: 22px;
+}
+
+.text-input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.text-input:focus {
+  border-color: var(--accent);
+  outline: 3px solid var(--accent-soft);
+}
+
+.hint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.error {
+  margin: 6px 0 12px;
+  color: var(--danger);
+}
+
+/* The one big action of a screen ("Join", "Can I borrow it?") */
+.button-primary {
+  width: 100%;
+  min-height: calc(var(--tap) + 8px);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.1em;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button-primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Chips (components/ChipGroup.tsx): big tap targets, the selected one is filled */
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: var(--tap);
+  padding: 0 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.chip.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}

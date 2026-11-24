@@ -1,0 +1,65 @@
+/* ---------- Printing: the poster on one A4 page ---------- */
+
+/* Without a page margin there is no room for the header and footer of the browser (date, address),
+   so the paper stays clean. The padding of the poster keeps its text away from the edge. */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  .bottom-nav,
+  .banner-area,
+  .print-button {
+    display: none;
+  }
+
+  body {
+    background: none;
+  }
+
+  .app {
+    max-width: none;
+    min-height: 0;
+  }
+
+  .page,
+  body.elder .page {
+    padding: 0;
+  }
+
+  /* The font size is fixed, so the poster prints the same for everyone (also in elder mode).
+     The height is too: if a very long group name needs more room, the QR code gets smaller instead
+     of something moving to a second page. (A4 is 297 mm high; some browsers add their own margins.) */
+  .poster {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 270mm;
+    margin: 0;
+    padding: 16mm 15mm 0;
+    border: none;
+    font-size: 13.5pt;
+  }
+
+  .poster h1 {
+    font-size: 1.6em;
+  }
+
+  .poster-qr {
+    min-height: 50mm;
+    max-width: 110mm;
+  }
+
+  .poster .big-code {
+    font-size: 3em;
+  }
+
+  /* The three languages side by side */
+  .poster-texts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4mm;
+    font-size: 0.9em;
+  }
+}

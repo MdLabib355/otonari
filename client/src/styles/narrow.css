@@ -1,0 +1,15 @@
+/* ---------- Very narrow phones (e.g. 320 px) ---------- */
+
+/* A long badge or word continues on the next line instead of sticking out of its card. */
+@media (max-width: 359px) {
+  .item-card,
+  .catalog-item,
+  .loan-card,
+  .item-header {
+    overflow-wrap: anywhere;
+  }
+
+  .badge {
+    white-space: normal;
+  }
+}

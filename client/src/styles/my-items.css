@@ -1,0 +1,78 @@
+/* ---------- My items ---------- */
+
+.my-items {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.my-item {
+  display: flex;
+  flex-wrap: wrap; /* the "trusted neighbors only" switch is a second row */
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.my-item-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.my-item .hint {
+  margin-top: 4px;
+}
+
+.my-item .switch-row {
+  width: 100%;
+  padding: 8px 0 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.catalog-heading {
+  margin: 14px 0 8px;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.catalog-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: calc(var(--tap) * 1.8);
+  padding: 8px 4px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 0.85em;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+}
+
+.catalog-item.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.catalog-emoji {
+  font-size: 1.8em;
+  line-height: 1;
+}

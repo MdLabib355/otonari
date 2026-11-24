@@ -5,10 +5,14 @@
 // Everyone gets a new token, so open browser windows will be sent back to the join page.
 
 import crypto from 'node:crypto';
-import type { Group, GroupType, Lang } from '../shared/types.ts';
-import { createMessage, db, found, resetDatabase } from './db.ts';
-import { deletePhotos } from './photos.ts';
-import type { CountRow, ItemRow, LoanRow, UserRow } from './types.ts';
+import type { GroupType, Lang } from '../shared/types.ts';
+import { db, found, resetDatabase } from './core/database.ts';
+import { listGroups } from './modules/group/groupModel.ts';
+import { createItem } from './modules/item/itemModel.ts';
+import { getLoan } from './modules/loan/loanModel.ts';
+import { createMessage } from './modules/message/messageModel.ts';
+import type { CountRow, ItemRow, UserRow } from './types.ts';
+import { deletePhotos } from './modules/loan/photoFiles.ts';
 
 const EMPTY = process.argv.includes('--empty'); // npm run seed:empty
 
@@ -122,9 +126,10 @@ function insertGroupsUsersAndItems() {
   const userIds: Record<string, number> = {}; // nickname → id, needed for the loan below
 
   for (const group of GROUPS) {
-    const groupId = db
+    const insertedGroup = db
       .prepare('INSERT INTO groups (code, name, type, city) VALUES (?, ?, ?, ?)')
-      .run(group.code, group.name, group.type, group.city).lastInsertRowid;
+      .run(group.code, group.name, group.type, group.city);
+    const groupId = Number(insertedGroup.lastInsertRowid);
     if (EMPTY) continue; // nobody has joined yet
 
     for (const user of group.users) {
@@ -139,9 +144,7 @@ function insertGroupsUsersAndItems() {
       userIds[user.nickname] = userId;
 
       for (const [itemKey, maxDays, spot, trustedOnly] of user.items) {
-        db.prepare(
-          'INSERT INTO items (owner_id, group_id, item_key, max_days, spot, trusted_only) VALUES (?, ?, ?, ?, ?, ?)'
-        ).run(userId, groupId, itemKey, maxDays, spot, trustedOnly ? 1 : 0);
+        createItem(userId, groupId, itemKey, maxDays, spot, trustedOnly ?? false);
       }
     }
   }
@@ -166,7 +169,7 @@ function insertReturnedLoan(mariaId: number, tanakaId: number) {
     )
     .run(projector.id, mariaId, tanakaId, japanTime(8, 18), japanTime(6, 18), returnedAt, requestedAt)
     .lastInsertRowid;
-  const loan = found(db.prepare<unknown[], LoanRow>('SELECT * FROM loans WHERE id = ?').get(loanId));
+  const loan = getLoan(Number(loanId));
 
   // [from, to, phrase_key, when]
   const conversation: [number, number, string, string][] = [
@@ -196,7 +199,7 @@ deletePhotos(); // they belonged to the old loans
 
 // Short summary (the user ids are handy for POST /api/demo/login).
 console.log(EMPTY ? 'Seeded two empty groups:' : 'Seeded the Nagasaki demo data:');
-for (const group of db.prepare<unknown[], Group>('SELECT * FROM groups ORDER BY id').all()) {
+for (const group of listGroups()) {
   const members = db
     .prepare<unknown[], UserRow>('SELECT * FROM users WHERE group_id = ? ORDER BY id')
     .all(group.id);

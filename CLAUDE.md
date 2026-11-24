@@ -108,7 +108,7 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 ## 3. Tech stack (fixed)
 
 - **Client**: React 18 + Vite, **TypeScript (strict)**, `react-router-dom`, plain CSS
-  (`client/src/styles.css`), `vite-plugin-pwa`, `qrcode` (for the poster).
+  (`client/src/styles/`), `vite-plugin-pwa`, `qrcode` (for the poster).
 - **Server**: Node.js 22.18+ (runs the `.ts` files directly, no build step), TypeScript, Express, `better-sqlite3`, `multer` (photo upload), `cors`, `dotenv`,
   `nodemon` (dev only: restarts the server when a server `.ts` file is saved).
 - **Database**: SQLite file `server/otonari.db` (git-ignored). Recreated + seeded with `npm run seed`.
@@ -147,48 +147,47 @@ otonari/
 │   ├── make-icons.ps1      # draws the icons in public/
 │   ├── public/             # icons for PWA (icon-192.png, icon-512.png, icon-maskable-512.png)
 │   └── src/
-│       ├── main.tsx
-│       ├── serviceWorker.ts   # registers the service worker, reloads an open app after a deploy
-│       ├── App.tsx         # routes + bottom nav + notification banner
-│       ├── api.ts          # fetch wrapper; adds "Authorization: Bearer <token>"
-│       ├── UserContext.ts  # useUser(): me, my group, my language and my inbox, for every page
-│       ├── useInbox.ts     # my unread messages (banner, Loans badge, loan page)
-│       ├── styles.css
+│       ├── main.tsx        # starts the app, loads the styles
+│       ├── app/            # App (routes), BottomNav, serviceWorker (reloads an open app after a deploy)
+│       ├── core/           # used by all features
+│       │   ├── api.ts          # fetch wrapper; adds "Authorization: Bearer <token>"
+│       │   ├── UserContext.ts  # useUser() / useMember(): me, my group, my language and my inbox
+│       │   └── useInbox.ts     # my unread messages (banner, Loans badge, loan page)
+│       ├── components/     # used by several features: ChipGroup  SpeakButton  TipCard  TrustLine
+│       ├── features/       # one folder per feature, like the modules of the server
+│       │   ├── group/      # Join (/join)  NewGroup  Poster (/poster)
+│       │   ├── user/       # Settings (/settings)
+│       │   ├── item/       # Shelf (/)  ItemPage (/item/:id)  BorrowForm  borrowTimes
+│       │   │               # MyItems (/my-items)  MyItemRow  TrustedSwitch
+│       │   ├── loan/       # Loans (/loans)  LoanPage (/loan/:id)  LoanHeader  PendingActions  HandoverStep
+│       │   │               # ReturnStep  QuickReplies  LoanPhotos  PhotoCapture  loanProps
+│       │   ├── message/    # Banner (polling)  PhraseBubble ("show original" + 🔊)
+│       │   └── demo/       # DemoButtons (fast-forward)
 │       ├── i18n/
 │       │   ├── index.ts    # t(), renderPhrase(), formatDate(), useLang()
 │       │   ├── en.json  ja.json  ja-easy.json  bn.json
 │       ├── data/
 │       │   └── catalog.ts  # ITEMS, CATEGORIES, SPOTS, QUICK_REPLIES, DURATIONS
-│       ├── components/
-│       │   ├── Banner.tsx         # new-message banner (polling)
-│       │   ├── PhraseBubble.tsx   # renders one message + "show original" + 🔊
-│       │   ├── SpeakButton.tsx
-│       │   ├── TipCard.tsx
-│       │   ├── TrustLine.tsx      # the borrower's record, on an incoming request
-│       │   ├── ChipGroup.tsx      # big tappable chips
-│       │   ├── NewGroup.tsx       # start a new neighborhood (on the Join page)
-│       │   └── PhotoCapture.tsx   # <input type="file" accept="image/*" capture="environment">
-│       └── pages/
-│           ├── Join.tsx        # /join (reads ?code=)
-│           ├── Shelf.tsx       # /  (group shelf)
-│           ├── ItemPage.tsx    # /item/:id (borrow request + preview)
-│           ├── MyItems.tsx     # /my-items (add/remove my items)
-│           ├── Loans.tsx       # /loans (incoming + outgoing)
-│           ├── LoanPage.tsx    # /loan/:id (messages, actions, photos, quick replies)
-│           ├── Settings.tsx    # /settings (language, elder mode, poster link, leave)
-│           └── Poster.tsx      # /poster (printable QR poster)
+│       └── styles/         # index.css imports the others; the order matters
 └── server/
     ├── tsconfig.json       # type checking only
     ├── types.ts            # types of the database rows, req.user and req.loan
-    ├── index.ts            # express app, middleware, mounts routes, starts reminder job
-    ├── db.ts               # opens SQLite, creates tables, small helper functions
-    ├── auth.ts             # middleware: token → req.user
-    ├── allowedKeys.ts      # the keys and values the server accepts (copied from catalog.ts)
-    ├── photos.ts           # photo upload: images only, max 5 MB, random file name
+    ├── index.ts            # express app: mounts the modules' routes, starts the reminder job
     ├── seed.ts             # resets DB and inserts demo data
-    ├── reminders.ts        # setInterval(checkReminders, 30_000)
-    ├── routes/
-    │   ├── groups.ts  items.ts  loans.ts  inbox.ts  demo.ts
+    ├── core/               # used by all modules
+    │   ├── database.ts     # opens SQLite, creates tables
+    │   ├── allowedKeys.ts  # the keys and values the server accepts (copied from catalog.ts)
+    │   └── auth.ts         # middleware: token → req.user
+    ├── modules/            # modular MVC: one folder per feature. In each of them:
+    │   │                   #   Routes = URL → middleware → controller, Controller = input + rules,
+    │   │                   #   Model = the SQL of one table, View = the JSON the client gets
+    │   ├── group/          # groupRoutes  groupController  groupModel  groupView
+    │   ├── user/           # userRoutes  userController  userModel  userView  leaveGroup
+    │   ├── item/           # itemRoutes  itemController  itemModel  itemView  removeItem
+    │   ├── loan/           # loanRoutes  loanController  loanModel  loanView
+    │   │                   # loanRole (middleware), receivePhoto (middleware), photoFiles, reminders
+    │   ├── message/        # messageRoutes  messageController  messageModel  messageView (the inbox)
+    │   └── demo/           # demoRoutes  demoController (no table and no view of its own)
     ├── uploads/.gitkeep
     ├── .npmrc              # ignore-scripts: better-sqlite3 has ready-made binaries, npm must not compile it
     └── .env.example        # PORT=3001  DEMO_MODE=true
@@ -328,18 +327,18 @@ and `left_at` is set: the token no longer works, and they are no longer counted 
 Every message the server creates for a loan uses the same params object, so any phrase can use any
 placeholder: `{ item: item.item_key, spot: item.spot, start: loan.start_at, end: loan.end_at,
 name: <nickname of the OTHER person from the recipient's point of view> }`.
-Write one helper `createMessage(loan, fromUserId, toUserId, phraseKey)` in `server/db.ts` that builds this.
+Write one helper `createMessage(loan, fromUserId, toUserId, phraseKey)` in `server/modules/message/messageModel.ts` that builds this.
 
 ### Server rules
 - Every route checks the user belongs to the same group as the item/loan, and the right role
   (lender vs borrower). Return `403` otherwise.
 - Items with `removed_at` set are hidden from the shelf and My items, and `POST /api/loans` must refuse them.
 - Validate `phrase_key` against a whitelist; validate `item_key`/`spot` against the catalog
-  (keep a copy of allowed keys in `server/allowedKeys.ts` — just arrays of strings).
+  (keep a copy of allowed keys in `server/core/allowedKeys.ts` — just arrays of strings).
 - Photo upload: images only, max 5 MB, random filename.
 - Demo routes are mounted only when `process.env.DEMO_MODE === 'true'`. "Continue as" works only for the seeded
   users (`is_demo`), never for people who joined with a code.
-- Reminder job (`reminders.ts`): every 30 s, for `active` loans without a return photo:
+- Reminder job (`modules/loan/reminders.ts`): every 30 s, for `active` loans without a return photo:
   - `end_at > now`, `end_at - now <= 24h` and `reminded_soon_at IS NULL` → `sys.dueSoon` to borrower,
     set timestamp.
   - `end_at < now` and `reminded_overdue_at IS NULL` → `sys.overdue` to borrower **and**

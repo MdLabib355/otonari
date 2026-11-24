@@ -1,0 +1,68 @@
+/* ---------- Settings ---------- */
+
+/* The whole row is the tap target, not only the small switch. */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: var(--tap);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.switch-row .hint {
+  display: block;
+  margin-top: 2px;
+}
+
+/* A checkbox that looks like a switch. Sizes are in em, so it grows with elder mode. */
+.switch {
+  position: relative;
+  flex: none;
+  width: 3.2em;
+  height: 1.9em;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--muted);
+  appearance: none;
+  cursor: pointer;
+}
+
+.switch::before {
+  position: absolute;
+  top: 0.2em;
+  left: 0.2em;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: #fff;
+  content: "";
+}
+
+.switch:checked {
+  background: var(--accent);
+}
+
+.switch:checked::before {
+  left: 1.5em;
+}
+
+/* A link that looks like a button */
+.button-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
+}
+
+.button-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
+}

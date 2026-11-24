@@ -9,14 +9,14 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
-import { db, found } from './db.ts';
-import { startReminders } from './reminders.ts';
-import demoRoutes from './routes/demo.ts';
-import groupRoutes from './routes/groups.ts';
-import inboxRoutes from './routes/inbox.ts';
-import itemRoutes from './routes/items.ts';
-import loanRoutes from './routes/loans.ts';
-import type { CountRow } from './types.ts';
+import { startReminders } from './modules/loan/reminders.ts';
+import { countGroups } from './modules/group/groupModel.ts';
+import demoRoutes from './modules/demo/demoRoutes.ts';
+import groupRoutes from './modules/group/groupRoutes.ts';
+import inboxRoutes from './modules/message/messageRoutes.ts';
+import itemRoutes from './modules/item/itemRoutes.ts';
+import loanRoutes from './modules/loan/loanRoutes.ts';
+import userRoutes from './modules/user/userRoutes.ts';
 
 // Load server/.env by its full path, because `npm start` runs from the project root
 // while `npm run dev` runs from the server folder.
@@ -40,9 +40,10 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true });
 });
 
-// API routes. Each routes file uses full paths (e.g. '/join'), so all are mounted at /api.
-// Login is checked per route with requireUser (see auth.ts).
+// API routes. Each module's routes file uses full paths (e.g. '/join'), so all are mounted at /api.
+// Login is checked per route with requireUser (see core/auth.ts).
 app.use('/api', groupRoutes);
+app.use('/api', userRoutes);
 app.use('/api', itemRoutes);
 app.use('/api', loanRoutes);
 app.use('/api', inboxRoutes);
@@ -83,8 +84,7 @@ app.use((err: Error & { status?: number }, req: Request, res: Response, next: Ne
 });
 
 // An empty database (e.g. after a fresh deploy) gets the demo data, exactly like `npm run seed`.
-const { count } = found(db.prepare<unknown[], CountRow>('SELECT COUNT(*) AS count FROM groups').get());
-if (count === 0) {
+if (countGroups() === 0) {
   console.log('The database is empty, so it gets the demo data.');
   await import('./seed.ts'); // importing it runs it
 }

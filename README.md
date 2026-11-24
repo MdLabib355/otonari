@@ -124,20 +124,19 @@ otonari/
 ├── client/                   the React app
 │   ├── public/               the app icons (drawn by make-icons.ps1)
 │   └── src/
-│       ├── pages/            one file per screen: Join, Shelf, ItemPage, MyItems, Loans, LoanPage, Settings, Poster
-│       ├── components/       Banner, PhraseBubble, SpeakButton, PhotoCapture, TrustLine, TipCard, ...
+│       ├── app/              routes, bottom navigation, service worker
+│       ├── core/             calls to the server, the logged-in user, unread messages
+│       ├── components/       used by several features: ChipGroup, SpeakButton, TipCard, TrustLine
+│       ├── features/         one folder per feature, like the server: group, user, item, loan, message, demo
 │       ├── i18n/             en.json, ja.json, ja-easy.json, bn.json, and index.ts, which renders the phrases
 │       ├── data/catalog.ts   the items, handover spots, quick replies and loan lengths to choose from
-│       ├── App.tsx           routes, bottom navigation, new-message banner
-│       └── api.ts, useInbox.ts, UserContext.ts, serviceWorker.ts, styles.css
-├── server/                   the Express API
+│       └── styles/           plain CSS, one file per part of the app
+├── server/                   the Express API (modular MVC)
 │   ├── index.ts              starts the server (and serves the built client)
-│   ├── db.ts                 database tables and small helpers
-│   ├── routes/               groups, items, loans, inbox, demo
-│   ├── reminders.ts          the polite reminders, checked every 30 seconds
-│   ├── photos.ts             photo uploads
-│   ├── auth.ts               token → user
-│   ├── allowedKeys.ts        the only keys and values the server accepts
+│   ├── core/                 used by all modules: database tables, login check, the only keys the server accepts
+│   ├── modules/              one folder per feature, each with its routes, controller, model and view:
+│   │   ├── group/  user/  item/  message/  demo/
+│   │   └── loan/             also the photos and the polite reminders
 │   └── seed.ts               the demo data
 ├── docs/screenshots/
 ├── CLAUDE.md                 our specification

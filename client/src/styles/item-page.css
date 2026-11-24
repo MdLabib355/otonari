@@ -1,0 +1,80 @@
+/* ---------- Item page (borrow request) ---------- */
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.item-header h1 {
+  margin: 0;
+}
+
+.item-header .muted {
+  margin: 2px 0 0;
+}
+
+.item-header-emoji {
+  font-size: 3.2em;
+  line-height: 1;
+}
+
+.item-facts {
+  margin: 12px 0 18px;
+  color: var(--muted);
+}
+
+.notice {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+.tip-card {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--quiet);
+  font-size: 0.9em;
+}
+
+.tip-card p {
+  margin: 0;
+}
+
+.chip-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.period {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.preview {
+  margin-bottom: 20px;
+}
+
+/* Looks like the chat bubble that will arrive on the neighbor's phone. */
+.preview-bubble {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius) var(--radius) var(--radius) 4px;
+  background: var(--surface);
+  font-size: 1.05em;
+  line-height: 1.6;
+}

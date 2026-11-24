@@ -1,4 +1,4 @@
-// Rows exactly as SQLite returns them (the tables are in db.ts). SQLite has no booleans: 0 / 1.
+// Rows exactly as SQLite returns them (the tables are in core/database.ts). SQLite has no booleans: 0 / 1.
 
 import type { ItemStatus, Lang, Loan } from '../shared/types.ts';
 
@@ -34,7 +34,7 @@ export interface CountRow {
   count: number;
 }
 
-// What our middleware adds to requests: requireUser (auth.ts) and loanRole (routes/loans.ts).
+// What our middleware adds to requests: requireUser (core/auth.ts) and loanRole (modules/loan).
 declare global {
   namespace Express {
     interface Request {
