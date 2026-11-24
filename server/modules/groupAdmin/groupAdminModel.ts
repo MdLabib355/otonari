@@ -2,13 +2,14 @@
 
 import type {
   ActiveLoanBadge,
+  GroupAdminItem,
   GroupAnnouncement,
   GroupRole,
   LoanStatus,
   MemberStatus,
 } from '../../../shared/types.ts';
 import { found, query, queryOne, transaction } from '../../core/database.ts';
-import type { CountRow, UserRow } from '../../types.ts';
+import type { CountRow, ItemRow, UserRow } from '../../types.ts';
 
 export async function findGroupMember(groupId: number, userId: number): Promise<UserRow | undefined> {
   return queryOne<UserRow>(
@@ -198,4 +199,52 @@ export async function transferPrimaryAdmin(
     );
     return found(promoted);
   });
+}
+
+export async function listGroupItemsForAdmin(groupId: number): Promise<GroupAdminItem[]> {
+  return query<GroupAdminItem>(
+    `SELECT items.id, items.item_key, items.max_days, items.spot, items.trusted_only, items.status,
+            items.owner_id, users.nickname AS owner_nickname, items.hidden_at
+     FROM items
+     JOIN users ON users.id = items.owner_id
+     WHERE items.group_id = $1 AND items.removed_at IS NULL
+     ORDER BY items.id ASC`,
+    [groupId]
+  );
+}
+
+export async function findGroupItem(groupId: number, itemId: number): Promise<ItemRow | undefined> {
+  return queryOne<ItemRow>(
+    'SELECT * FROM items WHERE id = $1 AND group_id = $2 AND removed_at IS NULL',
+    [itemId, groupId]
+  );
+}
+
+export async function setItemHidden(itemId: number, hidden: boolean) {
+  await query('UPDATE items SET hidden_at = CASE WHEN $2 THEN now() ELSE NULL END WHERE id = $1', [itemId, hidden]);
+}
+
+export async function pinGroupAnnouncement(
+  groupId: number,
+  authorId: number,
+  phraseKey: string
+): Promise<GroupAnnouncement> {
+  return transaction(async () => {
+    await query('UPDATE group_announcements SET is_active = false WHERE group_id = $1 AND is_active', [groupId]);
+    const row = await queryOne<GroupAnnouncement>(
+      `INSERT INTO group_announcements (group_id, author_id, phrase_key, is_active)
+       VALUES ($1, $2, $3, true)
+       RETURNING id, group_id, phrase_key, is_active, created_at`,
+      [groupId, authorId, phraseKey]
+    );
+    return found(row);
+  });
+}
+
+export async function unpinGroupAnnouncement(groupId: number): Promise<string | null> {
+  const row = await queryOne<{ phrase_key: string }>(
+    'UPDATE group_announcements SET is_active = false WHERE group_id = $1 AND is_active RETURNING phrase_key',
+    [groupId]
+  );
+  return row?.phrase_key ?? null;
 }

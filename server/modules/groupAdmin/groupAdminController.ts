@@ -1,22 +1,30 @@
 // Group Admin HTTP handlers for dashboard, neighbor control, join policy, and invite code rotation.
 
 import type { Request } from 'express';
-import { GROUP_ROLES, JOIN_POLICIES, isOneOf } from '../../core/allowedKeys.ts';
-import { writeAuditLog } from '../../core/audit.ts';
+import { ANNOUNCEMENT_KEYS, GROUP_ROLES, JOIN_POLICIES, isOneOf } from '../../core/allowedKeys.ts';
+import { listAuditLogs, writeAuditLog } from '../../core/audit.ts';
 import { refuse, reply, toId, toText } from '../../core/http.ts';
 import { getGroup, rotateGroupCode, updateGroupJoinPolicy } from '../group/groupModel.ts';
+import { setTrustedOnly } from '../item/itemModel.ts';
+import { declinePendingLoans } from '../loan/loanModel.ts';
 import {
   approvePendingMember,
   countOwnedAvailableItemsByUser,
   extractMemberActiveLoans,
+  findGroupItem,
   findGroupMember,
   getDashboardStats,
   listActiveLoansForGroup,
+  listGroupItemsForAdmin,
   listGroupMembersRaw,
+  pinGroupAnnouncement,
   rejectPendingMember,
+  setItemHidden,
+  unpinGroupAnnouncement,
   updateMemberTrustOverride,
 } from './groupAdminModel.ts';
 import { dashboardView, memberSummaryView } from './groupAdminView.ts';
+import { findGroupLoan, listGroupLoansForAdmin, resolveGroupLoan, sendGentleCheckIn } from './loanMediation.ts';
 import {
   changeMemberRoleGuarded,
   changeMemberStatusGuarded,
@@ -274,4 +282,140 @@ export async function rotateInviteCode(req: Request) {
   });
 
   return reply(200, updated);
+}
+
+export async function listItems(req: Request) {
+  return reply(200, await listGroupItemsForAdmin(req.user.group_id));
+}
+
+export async function moderateItem(req: Request) {
+  const { trusted_only, hidden }: Record<string, unknown> = req.body ?? {};
+  if (trusted_only === undefined && hidden === undefined) {
+    return refuse(400, 'Provide trusted_only or hidden to update');
+  }
+  if (trusted_only !== undefined && typeof trusted_only !== 'boolean') {
+    return refuse(400, 'trusted_only must be true or false');
+  }
+  if (hidden !== undefined && typeof hidden !== 'boolean') {
+    return refuse(400, 'hidden must be true or false');
+  }
+
+  const item = await findGroupItem(req.user.group_id, toId(req.params.itemId));
+  if (!item) return refuse(404, 'Item not found');
+
+  if (hidden === true && item.status !== 'available') {
+    return refuse(409, 'Cannot hide an item while it is reserved or lent');
+  }
+
+  if (trusted_only !== undefined) {
+    await setTrustedOnly(item.id, trusted_only);
+    await writeAuditLog({
+      actorId: req.user.id,
+      actorLabel: actorLabelOf(req),
+      actorRole: actorRoleOf(req),
+      scopeGroupId: req.user.group_id,
+      category: 'Shelf',
+      action: 'item.trusted_only_changed',
+      targetType: 'item',
+      targetId: item.id,
+      detail: `Set "${item.item_key}" Trusted-Only to ${trusted_only ? 'ON' : 'OFF'}.`,
+      ipAddress: req.ip ?? null,
+    });
+  }
+
+  if (hidden !== undefined) {
+    await setItemHidden(item.id, hidden);
+    if (hidden) {
+      await declinePendingLoans(item.id);
+    }
+    await writeAuditLog({
+      actorId: req.user.id,
+      actorLabel: actorLabelOf(req),
+      actorRole: actorRoleOf(req),
+      scopeGroupId: req.user.group_id,
+      category: 'Shelf',
+      action: hidden ? 'item.hidden' : 'item.restored',
+      targetType: 'item',
+      targetId: item.id,
+      detail: `${hidden ? 'Hidden' : 'Restored'} shelf item "${item.item_key}".`,
+      ipAddress: req.ip ?? null,
+    });
+  }
+
+  const updated = (await listGroupItemsForAdmin(req.user.group_id)).find((row) => row.id === item.id);
+  return reply(200, updated);
+}
+
+export async function listLoans(req: Request) {
+  return reply(200, await listGroupLoansForAdmin(req.user.group_id));
+}
+
+export async function nudgeLoan(req: Request) {
+  const loan = await findGroupLoan(req.user.group_id, toId(req.params.loanId));
+  if (!loan) return refuse(404, 'Loan not found');
+
+  const error = await sendGentleCheckIn(req.user, loan, req.body?.phrase_key, req.ip ?? null);
+  if (error) return error;
+
+  const updated = (await listGroupLoansForAdmin(req.user.group_id)).find((row) => row.id === loan.id);
+  return reply(200, updated);
+}
+
+export async function resolveLoan(req: Request) {
+  const loan = await findGroupLoan(req.user.group_id, toId(req.params.loanId));
+  if (!loan) return refuse(404, 'Loan not found');
+
+  const error = await resolveGroupLoan(req.user, loan, req.body?.resolution, req.body?.reason_key, req.ip ?? null);
+  if (error) return error;
+
+  const updated = (await listGroupLoansForAdmin(req.user.group_id)).find((row) => row.id === loan.id);
+  return reply(200, updated);
+}
+
+export async function publishAnnouncement(req: Request) {
+  const phraseKey: unknown = req.body?.phrase_key;
+  if (!isOneOf(ANNOUNCEMENT_KEYS, phraseKey)) {
+    return refuse(400, `phrase_key must be one of: ${ANNOUNCEMENT_KEYS.join(', ')}`);
+  }
+
+  const announcement = await pinGroupAnnouncement(req.user.group_id, req.user.id, phraseKey);
+  await writeAuditLog({
+    actorId: req.user.id,
+    actorLabel: actorLabelOf(req),
+    actorRole: actorRoleOf(req),
+    scopeGroupId: req.user.group_id,
+    category: 'Notice',
+    action: 'announcement.pinned',
+    targetType: 'group',
+    targetId: req.user.group_id,
+    reason: phraseKey,
+    detail: `Pinned structured building announcement "${phraseKey}" to the Live Shelf Banner.`,
+    ipAddress: req.ip ?? null,
+  });
+
+  return reply(201, announcement);
+}
+
+export async function clearAnnouncement(req: Request) {
+  const previousKey = await unpinGroupAnnouncement(req.user.group_id);
+  if (previousKey) {
+    await writeAuditLog({
+      actorId: req.user.id,
+      actorLabel: actorLabelOf(req),
+      actorRole: actorRoleOf(req),
+      scopeGroupId: req.user.group_id,
+      category: 'Notice',
+      action: 'announcement.unpinned',
+      targetType: 'group',
+      targetId: req.user.group_id,
+      reason: previousKey,
+      detail: `Unpinned building announcement "${previousKey}" from the Live Shelf Banner.`,
+      ipAddress: req.ip ?? null,
+    });
+  }
+  return reply(204);
+}
+
+export async function showActivityLog(req: Request) {
+  return reply(200, await listAuditLogs({ scopeGroupId: req.user.group_id, limit: 100 }));
 }

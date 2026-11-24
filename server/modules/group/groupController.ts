@@ -4,8 +4,13 @@ import type { Request } from 'express';
 import { GROUP_TYPES, isOneOf } from '../../core/allowedKeys.ts';
 import { refuse, reply, toText } from '../../core/http.ts';
 import { countMembers } from '../user/userModel.ts';
+import { getActiveAnnouncement } from '../groupAdmin/groupAdminModel.ts';
 import { createGroup, findGroupByCode, findSimilarGroup } from './groupModel.ts';
 import { groupPreviewView, newGroupView } from './groupView.ts';
+
+export async function showGroupAnnouncement(req: Request) {
+  return reply(200, await getActiveAnnouncement(req.user.group_id));
+}
 
 export async function previewGroup(req: Request) {
   const group = await findGroupByCode(req.params.code);

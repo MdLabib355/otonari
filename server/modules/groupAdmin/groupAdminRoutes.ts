@@ -6,13 +6,21 @@ import { requireGroupAdmin, requirePrimaryGroupAdmin } from '../../core/auth.ts'
 import { read, write } from '../../core/http.ts';
 import {
   approveMember,
+  clearAnnouncement,
+  listItems,
+  listLoans,
   listMembers,
+  moderateItem,
+  nudgeLoan,
+  publishAnnouncement,
   rejectMember,
   removeMember,
+  resolveLoan,
   rotateInviteCode,
   setMemberRole,
   setMemberStatus,
   setMemberTrust,
+  showActivityLog,
   showDashboard,
   updateSettings,
 } from './groupAdminController.ts';
@@ -29,5 +37,14 @@ router.patch('/group-admin/members/:userId/role', write(requirePrimaryGroupAdmin
 router.delete('/group-admin/members/:userId', write(requireGroupAdmin, removeMember));
 router.patch('/group-admin/settings', write(requireGroupAdmin, updateSettings));
 router.post('/group-admin/invite-code/rotate', write(requireGroupAdmin, rotateInviteCode));
+
+router.get('/group-admin/items', read(requireGroupAdmin, listItems));
+router.patch('/group-admin/items/:itemId/moderate', write(requireGroupAdmin, moderateItem));
+router.get('/group-admin/loans', read(requireGroupAdmin, listLoans));
+router.post('/group-admin/loans/:loanId/nudge', write(requireGroupAdmin, nudgeLoan));
+router.post('/group-admin/loans/:loanId/resolve', write(requireGroupAdmin, resolveLoan));
+router.post('/group-admin/announcements', write(requireGroupAdmin, publishAnnouncement));
+router.delete('/group-admin/announcements/active', write(requireGroupAdmin, clearAnnouncement));
+router.get('/group-admin/activity-log', read(requireGroupAdmin, showActivityLog));
 
 export default router;

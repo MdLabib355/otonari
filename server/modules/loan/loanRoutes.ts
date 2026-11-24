@@ -14,6 +14,7 @@
 import express from 'express';
 import {
   accept,
+  askAdminHelp,
   cancel,
   decline,
   giveBack,
@@ -42,6 +43,7 @@ router.post('/loans/:id/cancel', write(requireUser, requireActiveMember, loanRol
 router.post('/loans/:id/confirm-handover', write(requireUser, requireActiveMember, loanRole('borrower'), received));
 router.post('/loans/:id/confirm-return', write(requireUser, requireActiveMember, loanRole('lender'), returnConfirmed));
 router.post('/loans/:id/messages', write(requireUser, requireActiveMember, loanRole('participant'), quickReply));
+router.post('/loans/:id/help', write(requireUser, requireActiveMember, loanRole('participant'), askAdminHelp));
 
 // Uploads can be slow, so the loan is loaded and checked AFTER the photo has arrived: its status may
 // have changed in the meantime.

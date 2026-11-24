@@ -4,9 +4,10 @@
 
 import type { Request } from 'express';
 import type { LoanStatus, MyLoans } from '../../../shared/types.ts';
-import { DURATIONS, QUICK_REPLY_KEYS, isOneOf } from '../../core/allowedKeys.ts';
+import { DISPUTE_REASON_KEYS, DURATIONS, QUICK_REPLY_KEYS, isOneOf } from '../../core/allowedKeys.ts';
 import { found } from '../../core/database.ts';
 import { refuse, reply, toId } from '../../core/http.ts';
+import { flagLoanForAdminHelp } from '../groupAdmin/loanMediation.ts';
 import { findItem, getItem } from '../item/itemModel.ts';
 import { getGroupRow } from '../group/groupModel.ts';
 import { createMessage } from '../message/messageModel.ts';
@@ -173,4 +174,18 @@ export async function quickReply(req: Request) {
   const otherId = loan.borrower_id === req.user.id ? loan.lender_id : loan.borrower_id;
   await createMessage(loan, req.user.id, otherId, phraseKey);
   return reply(201, await loanDetailsView(loan.id, req.user.id));
+}
+
+// Resident asks their building's Group Admin for polite mediation on a stuck or disputed loan.
+export async function askAdminHelp(req: Request) {
+  const reasonKey: unknown = req.body?.reason_key;
+  if (!isOneOf(DISPUTE_REASON_KEYS, reasonKey)) {
+    return refuse(400, `reason_key must be one of: ${DISPUTE_REASON_KEYS.join(', ')}`);
+  }
+  if (req.loan.status !== 'active' && req.loan.status !== 'accepted' && req.loan.status !== 'returned') {
+    return refuse(409, 'Only accepted, active, or returned loans can be flagged for admin help');
+  }
+
+  const flagged = await flagLoanForAdminHelp(req.user.group_id, req.loan.id, req.user.id, reasonKey);
+  return reply(201, flagged);
 }
