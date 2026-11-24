@@ -2,8 +2,10 @@
 // so every item has a stable key that translates perfectly into every language.
 // Names live in the i18n files under "items.<key>".
 
-import type { CatalogItemRecord, Lang } from '../../../shared/types.ts';
+import { useSyncExternalStore } from 'react';
+import type { CatalogCategoryRecord, CatalogItemRecord, Lang } from '../../../shared/types.ts';
 
+// The categories until GET /api/v1/categories has answered.
 export const CATEGORIES = ['kitchen', 'cleaning', 'tools', 'living', 'outdoor'];
 
 export interface CatalogEntry {
@@ -68,13 +70,46 @@ export const TIME_SLOTS: Record<TimeSlot, number> = { morning: 9, afternoon: 13,
 
 export const LANGUAGES: Lang[] = ['en', 'ja', 'ja-easy', 'bn'];
 
-// Runtime localized overrides synced from GET /api/v1/catalog (falls back to static i18n JSON).
-const dynamicItemLabels: Record<Lang, Record<string, string>> = {
-  en: {},
-  ja: {},
-  'ja-easy': {},
-  bn: {},
-};
+// What GET /api/v1/catalog and GET /api/v1/categories say goes before the language files.
+type Labels = Record<Lang, Record<string, string>>;
+const dynamicItemLabels: Labels = { en: {}, ja: {}, 'ja-easy': {}, bn: {} };
+const dynamicCategoryLabels: Labels = { en: {}, ja: {}, 'ja-easy': {}, bn: {} };
+const categoryIcons: Record<string, string> = {};
+
+// Components that show the catalog call useCatalog(): they are drawn again when it changes.
+let version = 0;
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function changed() {
+  version += 1;
+  for (const listener of listeners) listener();
+}
+
+export function useCatalog() {
+  useSyncExternalStore(subscribe, () => version);
+  return { items: ITEMS, categories: CATEGORIES };
+}
+
+interface LabelRecord {
+  label_en: string;
+  label_ja: string;
+  label_ja_easy: string;
+  label_bn: string;
+}
+
+function saveLabels(labels: Labels, key: string, record: LabelRecord) {
+  labels.en[key] = record.label_en;
+  labels.ja[key] = record.label_ja;
+  labels['ja-easy'][key] = record.label_ja_easy;
+  labels.bn[key] = record.label_bn;
+}
 
 export function syncDynamicCatalog(records: CatalogItemRecord[]) {
   if (!Array.isArray(records) || records.length === 0) return;
@@ -83,12 +118,28 @@ export function syncDynamicCatalog(records: CatalogItemRecord[]) {
     ITEMS.length,
     ...records.map((r) => ({ key: r.item_key, emoji: r.emoji, category: r.category }))
   );
+  for (const r of records) saveLabels(dynamicItemLabels, r.item_key, r);
+  changed();
+}
+
+// All records give their labels and icons; only the active ones can be chosen.
+export function syncDynamicCategories(records: CatalogCategoryRecord[]) {
+  if (!Array.isArray(records) || records.length === 0) return;
+  CATEGORIES.splice(0, CATEGORIES.length, ...records.filter((r) => r.is_active).map((r) => r.category_key));
   for (const r of records) {
-    dynamicItemLabels.en[r.item_key] = r.label_en;
-    dynamicItemLabels.ja[r.item_key] = r.label_ja;
-    dynamicItemLabels['ja-easy'][r.item_key] = r.label_ja_easy;
-    dynamicItemLabels.bn[r.item_key] = r.label_bn;
+    saveLabels(dynamicCategoryLabels, r.category_key, r);
+    categoryIcons[r.category_key] = r.icon_key;
   }
+  changed();
+}
+
+export function dynamicCategoryLabel(lang: Lang, categoryKey: string): string | undefined {
+  return dynamicCategoryLabels[lang]?.[categoryKey];
+}
+
+// The drawing of a category. (The first five categories are called like their drawings.)
+export function categoryIconKey(categoryKey: string): string {
+  return categoryIcons[categoryKey] ?? categoryKey;
 }
 
 export function dynamicItemLabel(lang: Lang, itemKey: string): string | undefined {

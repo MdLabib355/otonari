@@ -2,13 +2,14 @@ import { useState } from 'react';
 import type { Lang, ShelfItem } from '../../../../shared/types.ts';
 import FilterStrip from '../../components/FilterStrip.tsx';
 import { CheckIcon, CloseIcon, SearchIcon } from '../../components/Icons.tsx';
-import { CATEGORIES, findItem } from '../../data/catalog.ts';
+import { findItem, useCatalog } from '../../data/catalog.ts';
 import { categoryName, displayName, itemName, t } from '../../i18n/index.ts';
 import ItemCard from './ItemCard.tsx';
 
 // My neighbors' items, with a search field and filters above them. (The search only filters what is
 // already on the screen; nothing that is typed here leaves this device.)
 export default function NeighborShelf({ items, lang }: { items: ShelfItem[]; lang: Lang }) {
+  const { categories } = useCatalog();
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [availableOnly, setAvailableOnly] = useState(false);
@@ -18,7 +19,7 @@ export default function NeighborShelf({ items, lang }: { items: ShelfItem[]; lan
   // Only offer the categories that actually have something on the shelf.
   const categoryOptions = [
     { value: 'all', label: t(lang, 'shelf.allCategories') },
-    ...CATEGORIES.filter((key) => items.some((item) => categoryOf(item) === key)).map((key) => ({
+    ...categories.filter((key) => items.some((item) => categoryOf(item) === key)).map((key) => ({
       value: key,
       label: categoryName(lang, key),
     })),

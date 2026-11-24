@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { AdminUser, Role } from '../../../../shared/types.ts';
 import { api, ApiError } from '../../core/api.ts';
 
-const ALL_ROLES: Role[] = ['user', 'co_admin', 'group_admin', 'super_admin'];
+const ALL_ROLES: Role[] = ['user', 'group_admin', 'super_admin'];
 
 export interface AccountsDirectoryProps {
   meId: number;

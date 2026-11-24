@@ -22,13 +22,12 @@ interface GroupLoanQueryRow extends LoanRow {
   last_nudge_at: string | null;
 }
 
-function actorRoleOf(admin: UserRow): 'super_admin' | 'group_admin' | 'co_admin' {
-  if (admin.role === 'super_admin') return 'super_admin';
-  return admin.role === 'group_admin' ? 'group_admin' : 'co_admin';
+function actorRoleOf(admin: UserRow): 'super_admin' | 'group_admin' {
+  return admin.role === 'super_admin' ? 'super_admin' : 'group_admin';
 }
 
 function actorLabelOf(admin: UserRow): string {
-  const prefix = admin.role === 'super_admin' ? 'SuperAdmin' : admin.role === 'group_admin' ? 'GroupAdmin' : 'CoAdmin';
+  const prefix = admin.role === 'super_admin' ? 'SuperAdmin' : 'GroupAdmin';
   return `${prefix} · ${admin.nickname || admin.email}`;
 }
 

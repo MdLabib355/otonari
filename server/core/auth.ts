@@ -1,8 +1,7 @@
 // Login & RBAC checks: "Authorization: Bearer <token>" -> req.user (validated via sessions table).
 //   requireUser              anyone logged in (account active)
 //   requireMember            logged in, active member of an active/read-only group (sets req.groupId)
-//   requireGroupAdmin        group_admin, co_admin, or super_admin in that group
-//   requirePrimaryGroupAdmin primary group_admin (or super_admin) in that group
+//   requireGroupAdmin        group_admin or super_admin in that group (all group admins are equal)
 //   requireSuperAdmin        platform super_admin account (role === 'super_admin')
 
 import type { Request } from 'express';
@@ -54,14 +53,6 @@ export async function requireGroupAdmin(req: Request) {
     return refuse(403, 'Admin privileges require an active membership');
   }
   return req.user.role === 'user' ? refuse(403, 'Only for group admins') : null;
-}
-
-export async function requirePrimaryGroupAdmin(req: Request) {
-  const refusal = await requireGroupAdmin(req);
-  if (refusal) return refusal;
-  return req.user.role === 'group_admin' || req.user.role === 'super_admin'
-    ? null
-    : refuse(403, 'Primary Group Admin access required');
 }
 
 export async function requireSuperAdmin(req: Request) {

@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import type { CatalogItemRecord, GroupAdminDashboard, Lang, Login, Me } from '../../../shared/types.ts';
+import type { CatalogCategoryRecord, CatalogItemRecord, GroupAdminDashboard, Lang, Login, Me } from '../../../shared/types.ts';
 import { api, clearToken, errorStatus, getToken, saveToken } from '../core/api.ts';
 import { UserContext, saveVisitorLanguage, visitorLanguage, type SharedValues } from '../core/UserContext.ts';
 import { useInbox } from '../core/useInbox.ts';
-import { syncDynamicCatalog } from '../data/catalog.ts';
+import { syncDynamicCatalog, syncDynamicCategories } from '../data/catalog.ts';
 import AuthPage from '../features/auth/AuthPage.tsx';
 import Join from '../features/group/Join.tsx';
 import Poster from '../features/group/Poster.tsx';
@@ -38,11 +38,15 @@ export default function App() {
 
   const isSuperAdminRoute = pathname === '/admin' || pathname.startsWith('/super-admin');
 
-  // Sync active catalog items from PostgreSQL (non-blocking; static ITEMS provide instant first paint).
+  // Sync active catalog items and categories from PostgreSQL (non-blocking; static ITEMS provide instant first paint).
   useEffect(() => {
     api
       .get<CatalogItemRecord[]>('/catalog')
       .then(syncDynamicCatalog)
+      .catch(() => {});
+    api
+      .get<CatalogCategoryRecord[]>('/categories')
+      .then(syncDynamicCategories)
       .catch(() => {});
   }, []);
 

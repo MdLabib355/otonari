@@ -86,7 +86,7 @@ export async function createTables() {
       password_hash TEXT,
       google_sub TEXT UNIQUE,
       google_only BOOLEAN NOT NULL DEFAULT false,
-      role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('super_admin','group_admin','co_admin','user')),
+      role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('super_admin','group_admin','user')),
       group_id INTEGER REFERENCES groups(id),
       joined_at TIMESTAMPTZ,
       nickname TEXT NOT NULL DEFAULT '',
@@ -100,7 +100,7 @@ export async function createTables() {
       muted_until TIMESTAMPTZ,
       trust_override TEXT CHECK (trust_override IN ('granted','revoked')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-      CHECK (role NOT IN ('group_admin','co_admin') OR group_id IS NOT NULL)
+      CHECK (role <> 'group_admin' OR group_id IS NOT NULL)
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
@@ -191,7 +191,7 @@ export async function createTables() {
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       actor_id INTEGER REFERENCES users(id),
       actor_label TEXT NOT NULL,
-      actor_role TEXT NOT NULL CHECK (actor_role IN ('super_admin','group_admin','co_admin','system')),
+      actor_role TEXT NOT NULL CHECK (actor_role IN ('super_admin','group_admin','system')),
       scope_group_id INTEGER REFERENCES groups(id),
       category TEXT NOT NULL,
       action TEXT NOT NULL,
@@ -208,6 +208,18 @@ export async function createTables() {
       emoji TEXT NOT NULL,
       category TEXT NOT NULL,
       is_active BOOLEAN NOT NULL DEFAULT true,
+      label_en TEXT NOT NULL,
+      label_ja TEXT NOT NULL,
+      label_ja_easy TEXT NOT NULL,
+      label_bn TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+    );
+
+    CREATE TABLE IF NOT EXISTS catalog_categories (
+      category_key TEXT PRIMARY KEY,
+      icon_key TEXT NOT NULL DEFAULT 'default',
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      sort_order INTEGER NOT NULL DEFAULT 100,
       label_en TEXT NOT NULL,
       label_ja TEXT NOT NULL,
       label_ja_easy TEXT NOT NULL,
@@ -235,9 +247,17 @@ export async function addNewColumns() {
 
     ALTER TABLE items ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ;
 
-    -- Safely widen users.role CHECK constraint on existing DBs to include co_admin.
+    -- There are no co-admins anymore: they become equal group admins, before the roles are limited to three.
+    -- (One statement list = one transaction, so nobody can be made a co-admin in between.)
+    UPDATE users SET role = CASE WHEN group_id IS NULL THEN 'user' ELSE 'group_admin' END WHERE role = 'co_admin';
+    UPDATE audit_logs SET actor_role = 'group_admin' WHERE actor_role = 'co_admin';
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('super_admin','group_admin','co_admin','user'));
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('super_admin','group_admin','user'));
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_check;
+    ALTER TABLE users ADD CONSTRAINT users_check CHECK (role <> 'group_admin' OR group_id IS NOT NULL);
+    ALTER TABLE audit_logs DROP CONSTRAINT IF EXISTS audit_logs_actor_role_check;
+    ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_actor_role_check
+      CHECK (actor_role IN ('super_admin','group_admin','system'));
 
     CREATE INDEX IF NOT EXISTS idx_audit_logs_scope_created ON audit_logs (scope_group_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_loan_disputes_group_status ON loan_disputes (group_id, status);
@@ -247,7 +267,7 @@ export async function addNewColumns() {
 
 export async function resetDatabase() {
   await query(
-    'DROP TABLE IF EXISTS audit_logs, loan_disputes, group_announcements, catalog_items, messages, loans, items, sessions, email_codes, registrations, users, groups'
+    'DROP TABLE IF EXISTS audit_logs, loan_disputes, group_announcements, catalog_items, catalog_categories, messages, loans, items, sessions, email_codes, registrations, users, groups'
   );
   await createTables();
 }

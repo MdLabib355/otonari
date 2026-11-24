@@ -319,7 +319,7 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
             <form onSubmit={submitRescue}>
               <div className="modal-body">
                 <p className="ga-meta" style={{ marginBottom: 12 }}>
-                  Promote an active neighbor to Primary Group Admin. Action is permanently audit-logged.
+                  Promote an active neighbor to Group Admin. Action is permanently audit-logged.
                 </p>
                 <div className="field">
                   <label className="label" htmlFor="sa-rescue-member">

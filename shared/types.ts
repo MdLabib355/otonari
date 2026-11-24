@@ -2,8 +2,8 @@
 // Types only (no code): both sides use "import type", so nothing of this file is left at run time.
 
 export type Lang = 'en' | 'ja' | 'ja-easy' | 'bn';
-export type Role = 'super_admin' | 'group_admin' | 'co_admin' | 'user';
-export type GroupRole = 'user' | 'co_admin' | 'group_admin';
+export type Role = 'super_admin' | 'group_admin' | 'user';
+export type GroupRole = 'user' | 'group_admin';
 export type GroupType = 'building' | 'block';
 export type ItemStatus = 'available' | 'reserved' | 'lent';
 export type LoanStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'active' | 'returned';
@@ -299,7 +299,7 @@ export interface AuditLogEntry {
   id: number;
   actor_id: number | null;
   actor_label: string;
-  actor_role: 'super_admin' | 'group_admin' | 'co_admin' | 'system';
+  actor_role: 'super_admin' | 'group_admin' | 'system';
   scope_group_id: number | null;
   category: AuditCategory;
   action: string;
@@ -317,6 +317,19 @@ export interface CatalogItemRecord {
   emoji: string;
   category: string;
   is_active: boolean;
+  label_en: string;
+  label_ja: string;
+  label_ja_easy: string;
+  label_bn: string;
+  updated_at: string;
+}
+
+// GET /api/v1/categories (only the active ones) and /api/v1/super-admin/categories
+export interface CatalogCategoryRecord {
+  category_key: string;
+  icon_key: string; // one of CATEGORY_ICON_KEYS
+  is_active: boolean;
+  sort_order: number;
   label_en: string;
   label_ja: string;
   label_ja_easy: string;

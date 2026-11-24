@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import type { CatalogItemRecord, Lang } from '../../../../shared/types.ts';
+import type { CatalogCategoryRecord, CatalogItemRecord, Lang } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
 import { api, ApiError } from '../../core/api.ts';
-import { CATEGORIES, LANGUAGES } from '../../data/catalog.ts';
+import { LANGUAGES } from '../../data/catalog.ts';
 import { meta, renderPhrase } from '../../i18n/index.ts';
+import CategoryManager from './CategoryManager.tsx';
+import LabelFields, { EMPTY_LABELS } from './LabelFields.tsx';
 
 const INSPECTABLE_PHRASES = [
   'request',
@@ -17,27 +19,22 @@ const INSPECTABLE_PHRASES = [
   'platform.escalationNotice',
 ];
 
+const EMPTY_FORM = { item_key: '', emoji: '🧰', category: 'kitchen', ...EMPTY_LABELS };
+
 export interface CatalogPhraseStudioProps {
   catalog: CatalogItemRecord[];
+  categories: CatalogCategoryRecord[];
   onRefresh: () => Promise<void>;
   onNotify: (text: string, isError?: boolean) => void;
 }
 
-export default function CatalogPhraseStudio({ catalog, onRefresh, onNotify }: CatalogPhraseStudioProps) {
+export default function CatalogPhraseStudio({ catalog, categories, onRefresh, onNotify }: CatalogPhraseStudioProps) {
   const [category, setCategory] = useState<string>('all');
   const [selectedPhrase, setSelectedPhrase] = useState<string>(INSPECTABLE_PHRASES[0]);
   const [addOpen, setAddOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const [form, setForm] = useState({
-    item_key: '',
-    emoji: '🧰',
-    category: 'kitchen',
-    label_en: '',
-    label_ja: '',
-    label_ja_easy: '',
-    label_bn: '',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const filtered = category === 'all' ? catalog : catalog.filter((c) => c.category === category);
 
@@ -60,15 +57,7 @@ export default function CatalogPhraseStudio({ catalog, onRefresh, onNotify }: Ca
     try {
       await api.post('/super-admin/catalog', form);
       setAddOpen(false);
-      setForm({
-        item_key: '',
-        emoji: '🧰',
-        category: 'kitchen',
-        label_en: '',
-        label_ja: '',
-        label_ja_easy: '',
-        label_bn: '',
-      });
+      setForm(EMPTY_FORM);
       await onRefresh();
       onNotify(`Added "${form.item_key}" to global catalog`);
     } catch (err) {
@@ -80,7 +69,7 @@ export default function CatalogPhraseStudio({ catalog, onRefresh, onNotify }: Ca
 
   const categoryOptions = [
     { value: 'all', label: `All (${catalog.length})` },
-    ...CATEGORIES.map((c) => ({ value: c, label: c })),
+    ...categories.map((c) => ({ value: c.category_key, label: c.label_en })),
   ];
 
   const sampleParams = {
@@ -187,6 +176,8 @@ export default function CatalogPhraseStudio({ catalog, onRefresh, onNotify }: Ca
         </div>
       </div>
 
+      <CategoryManager categories={categories} onRefresh={onRefresh} onNotify={onNotify} />
+
       {/* Read-Only 4-Locale Phrase Template Inspector */}
       <div className="sa-card">
         <div className="sa-card-head">
@@ -235,7 +226,7 @@ export default function CatalogPhraseStudio({ catalog, onRefresh, onNotify }: Ca
             <div className="modal-header">
               <h2>Add Fixed Catalog Item</h2>
             </div>
-            <form onSubmit={submitAdd}>
+            <form className="modal-form" onSubmit={submitAdd}>
               <div className="modal-body">
                 <p className="ga-meta" style={{ marginBottom: 12 }}>
                   All 4 language labels are required to guarantee zero untranslated keys.
@@ -264,11 +255,13 @@ export default function CatalogPhraseStudio({ catalog, onRefresh, onNotify }: Ca
                       value={form.category}
                       onChange={(e) => setForm({ ...form, category: e.target.value })}
                     >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
+                      {categories
+                        .filter((c) => c.is_active)
+                        .map((c) => (
+                          <option key={c.category_key} value={c.category_key}>
+                            {c.label_en}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 </div>
@@ -286,58 +279,7 @@ export default function CatalogPhraseStudio({ catalog, onRefresh, onNotify }: Ca
                     placeholder="e.g., hand_mixer"
                   />
                 </div>
-                <div className="sa-form-row">
-                  <div className="field">
-                    <label className="label" htmlFor="ci-en">
-                      English (en)
-                    </label>
-                    <input
-                      id="ci-en"
-                      className="text-input"
-                      required
-                      value={form.label_en}
-                      onChange={(e) => setForm({ ...form, label_en: e.target.value })}
-                    />
-                  </div>
-                  <div className="field">
-                    <label className="label" htmlFor="ci-ja">
-                      Japanese (ja)
-                    </label>
-                    <input
-                      id="ci-ja"
-                      className="text-input"
-                      required
-                      value={form.label_ja}
-                      onChange={(e) => setForm({ ...form, label_ja: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="sa-form-row">
-                  <div className="field">
-                    <label className="label" htmlFor="ci-ja-easy">
-                      Easy Japanese (ja-easy)
-                    </label>
-                    <input
-                      id="ci-ja-easy"
-                      className="text-input"
-                      required
-                      value={form.label_ja_easy}
-                      onChange={(e) => setForm({ ...form, label_ja_easy: e.target.value })}
-                    />
-                  </div>
-                  <div className="field">
-                    <label className="label" htmlFor="ci-bn">
-                      Bengali (bn)
-                    </label>
-                    <input
-                      id="ci-bn"
-                      className="text-input"
-                      required
-                      value={form.label_bn}
-                      onChange={(e) => setForm({ ...form, label_bn: e.target.value })}
-                    />
-                  </div>
-                </div>
+                <LabelFields idPrefix="ci" labels={form} onChange={(labels) => setForm({ ...form, ...labels })} />
               </div>
               <div className="modal-footer">
                 <button type="button" className="button-secondary" onClick={() => setAddOpen(false)}>

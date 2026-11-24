@@ -1,8 +1,8 @@
 // The demo data (CLAUDE.md section 9), unified with real email accounts, roles (Sato group_admin,
-// Tanaka co_admin, Inoue group_admin), 28 canonical catalog items, 1 overdue loan, and 1 escalated dispute.
+// Inoue group_admin, everybody else user), 5 categories, 28 canonical catalog items, 1 overdue loan, and 1 escalated dispute.
 
 import type { GroupType, Lang, Role } from '../shared/types.ts';
-import { CANONICAL_CATALOG } from './core/allowedKeys.ts';
+import { CANONICAL_CATALOG, CANONICAL_CATEGORIES } from './core/allowedKeys.ts';
 import { writeAuditLog } from './core/audit.ts';
 import { found, query, queryOne, resetDatabase, transaction } from './core/database.ts';
 import { hashSecret } from './modules/auth/password.ts';
@@ -56,7 +56,6 @@ const GROUPS: SeedGroup[] = [
         nickname: 'Tanaka',
         lang: 'ja',
         elder: false,
-        role: 'co_admin',
         items: [
           ['projector', 2, 'mailbox', true],
           ['power_drill', 1, 'mailbox'],
@@ -132,7 +131,26 @@ function japanTime(daysAgo: number, hour: number, minute = 0): string {
 
 type UserIds = Record<string, number>;
 
+// Only what is missing: whatever a super admin has changed stays.
 export async function seedCatalogItems() {
+  for (const category of CANONICAL_CATEGORIES) {
+    await query(
+      `INSERT INTO catalog_categories (
+         category_key, icon_key, sort_order, label_en, label_ja, label_ja_easy, label_bn
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (category_key) DO NOTHING`,
+      [
+        category.category_key,
+        category.icon_key,
+        category.sort_order,
+        category.label_en,
+        category.label_ja,
+        category.label_ja_easy,
+        category.label_bn,
+      ]
+    );
+  }
   for (const item of CANONICAL_CATALOG) {
     await query(
       `INSERT INTO catalog_items (

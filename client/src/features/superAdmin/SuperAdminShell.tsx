@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type {
   AdminUser,
   AuditLogEntry,
+  CatalogCategoryRecord,
   CatalogItemRecord,
   DisputeSummary,
   SuperAdminGroupSummary,
@@ -18,7 +19,7 @@ import {
   UsersIcon,
 } from '../../components/Icons.tsx';
 import { api } from '../../core/api.ts';
-import { syncDynamicCatalog } from '../../data/catalog.ts';
+import { syncDynamicCatalog, syncDynamicCategories } from '../../data/catalog.ts';
 import AccountsDirectory from './AccountsDirectory.tsx';
 import AuditLogViewer from './AuditLogViewer.tsx';
 import CatalogPhraseStudio from './CatalogPhraseStudio.tsx';
@@ -40,6 +41,7 @@ export default function SuperAdminShell({
   const [groups, setGroups] = useState<SuperAdminGroupSummary[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [catalog, setCatalog] = useState<CatalogItemRecord[]>([]);
+  const [categories, setCategories] = useState<CatalogCategoryRecord[]>([]);
   const [disputes, setDisputes] = useState<DisputeSummary[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,11 +55,12 @@ export default function SuperAdminShell({
   }, []);
 
   const refreshAll = useCallback(async () => {
-    const [ov, grp, acc, cat, disp, logs] = await Promise.all([
+    const [ov, grp, acc, cat, cats, disp, logs] = await Promise.all([
       api.get<SuperAdminOverview>('/super-admin/overview'),
       api.get<SuperAdminGroupSummary[]>('/super-admin/groups'),
       api.get<AdminUser[]>('/admin/users'),
       api.get<CatalogItemRecord[]>('/super-admin/catalog'),
+      api.get<CatalogCategoryRecord[]>('/super-admin/categories'),
       api.get<DisputeSummary[]>('/super-admin/disputes'),
       api.get<AuditLogEntry[]>('/super-admin/audit-logs'),
     ]);
@@ -65,9 +68,11 @@ export default function SuperAdminShell({
     setGroups(grp);
     setUsers(acc);
     setCatalog(cat);
+    setCategories(cats);
     setDisputes(disp);
     setAuditLogs(logs);
     syncDynamicCatalog(cat.filter((c) => c.is_active));
+    syncDynamicCategories(cats);
   }, []);
 
   useEffect(() => {
@@ -233,7 +238,12 @@ export default function SuperAdminShell({
                 <AccountsDirectory meId={user.id} users={users} onRefresh={refreshAll} onNotify={notify} />
               )}
               {tab === 'catalog' && (
-                <CatalogPhraseStudio catalog={catalog} onRefresh={refreshAll} onNotify={notify} />
+                <CatalogPhraseStudio
+                  catalog={catalog}
+                  categories={categories}
+                  onRefresh={refreshAll}
+                  onNotify={notify}
+                />
               )}
               {tab === 'disputes' && (
                 <SafetyQueue disputes={disputes} onRefresh={refreshAll} onNotify={notify} />

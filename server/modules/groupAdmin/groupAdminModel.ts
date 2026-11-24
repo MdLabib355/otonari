@@ -25,7 +25,7 @@ export async function listGroupMembersRaw(groupId: number): Promise<UserRow[]> {
      WHERE group_id = $1 AND deactivated_at IS NULL
      ORDER BY
        CASE member_status WHEN 'pending' THEN 0 ELSE 1 END,
-       CASE role WHEN 'super_admin' THEN 0 WHEN 'group_admin' THEN 1 WHEN 'co_admin' THEN 2 ELSE 3 END,
+       CASE role WHEN 'super_admin' THEN 0 WHEN 'group_admin' THEN 1 ELSE 2 END,
        id ASC`,
     [groupId]
   );
@@ -183,24 +183,6 @@ export async function updateMemberRole(groupId: number, userId: number, role: Gr
     [userId, groupId, role]
   );
   return found(row);
-}
-
-export async function transferPrimaryAdmin(
-  groupId: number,
-  currentPrimaryId: number,
-  newPrimaryId: number
-): Promise<UserRow> {
-  return transaction(async () => {
-    await query(
-      "UPDATE users SET role = 'co_admin' WHERE id = $1 AND group_id = $2 AND role = 'group_admin'",
-      [currentPrimaryId, groupId]
-    );
-    const promoted = await queryOne<UserRow>(
-      "UPDATE users SET role = 'group_admin' WHERE id = $1 AND group_id = $2 RETURNING *",
-      [newPrimaryId, groupId]
-    );
-    return found(promoted);
-  });
 }
 
 export async function listGroupItemsForAdmin(groupId: number): Promise<GroupAdminItem[]> {

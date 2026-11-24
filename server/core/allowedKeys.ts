@@ -3,6 +3,7 @@
 // against these allowlists.
 
 import type {
+  CatalogCategoryRecord,
   GroupLifecycleStatus,
   GroupRole,
   GroupType,
@@ -23,7 +24,29 @@ export interface CanonicalCatalogSeed {
   label_bn: string;
 }
 
-export const CATEGORIES = ['kitchen', 'cleaning', 'tools', 'living', 'outdoor'] as const;
+// The categories every database starts with. Super admins add more (catalog_categories).
+export const CANONICAL_CATEGORIES: Omit<CatalogCategoryRecord, 'is_active' | 'updated_at'>[] = [
+  { category_key: 'kitchen', icon_key: 'kitchen', sort_order: 10, label_en: 'Kitchen', label_ja: 'キッチン', label_ja_easy: 'キッチン', label_bn: 'রান্নাঘর' },
+  { category_key: 'cleaning', icon_key: 'cleaning', sort_order: 20, label_en: 'Cleaning & laundry', label_ja: '掃除・洗濯', label_ja_easy: 'そうじ・せんたく', label_bn: 'পরিষ্কার ও কাপড় ধোয়া' },
+  { category_key: 'tools', icon_key: 'tools', sort_order: 30, label_en: 'Tools', label_ja: '工具', label_ja_easy: 'どうぐ', label_bn: 'যন্ত্রপাতি' },
+  { category_key: 'living', icon_key: 'living', sort_order: 40, label_en: 'Living', label_ja: '暮らし', label_ja_easy: 'くらし', label_bn: 'দৈনন্দিন' },
+  { category_key: 'outdoor', icon_key: 'outdoor', sort_order: 50, label_en: 'Outdoor & travel', label_ja: 'アウトドア・旅行', label_ja_easy: 'そと・りょこう', label_bn: 'বাইরে ও ভ্রমণ' },
+];
+
+// The drawings in client/src/components/ItemIcons.tsx that a category can have.
+export const CATEGORY_ICON_KEYS = [
+  'kitchen',
+  'cleaning',
+  'tools',
+  'living',
+  'outdoor',
+  'electronics',
+  'sports',
+  'baby',
+  'books',
+  'garden',
+  'default',
+];
 
 export const CANONICAL_CATALOG: CanonicalCatalogSeed[] = [
   // kitchen
@@ -87,8 +110,8 @@ export const LANGUAGES: Lang[] = ['en', 'ja', 'ja-easy', 'bn'];
 export const GROUP_TYPES: GroupType[] = ['building', 'block'];
 export const JOIN_POLICIES: JoinPolicy[] = ['open', 'approval_required', 'locked'];
 export const GROUP_LIFECYCLE_STATUSES: GroupLifecycleStatus[] = ['active', 'read_only', 'suspended', 'archived'];
-export const GROUP_ROLES: GroupRole[] = ['user', 'co_admin', 'group_admin'];
-export const ALL_ROLES: Role[] = ['user', 'co_admin', 'group_admin', 'super_admin'];
+export const GROUP_ROLES: GroupRole[] = ['user', 'group_admin'];
+export const ALL_ROLES: Role[] = ['user', 'group_admin', 'super_admin'];
 export const MEMBER_STATUSES: MemberStatus[] = ['pending', 'active', 'borrow_muted', 'suspended'];
 
 // Loan lengths in days (an item's max_days must be one of these).
@@ -111,4 +134,17 @@ export async function isActiveCatalogItemKey(value: unknown): Promise<boolean> {
   const anyRow = await queryOne<{ item_key: string }>('SELECT item_key FROM catalog_items LIMIT 1');
   if (anyRow) return false;
   return isOneOf(ITEM_KEYS, value);
+}
+
+// The same for categories.
+export async function isActiveCategoryKey(value: unknown): Promise<boolean> {
+  if (typeof value !== 'string' || value.length === 0) return false;
+  const row = await queryOne<{ is_active: boolean }>(
+    'SELECT is_active FROM catalog_categories WHERE category_key = $1',
+    [value]
+  );
+  if (row) return row.is_active;
+  const anyRow = await queryOne('SELECT category_key FROM catalog_categories LIMIT 1');
+  if (anyRow) return false;
+  return CANONICAL_CATEGORIES.some((category) => category.category_key === value);
 }

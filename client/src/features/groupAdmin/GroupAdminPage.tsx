@@ -78,8 +78,6 @@ export default function GroupAdminPage({ onAlertCountChange }: { onAlertCountCha
   const currentGroup = dashboard?.group ?? group;
   const pendingCount = dashboard?.pending_count ?? 0;
   const attentionLoans = (dashboard?.overdue_loan_count ?? 0) + (dashboard?.flagged_loan_count ?? 0);
-  const roleBadge =
-    user.role === 'co_admin' ? t(lang, 'groupAdmin.coAdminBadge') : t(lang, 'groupAdmin.roleBadge');
 
   return (
     <section className="ga-page">
@@ -87,7 +85,7 @@ export default function GroupAdminPage({ onAlertCountChange }: { onAlertCountCha
         <div className="ga-header-title">
           <GroupIcon group={currentGroup} className="group-icon-svg" />
           <h1>{t(lang, 'groupAdmin.title')}</h1>
-          <span className="ga-badge ga-badge-indigo">{roleBadge}</span>
+          <span className="ga-badge ga-badge-indigo">{t(lang, 'groupAdmin.roleBadge')}</span>
           <span className="ga-code-chip">{currentGroup.code}</span>
         </div>
         <SpeakButton lang={lang} text={`${t(lang, 'groupAdmin.title')}. ${currentGroup.name}.`} />

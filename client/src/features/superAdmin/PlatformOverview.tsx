@@ -88,7 +88,7 @@ export default function PlatformOverview({
           <div>
             <strong>Orphaned Group Alert:</strong>{' '}
             {overview.orphaned_groups.map((g) => `${g.name} (${g.code})`).join(', ')} currently have no active
-            Primary Group Admin.
+            Group Admin.
           </div>
           <button type="button" className="ga-btn ga-btn-amber" onClick={() => onNavigate('groups')}>
             Open Admin Rescue →

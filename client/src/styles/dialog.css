@@ -81,3 +81,10 @@ body:has(dialog[open]) {
     border-radius: var(--radius-lg);
   }
 }
+
+/* A form around the body and the footer: only the body scrolls. */
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}

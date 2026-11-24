@@ -60,6 +60,14 @@ async function loginNickname(nickname: string): Promise<{ id: number; email: str
   return session;
 }
 
+async function superAdminToken(): Promise<string> {
+  const login = await apiReq('POST', '/auth/login', {
+    body: { email: TEST_SUPER_ADMIN_EMAIL, password: TEST_SUPER_ADMIN_PASSWORD },
+  });
+  assert.equal(login.status, 200);
+  return login.data.token;
+}
+
 async function createVerifiedAccount(email: string, nickname = '') {
   const user = await createUser({ email, lang: 'en', nickname });
   await setPassword(user.id, await hashSecret('test-user-password-123'));
@@ -162,17 +170,109 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass, Catalog & Unif
     });
     assert.equal(demoteSelf.status, 409);
 
-    // Co-Admin (Tanaka) cannot suspend or remove Primary Group Admin (Sato)
+    // A resident (Tanaka) cannot suspend a Group Admin
     const tanaka = await loginNickname('Tanaka');
-    const coSuspend = await apiReq('PATCH', `/group-admin/members/${sato.id}/status`, {
+    const residentSuspend = await apiReq('PATCH', `/group-admin/members/${sato.id}/status`, {
       token: tanaka.token,
       body: { status: 'suspended' },
     });
-    assert.equal(coSuspend.status, 403);
+    assert.equal(residentSuspend.status, 403);
 
-    // Primary Group Admin Inoue cannot remove himself
+    // Group Admin Inoue cannot remove themselves
     const selfRemove = await apiReq('DELETE', `/group-admin/members/${inoue.id}`, { token: inoue.token });
     assert.equal(selfRemove.status, 400);
+  });
+
+  it('has exactly 3 roles: co_admin is refused (400), group admins are equal, the last one is locked (409)', async () => {
+    const sato = await loginNickname('Sato');
+    const tanaka = await loginNickname('Tanaka');
+    const setRoleOf = (token: string, userId: number, role: string) =>
+      apiReq('PATCH', `/group-admin/members/${userId}/role`, { token, body: { role } });
+
+    assert.equal((await setRoleOf(sato.token, tanaka.id, 'co_admin')).status, 400);
+    assert.equal((await setRoleOf(tanaka.token, sato.id, 'user')).status, 403);
+
+    const promoted = await setRoleOf(sato.token, tanaka.id, 'group_admin');
+    assert.equal(promoted.status, 200);
+    assert.equal(promoted.data.role, 'group_admin');
+    const me = await apiReq('GET', '/me', { token: sato.token });
+    assert.equal(me.data.user.role, 'group_admin', 'Promoting somebody does not demote the promoter');
+
+    // The equal admin can demote the first one, and is then the last one.
+    assert.equal((await setRoleOf(tanaka.token, sato.id, 'user')).status, 200);
+    assert.equal((await setRoleOf(tanaka.token, tanaka.id, 'user')).status, 409);
+    assert.equal((await setRoleOf(tanaka.token, sato.id, 'group_admin')).status, 200);
+    assert.equal((await setRoleOf(tanaka.token, tanaka.id, 'user')).status, 200);
+    assert.equal((await setRoleOf(sato.token, sato.id, 'user')).status, 409);
+
+    // The database refuses the old role as well.
+    await assert.rejects(query("UPDATE users SET role = 'co_admin' WHERE id = $1", [tanaka.id]), /users_role_check/);
+  });
+
+  it('migrates co_admin rows of an existing database to group_admin, as often as it runs', async () => {
+    const maria = await loginNickname('Maria');
+    await query('ALTER TABLE users DROP CONSTRAINT users_role_check');
+    await query('ALTER TABLE audit_logs DROP CONSTRAINT audit_logs_actor_role_check');
+    await query("UPDATE users SET role = 'co_admin' WHERE id = $1", [maria.id]);
+    await query("UPDATE audit_logs SET actor_role = 'co_admin' WHERE actor_role = 'group_admin'");
+    await addNewColumns();
+    await addNewColumns();
+
+    const users = await query<{ role: string }>('SELECT role FROM users WHERE id = $1', [maria.id]);
+    assert.equal(users[0].role, 'group_admin');
+    assert.equal((await query("SELECT 1 FROM audit_logs WHERE actor_role = 'co_admin'")).length, 0);
+    await query("UPDATE users SET role = 'user' WHERE id = $1", [maria.id]);
+  });
+
+  it('lets only super admins manage 4-locale categories, which the catalog then uses', async () => {
+    const sato = await loginNickname('Sato');
+    const token = await superAdminToken();
+    const garden = {
+      category_key: 'garden_care',
+      icon_key: 'garden',
+      label_en: 'Garden care',
+      label_ja: '庭の手入れ',
+      label_ja_easy: 'にわの ていれ',
+      label_bn: 'বাগানের যত্ন',
+    };
+    const post = (body: object) => apiReq('POST', '/super-admin/categories', { token, body });
+
+    assert.equal((await apiReq('POST', '/super-admin/categories', { token: sato.token, body: garden })).status, 403);
+    assert.equal((await post({ ...garden, label_bn: ' ' })).status, 400);
+    assert.equal((await post({ ...garden, category_key: 'Garden care!' })).status, 400);
+    assert.equal((await post({ ...garden, icon_key: 'unknown' })).status, 400);
+    assert.equal((await post(garden)).status, 201);
+    assert.equal((await post(garden)).status, 409);
+
+    const item = {
+      item_key: 'watering_can',
+      emoji: '-',
+      category: 'garden_care',
+      label_en: 'Watering can',
+      label_ja: 'じょうろ',
+      label_ja_easy: 'じょうろ',
+      label_bn: 'পানির ঝাঁঝরি',
+    };
+    assert.equal((await apiReq('POST', '/super-admin/catalog', { token, body: { ...item, category: 'none' } })).status, 400);
+    assert.equal((await apiReq('POST', '/super-admin/catalog', { token, body: item })).status, 201);
+
+    const isPublic = async () =>
+      (await apiReq('GET', '/categories')).data.some((c: { category_key: string }) => c.category_key === 'garden_care');
+    assert.equal(await isPublic(), true);
+
+    const disable = await apiReq('PATCH', '/super-admin/categories/garden_care', { token, body: { is_active: false } });
+    assert.equal(disable.status, 200);
+    assert.equal(disable.data.label_ja, garden.label_ja);
+    assert.equal(await isPublic(), false);
+    const inDisabled = { ...item, item_key: 'garden_hose' };
+    assert.equal((await apiReq('POST', '/super-admin/catalog', { token, body: inDisabled })).status, 400);
+    const emptied = { label_en: '' };
+    assert.equal((await apiReq('PATCH', '/super-admin/categories/garden_care', { token, body: emptied })).status, 400);
+    const enabled = { is_active: true };
+    assert.equal((await apiReq('PATCH', '/super-admin/categories/garden_care', { token, body: enabled })).status, 200);
+
+    const audits = await apiReq('GET', '/super-admin/audit-logs?category=Catalog', { token });
+    assert.ok(audits.data.some((a: { action: string }) => a.action === 'catalog.category_added'));
   });
 
   it('enforces lent-item hide lock (409) and allows hiding/restoring available items', async () => {

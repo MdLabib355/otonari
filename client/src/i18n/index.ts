@@ -3,7 +3,7 @@
 // No AI, no translation API — every sentence was written (and checked) by humans.
 
 import type { Lang, PhraseParams } from '../../../shared/types.ts';
-import { dynamicItemLabel } from '../data/catalog.ts';
+import { dynamicCategoryLabel, dynamicItemLabel } from '../data/catalog.ts';
 import en from './en.json';
 import ja from './ja.json';
 import jaEasy from './ja-easy.json';
@@ -60,7 +60,7 @@ export function spotName(lang: Lang, spotKey: string): string {
 }
 
 export function categoryName(lang: Lang, categoryKey: string): string {
-  return lookup(lang, 'categories', categoryKey);
+  return dynamicCategoryLabel(lang, categoryKey) ?? lookup(lang, 'categories', categoryKey);
 }
 
 export function tip(lang: Lang, tipKey: TipKey): string {

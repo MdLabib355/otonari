@@ -2,7 +2,7 @@
 // Every route resolves group_id strictly from the authenticated admin's session (req.user.group_id).
 
 import express from 'express';
-import { requireGroupAdmin, requirePrimaryGroupAdmin } from '../../core/auth.ts';
+import { requireGroupAdmin } from '../../core/auth.ts';
 import { check, read, write } from '../../core/http.ts';
 import { storePhoto } from '../../core/photoFiles.ts';
 import { receivePhoto } from '../../core/receivePhoto.ts';
@@ -37,7 +37,7 @@ router.post('/group-admin/members/:userId/approve', write(requireGroupAdmin, app
 router.post('/group-admin/members/:userId/reject', write(requireGroupAdmin, rejectMember));
 router.patch('/group-admin/members/:userId/trust', write(requireGroupAdmin, setMemberTrust));
 router.patch('/group-admin/members/:userId/status', write(requireGroupAdmin, setMemberStatus));
-router.patch('/group-admin/members/:userId/role', write(requirePrimaryGroupAdmin, setMemberRole));
+router.patch('/group-admin/members/:userId/role', write(requireGroupAdmin, setMemberRole));
 router.delete('/group-admin/members/:userId', write(requireGroupAdmin, removeMember));
 router.patch('/group-admin/settings', write(requireGroupAdmin, updateSettings));
 router.post('/group-admin/image', check(requireGroupAdmin), receivePhoto, storePhoto, read(requireGroupAdmin, changeImage));

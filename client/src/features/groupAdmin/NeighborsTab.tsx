@@ -39,7 +39,6 @@ export default function NeighborsTab({
 
   const pending = members.filter((m) => m.member_status === 'pending');
   const activeRoster = members.filter((m) => m.member_status !== 'pending');
-  const isPrimaryAdmin = me.role === 'group_admin' || me.role === 'super_admin';
 
   const q = search.trim().toLowerCase();
   const filtered = activeRoster.filter((m) => {
@@ -90,7 +89,6 @@ export default function NeighborsTab({
 
   function roleLabel(role: Role): string {
     if (role === 'group_admin' || role === 'super_admin') return t(lang, 'groupAdmin.roleGroupAdmin');
-    if (role === 'co_admin') return t(lang, 'groupAdmin.roleCoAdmin');
     return t(lang, 'groupAdmin.roleMember');
   }
 
@@ -206,12 +204,9 @@ export default function NeighborsTab({
           const isMuted = member.member_status === 'borrow_muted';
           const isAnyAdmin = member.role !== 'user';
           const hasActiveLoan = member.active_loans.length > 0;
-          const canEditRole =
-            isPrimaryAdmin && !isSelf && member.member_status === 'active' && member.role !== 'super_admin';
-          const canRestrict =
-            !isSelf &&
-            member.role !== 'super_admin' &&
-            !(me.role === 'co_admin' && member.role === 'group_admin');
+          const canEditRole = !isSelf && member.member_status === 'active' && member.role !== 'super_admin';
+          const canRestrict = !isSelf && member.role !== 'super_admin';
+          const isGroupAdmin = member.role === 'group_admin';
 
           return (
             <div key={member.id} className="ga-card">
@@ -304,16 +299,14 @@ export default function NeighborsTab({
                         member.id,
                         async () => {
                           await api.patch(`/group-admin/members/${member.id}/role`, {
-                            role: member.role === 'co_admin' ? 'user' : 'co_admin',
+                            role: isGroupAdmin ? 'user' : 'group_admin',
                           });
                         },
-                        `${member.nickname}: ${member.role === 'co_admin' ? t(lang, 'groupAdmin.roleMember') : t(lang, 'groupAdmin.roleCoAdmin')}`
+                        `${member.nickname}: ${isGroupAdmin ? t(lang, 'groupAdmin.roleMember') : t(lang, 'groupAdmin.roleGroupAdmin')}`
                       )
                     }
                   >
-                    {member.role === 'co_admin'
-                      ? t(lang, 'groupAdmin.removeCoAdmin')
-                      : t(lang, 'groupAdmin.makeCoAdmin')}
+                    {isGroupAdmin ? t(lang, 'groupAdmin.removeGroupAdmin') : t(lang, 'groupAdmin.makeGroupAdmin')}
                   </button>
                 )}
 

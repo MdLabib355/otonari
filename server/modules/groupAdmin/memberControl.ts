@@ -7,15 +7,14 @@ import type { UserRow } from '../../types.ts';
 import { hasUnfinishedLoan } from '../loan/loanModel.ts';
 import { leaveGroup } from '../user/leaveGroup.ts';
 import { countActiveGroupAdmins } from '../user/userModel.ts';
-import { transferPrimaryAdmin, updateMemberRole, updateMemberStatus } from './groupAdminModel.ts';
+import { updateMemberRole, updateMemberStatus } from './groupAdminModel.ts';
 
-function adminActorRole(admin: UserRow): 'super_admin' | 'group_admin' | 'co_admin' {
-  if (admin.role === 'super_admin') return 'super_admin';
-  return admin.role === 'group_admin' ? 'group_admin' : 'co_admin';
+function adminActorRole(admin: UserRow): 'super_admin' | 'group_admin' {
+  return admin.role === 'super_admin' ? 'super_admin' : 'group_admin';
 }
 
 function adminLabel(admin: UserRow): string {
-  const prefix = admin.role === 'super_admin' ? 'SuperAdmin' : admin.role === 'group_admin' ? 'GroupAdmin' : 'CoAdmin';
+  const prefix = admin.role === 'super_admin' ? 'SuperAdmin' : 'GroupAdmin';
   return `${prefix} · ${admin.nickname || admin.email}`;
 }
 
@@ -33,8 +32,8 @@ export async function changeMemberStatusGuarded(
   if (target.member_status === 'pending') {
     return { error: refuse(409, 'Approve or decline the pending request first') };
   }
-  if (admin.role === 'co_admin' && (target.role === 'group_admin' || target.role === 'super_admin')) {
-    return { error: refuse(403, 'Co-Admins cannot restrict the Primary Group Admin') };
+  if (target.role === 'super_admin') {
+    return { error: refuse(403, 'Platform Super Admin cannot be restricted here') };
   }
   if (
     nextStatus === 'suspended' &&
@@ -74,34 +73,26 @@ export async function changeMemberRoleGuarded(
   if (target.member_status !== 'active') {
     return { error: refuse(409, 'Only active neighbors can hold an admin role') };
   }
-  if (target.id === admin.id && nextRole !== 'group_admin') {
-    if ((await countActiveGroupAdmins(groupId)) <= 1) {
-      return { error: refuse(409, 'Last-Admin Guardrail: promote another Group Admin before stepping down') };
-    }
+  // Last-Admin Lock: whoever does it, a group never loses its only admin.
+  if (
+    target.role === 'group_admin' &&
+    nextRole !== 'group_admin' &&
+    (await countActiveGroupAdmins(groupId)) <= 1
+  ) {
+    return { error: refuse(409, 'Last-Admin Lock: promote another Group Admin before stepping down') };
   }
 
-  let updated: UserRow;
-  let action = 'member.role_changed';
-  let detail = `Changed ${target.nickname} role from ${target.role} to ${nextRole}.`;
-
-  if (nextRole === 'group_admin' && target.id !== admin.id && admin.role === 'group_admin') {
-    updated = await transferPrimaryAdmin(groupId, admin.id, target.id);
-    action = 'member.primary_transferred';
-    detail = `Transferred primary Group Admin ownership from ${admin.nickname} to ${target.nickname}.`;
-  } else {
-    updated = await updateMemberRole(groupId, target.id, nextRole);
-  }
-
+  const updated = await updateMemberRole(groupId, target.id, nextRole);
   await writeAuditLog({
     actorId: admin.id,
     actorLabel: adminLabel(admin),
     actorRole: adminActorRole(admin),
     scopeGroupId: groupId,
     category: 'Member',
-    action,
+    action: 'member.role_changed',
     targetType: 'user',
     targetId: target.id,
-    detail,
+    detail: `Changed ${target.nickname} role from ${target.role} to ${nextRole}.`,
     ipAddress,
   });
 
@@ -119,9 +110,6 @@ export async function safeRemoveMemberGuarded(
   }
   if (target.role === 'super_admin') {
     return refuse(403, 'Platform Super Admin cannot be removed here');
-  }
-  if (admin.role === 'co_admin' && target.role === 'group_admin') {
-    return refuse(403, 'Co-Admins cannot remove the Primary Group Admin');
   }
   if (await hasUnfinishedLoan(target.id)) {
     return refuse(409, 'Cannot remove neighbor while an accepted or active loan is still open');

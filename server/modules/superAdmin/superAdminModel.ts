@@ -3,6 +3,7 @@
 import type {
   BreakGlassEvidence,
   BreakGlassEvidenceMessage,
+  CatalogCategoryRecord,
   CatalogItemRecord,
   DisputeSummary,
   LoanStatus,
@@ -81,7 +82,7 @@ export async function listGroupsForSuperAdmin(): Promise<SuperAdminGroupSummary[
      WHERE u.group_id IS NOT NULL AND u.deactivated_at IS NULL AND u.member_status <> 'pending'
      GROUP BY u.id
      ORDER BY
-       CASE u.role WHEN 'group_admin' THEN 0 WHEN 'co_admin' THEN 1 ELSE 2 END,
+       CASE u.role WHEN 'group_admin' THEN 0 ELSE 1 END,
        u.id ASC`
   );
 
@@ -133,11 +134,11 @@ export async function rescuePrimaryAdmin(
 
   return transaction(async () => {
     const previous = await queryOne<{ id: number; nickname: string }>(
-      "SELECT id, nickname FROM users WHERE group_id = $1 AND deactivated_at IS NULL AND role = 'group_admin' LIMIT 1",
-      [groupId]
+      "SELECT id, nickname FROM users WHERE group_id = $1 AND deactivated_at IS NULL AND role = 'group_admin' ORDER BY (id = $2) DESC, id LIMIT 1",
+      [groupId, target.id]
     );
     if (previous && previous.id !== target.id) {
-      await query("UPDATE users SET role = 'co_admin' WHERE id = $1", [previous.id]);
+      await query("UPDATE users SET role = 'user' WHERE id = $1", [previous.id]);
     }
     await query("UPDATE users SET role = 'group_admin' WHERE id = $1", [target.id]);
     return { previousAdmin: previous?.nickname ?? null, newAdmin: target.nickname };
@@ -205,6 +206,59 @@ export async function updateCatalogItemRecord(
       changes.label_ja ?? current.label_ja,
       changes.label_ja_easy ?? current.label_ja_easy,
       changes.label_bn ?? current.label_bn,
+    ]
+  );
+  return found(row);
+}
+
+export async function listCategories(activeOnly = false): Promise<CatalogCategoryRecord[]> {
+  return query<CatalogCategoryRecord>(
+    `SELECT * FROM catalog_categories ${activeOnly ? 'WHERE is_active' : ''} ORDER BY sort_order, category_key`
+  );
+}
+
+export async function findCategory(categoryKey: string): Promise<CatalogCategoryRecord | undefined> {
+  return queryOne<CatalogCategoryRecord>('SELECT * FROM catalog_categories WHERE category_key = $1', [categoryKey]);
+}
+
+type CategoryValues = Omit<CatalogCategoryRecord, 'sort_order' | 'updated_at'>;
+
+// New categories come after the existing ones.
+export async function insertCategory(category: CategoryValues): Promise<CatalogCategoryRecord> {
+  const row = await queryOne<CatalogCategoryRecord>(
+    `INSERT INTO catalog_categories (
+       category_key, icon_key, is_active, sort_order, label_en, label_ja, label_ja_easy, label_bn
+     )
+     VALUES ($1, $2, $3, (SELECT COALESCE(MAX(sort_order), 0) + 10 FROM catalog_categories), $4, $5, $6, $7)
+     RETURNING *`,
+    [
+      category.category_key,
+      category.icon_key,
+      category.is_active,
+      category.label_en,
+      category.label_ja,
+      category.label_ja_easy,
+      category.label_bn,
+    ]
+  );
+  return found(row);
+}
+
+export async function updateCategoryRecord(category: CategoryValues): Promise<CatalogCategoryRecord> {
+  const row = await queryOne<CatalogCategoryRecord>(
+    `UPDATE catalog_categories
+     SET icon_key = $2, is_active = $3, label_en = $4, label_ja = $5, label_ja_easy = $6, label_bn = $7,
+         updated_at = now()
+     WHERE category_key = $1
+     RETURNING *`,
+    [
+      category.category_key,
+      category.icon_key,
+      category.is_active,
+      category.label_en,
+      category.label_ja,
+      category.label_ja_easy,
+      category.label_bn,
     ]
   );
   return found(row);
