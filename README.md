@@ -1,6 +1,7 @@
 # Otonari (お隣)
 
 **Borrow from next door, in your own language.**
+----
 
 Otonari (お隣, "next door") is an installable web app (PWA) that lets neighbors in the same building or block in Japan lend and borrow things they rarely use, like a futon dryer, a stepladder or a takoyaki maker. Nobody types a message: every message is a fixed phrase that each neighbor reads in their own language (English, Japanese, Easy Japanese or Bengali).
 
