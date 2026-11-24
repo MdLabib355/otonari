@@ -391,6 +391,11 @@
   z-index: 5;
 }
 
+body.dark .sa-privacy-overlay,
+:root[data-theme='dark'] .sa-privacy-overlay {
+  background: rgba(18, 22, 28, 0.85);
+}
+
 .sa-privacy-card {
   background: var(--surface);
   border: 1px solid var(--border-hover);

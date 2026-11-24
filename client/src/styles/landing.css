@@ -207,6 +207,12 @@
   clip-path: inset(0 -100vmax);
 }
 
+body.dark .landing-band,
+:root[data-theme='dark'] .landing-band {
+  background: #151c25;
+  box-shadow: 0 0 0 100vmax #151c25;
+}
+
 .landing-building {
   display: grid;
   gap: 28px;

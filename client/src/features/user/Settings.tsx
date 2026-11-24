@@ -7,12 +7,14 @@ import GroupIcon from '../../components/GroupIcon.tsx';
 import { LANGUAGES } from '../../data/catalog.ts';
 import { meta, t, type UiKey } from '../../i18n/index.ts';
 import { useMember } from '../../core/UserContext.ts';
+import { useTheme, type ThemePreference } from '../../core/theme.tsx';
 
 const DOUBLE_TAP_MS = 500;
 
 // Settings: language, elder mode, my neighborhood (with its poster), and leaving it.
 export default function Settings() {
   const { user, group, lang, setMe, logout } = useMember();
+  const { theme, setTheme } = useTheme();
   const [failed, setFailed] = useState(false);
   const [leaveTappedAt, setLeaveTappedAt] = useState<number | null>(null); // time of the first tap on "Leave"
   const [leaving, setLeaving] = useState(false);
@@ -69,6 +71,20 @@ export default function Settings() {
               options={languageOptions}
               value={lang}
               onChange={(language) => save({ lang: language })}
+            />
+          </div>
+
+          <div className="field">
+            <p className="label">{t(lang, 'theme.title')}</p>
+            <ChipGroup
+              label={t(lang, 'theme.title')}
+              options={[
+                { value: 'system', label: t(lang, 'theme.system') },
+                { value: 'light', label: t(lang, 'theme.light') },
+                { value: 'dark', label: t(lang, 'theme.dark') },
+              ]}
+              value={theme}
+              onChange={(val) => setTheme(val as ThemePreference)}
             />
           </div>
 

@@ -275,7 +275,14 @@
     "loan.confirmReceived": "もらいました",
     "loan.confirmReturn": "もどりました",
     "loan.showOriginal": "あいての がめんを みる",
-    "speak.button": "よみあげる"
+    "speak.button": "よみあげる",
+    "settings.darkMode": "くらい がめん",
+    "settings.darkModeHint": "よる でも めが つかれません。",
+    "theme.title": "がめんの いろ",
+    "theme.system": "じどう",
+    "theme.light": "あかるい",
+    "theme.dark": "くらい",
+    "theme.toggle": "がめんの あかるさを かえる"
   },
 
   "items": {
