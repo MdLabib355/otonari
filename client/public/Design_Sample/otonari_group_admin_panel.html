@@ -1,0 +1,2972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Otonari (お隣) — Group Admin Panel · Sakura Heights</title>
+  <style>
+    /* =========================================================================
+       OTONARI DESIGN TOKENS — WARM, CALM JAPANESE NEIGHBORHOOD UI
+       Zero external dependencies; system font stack only.
+       ========================================================================= */
+    :root {
+      --bg-page: #f6f2ea;
+      --surface: #ffffff;
+      --surface-soft: #faf7f2;
+      --border: #e5dfd3;
+      --border-strong: #cfc6b6;
+      --indigo: #1f4b6e;
+      --indigo-hover: #163854;
+      --indigo-tint: #e8eff5;
+      --indigo-border: #c5d7e6;
+      --text-main: #212427;
+      --text-muted: #5c5a55;
+      --green-bg: #e8f5ec;
+      --green-text: #1f6b3b;
+      --green-border: #bfe0ca;
+      --amber-bg: #fef3dc;
+      --amber-text: #945600;
+      --amber-border: #ebcfa0;
+      --red-bg: #fdeaea;
+      --red-text: #a62626;
+      --red-border: #e8bcbc;
+      --radius-card: 14px;
+      --radius-btn: 10px;
+      --radius-pill: 999px;
+      --shadow-card: 0 2px 8px rgba(33, 36, 39, 0.045);
+      --shadow-modal: 0 20px 48px rgba(22, 56, 84, 0.22);
+      --tap-min: 44px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN",
+                   "Hiragino Sans", "Yu Gothic", "Noto Sans Bengali", Meiryo, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    button, input, select {
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid var(--indigo);
+      outline-offset: 2px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* =========================================================================
+       TOP STICKY HEADER (Desktop Tabs + Context + Elder Mode + Language)
+       ========================================================================= */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 6px rgba(33, 36, 39, 0.04);
+    }
+
+    .header-inner {
+      max-width: 1024px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .header-row-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      background: var(--indigo);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .brand-text-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-line {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 7px;
+      font-weight: 800;
+      font-size: 16px;
+      color: var(--indigo);
+      line-height: 1.2;
+    }
+
+    .building-line {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 7px;
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .code-chip {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      background: var(--indigo-tint);
+      color: var(--indigo);
+      border: 1px solid var(--indigo-border);
+      padding: 2px 8px;
+      border-radius: 7px;
+      white-space: nowrap;
+    }
+
+    .header-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .admin-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 11px 5px 6px;
+      border-radius: var(--radius-pill);
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .admin-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--indigo);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lang-select {
+      min-height: var(--tap-min);
+      padding: 6px 12px;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      font-weight: 700;
+      font-size: 13.5px;
+      color: var(--text-main);
+    }
+
+    .elder-btn {
+      min-height: var(--tap-min);
+      padding: 7px 13px;
+      border-radius: var(--radius-btn);
+      border: 1.5px solid var(--indigo-border);
+      background: var(--indigo-tint);
+      color: var(--indigo);
+      font-weight: 700;
+      font-size: 13.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .elder-btn:hover {
+      background: #dae7f1;
+    }
+
+    .elder-btn.active {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #ffffff;
+    }
+
+    /* Desktop Top Navigation Bar (>= 768px) */
+    .desktop-nav {
+      display: none;
+      gap: 8px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+
+    .desktop-tab {
+      min-height: var(--tap-min);
+      padding: 8px 15px;
+      border-radius: var(--radius-btn);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .desktop-tab:hover {
+      background: var(--bg-page);
+      color: var(--indigo);
+    }
+
+    .desktop-tab.active {
+      background: var(--indigo);
+      color: #ffffff;
+    }
+
+    .nav-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 21px;
+      height: 21px;
+      padding: 0 6px;
+      border-radius: var(--radius-pill);
+      background: var(--amber-bg);
+      color: var(--amber-text);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .desktop-tab.active .nav-count,
+    .mobile-tab.active .nav-count {
+      background: #ffffff;
+      color: var(--indigo);
+    }
+
+    /* Fixed Mobile Bottom Navigation Bar (< 768px) */
+    .mobile-bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 110;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -2px 12px rgba(33, 36, 39, 0.08);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+      gap: 4px;
+    }
+
+    .mobile-tab {
+      min-height: 54px;
+      padding: 6px 4px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 11.5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      position: relative;
+      text-align: center;
+      line-height: 1.15;
+    }
+
+    .mobile-tab.active {
+      background: var(--indigo-tint);
+      color: var(--indigo);
+    }
+
+    .mobile-tab .nav-count {
+      position: absolute;
+      top: 4px;
+      right: 8px;
+      min-width: 18px;
+      height: 18px;
+      font-size: 11px;
+      padding: 0 4px;
+    }
+
+    @media (min-width: 768px) {
+      .desktop-nav {
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .mobile-bottom-nav {
+        display: none;
+      }
+    }
+
+    /* =========================================================================
+       LIVE PINNED SHELF BANNER (Beneath Header)
+       ========================================================================= */
+    .live-banner-wrap {
+      max-width: 1024px;
+      margin: 14px auto 0;
+      padding: 0 16px;
+    }
+
+    .live-banner {
+      background: var(--indigo-tint);
+      border: 1px solid var(--indigo-border);
+      border-left: 5px solid var(--indigo);
+      border-radius: var(--radius-card);
+      padding: 13px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .live-banner-content {
+      flex: 1 1 260px;
+    }
+
+    .live-banner-tag {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--indigo);
+      margin-bottom: 3px;
+    }
+
+    .live-banner-text {
+      margin: 0;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    /* =========================================================================
+       MAIN CONTENT CONTAINER
+       ========================================================================= */
+    .main-container {
+      max-width: 1024px;
+      margin: 0 auto;
+      padding: 18px 16px 96px;
+    }
+
+    @media (min-width: 768px) {
+      .main-container {
+        padding: 22px 16px 56px;
+      }
+    }
+
+    /* =========================================================================
+       REUSABLE CARDS, BUTTONS, BADGES, SWITCHES & FILTERS
+       ========================================================================= */
+    .section-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--indigo);
+    }
+
+    .section-sub {
+      margin: 3px 0 0;
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 18px;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 14px;
+    }
+
+    .card-pending {
+      background: #fffdf8;
+      border-color: var(--amber-border);
+    }
+
+    .card-overdue {
+      border-color: var(--red-border);
+    }
+
+    .card-dimmed {
+      opacity: 0.68;
+      background: var(--surface-soft);
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .btn {
+      min-height: var(--tap-min);
+      padding: 8px 14px;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-main);
+      font-weight: 700;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: background 0.14s ease, border-color 0.14s ease, transform 0.06s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--surface-soft);
+      border-color: var(--indigo);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--indigo-hover);
+      border-color: var(--indigo-hover);
+    }
+
+    .btn-soft {
+      background: var(--indigo-tint);
+      border-color: var(--indigo-border);
+      color: var(--indigo);
+    }
+
+    .btn-soft:hover:not(:disabled) {
+      background: #dbe6f0;
+    }
+
+    .btn-green {
+      background: var(--green-text);
+      border-color: var(--green-text);
+      color: #ffffff;
+    }
+
+    .btn-green:hover:not(:disabled) {
+      background: #17542e;
+    }
+
+    .btn-amber {
+      background: var(--amber-bg);
+      border-color: var(--amber-border);
+      color: var(--amber-text);
+    }
+
+    .btn-amber:hover:not(:disabled) {
+      background: #fbe8c4;
+    }
+
+    .btn-red-outline {
+      background: var(--surface);
+      border-color: var(--red-border);
+      color: var(--red-text);
+    }
+
+    .btn-red-outline:hover:not(:disabled) {
+      background: var(--red-bg);
+      border-color: var(--red-text);
+    }
+
+    .btn-sm {
+      min-height: 38px;
+      padding: 6px 11px;
+      font-size: 13px;
+    }
+
+    .speak-btn {
+      min-height: var(--tap-min);
+      min-width: var(--tap-min);
+      padding: 6px 11px;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--indigo-border);
+      background: var(--surface);
+      color: var(--indigo);
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .speak-btn:hover {
+      background: var(--indigo-tint);
+    }
+
+    .speak-label {
+      display: none;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 12.5px;
+      font-weight: 700;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .badge-green  { background: var(--green-bg);  color: var(--green-text); }
+    .badge-amber  { background: var(--amber-bg);  color: var(--amber-text); }
+    .badge-red    { background: var(--red-bg);    color: var(--red-text); }
+    .badge-indigo { background: var(--indigo-tint); color: var(--indigo); }
+    .badge-muted  { background: #ede8df;          color: var(--text-muted); }
+
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toolbar-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .search-input {
+      min-height: var(--tap-min);
+      padding: 8px 14px;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      width: 100%;
+      max-width: 340px;
+    }
+
+    .chips-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .chip {
+      min-height: 38px;
+      padding: 6px 13px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 700;
+      transition: all 0.14s ease;
+    }
+
+    .chip:hover {
+      border-color: var(--indigo);
+      color: var(--indigo);
+    }
+
+    .chip.active {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #ffffff;
+    }
+
+    /* Toggle Switch */
+    .toggle-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: var(--tap-min);
+      padding: 6px 12px;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--border-strong);
+      background: var(--surface-soft);
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .toggle-switch {
+      appearance: none;
+      width: 44px;
+      height: 24px;
+      background: #cfc7ba;
+      border-radius: 999px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.18s ease;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+      transition: transform 0.18s ease;
+    }
+
+    .toggle-switch:checked {
+      background: var(--indigo);
+    }
+
+    .toggle-switch:checked::after {
+      transform: translateX(20px);
+    }
+
+    /* =========================================================================
+       NEIGHBOR, SHELF & LOAN CARD LAYOUTS
+       ========================================================================= */
+    .card-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .identity {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: var(--indigo-tint);
+      color: var(--indigo);
+      font-weight: 800;
+      font-size: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .item-emoji {
+      width: 54px;
+      height: 54px;
+      border-radius: 13px;
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      font-size: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .entity-name {
+      font-size: 16.5px;
+      font-weight: 800;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .entity-meta {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .inline-note {
+      margin-top: 10px;
+      padding: 10px 13px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .note-red {
+      background: var(--red-bg);
+      color: var(--red-text);
+      border: 1px solid var(--red-border);
+    }
+
+    .note-indigo {
+      background: var(--indigo-tint);
+      color: var(--indigo);
+      border: 1px solid var(--indigo-border);
+    }
+
+    /* Loan Condition Photos & Timeline */
+    .photo-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin: 12px 0;
+    }
+
+    .photo-thumb {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 10px;
+    }
+
+    .photo-thumb-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 7px;
+    }
+
+    .loan-timeline {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .timeline-bubble {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13.5px;
+    }
+
+    .timeline-bubble-top {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    /* Dual-Language Mediation Preview */
+    .mediation-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 13px;
+      border-radius: 11px;
+      border: 1.5px solid var(--border);
+      background: var(--surface-soft);
+      cursor: pointer;
+    }
+
+    .mediation-option.selected {
+      border-color: var(--indigo);
+      background: var(--indigo-tint);
+    }
+
+    .mediation-option input[type="radio"] {
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
+      accent-color: var(--indigo);
+      flex-shrink: 0;
+    }
+
+    .dual-preview {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 640px) {
+      .dual-preview {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .dual-box {
+      background: var(--surface-soft);
+      border: 1px solid var(--indigo-border);
+      border-radius: 12px;
+      padding: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .dual-box-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--indigo);
+    }
+
+    .dual-box-text {
+      margin: 0;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    /* =========================================================================
+       PRINTABLE A4 QR POSTER & STRUCTURED ANNOUNCEMENTS
+       ========================================================================= */
+    .poster-sheet {
+      background: #ffffff;
+      border: 2.5px solid var(--indigo);
+      border-radius: 16px;
+      padding: 28px 24px;
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 16px;
+    }
+
+    .poster-kicker {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--indigo);
+      margin-bottom: 4px;
+    }
+
+    .poster-building {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .poster-city {
+      margin: 4px 0 18px;
+      font-size: 15px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .poster-qr-frame {
+      display: inline-flex;
+      padding: 12px;
+      border: 1.5px solid var(--border-strong);
+      border-radius: 14px;
+      background: #ffffff;
+      margin-bottom: 14px;
+    }
+
+    .poster-code-box {
+      font-family: var(--font-mono);
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: var(--indigo);
+      background: var(--indigo-tint);
+      border: 2px dashed var(--indigo);
+      border-radius: 12px;
+      padding: 8px 20px;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+
+    .trilingual-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      text-align: left;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 680px) {
+      .trilingual-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tri-box {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      font-size: 13px;
+    }
+
+    .tri-box strong {
+      display: block;
+      color: var(--indigo);
+      margin-bottom: 4px;
+      font-size: 12.5px;
+    }
+
+    .poster-footer {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .lang-preview-4 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 640px) {
+      .lang-preview-4 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .lang-preview-card {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 13px;
+    }
+
+    .lang-preview-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 5px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--indigo);
+    }
+
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .activity-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      font-size: 13.5px;
+    }
+
+    .activity-time {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* =========================================================================
+       ELDER MODE (body.elder) — 22px BASE FONT & 64px TAP TARGETS
+       ========================================================================= */
+    body.elder {
+      font-size: 22px;
+      line-height: 1.55;
+    }
+
+    body.elder .section-title {
+      font-size: 28px;
+    }
+
+    body.elder .brand-line,
+    body.elder .entity-name {
+      font-size: 24px;
+    }
+
+    body.elder .building-line,
+    body.elder .section-sub,
+    body.elder .entity-meta,
+    body.elder .badge,
+    body.elder .inline-note,
+    body.elder .timeline-bubble,
+    body.elder .dual-box-text,
+    body.elder .activity-row {
+      font-size: 19px;
+    }
+
+    body.elder .btn,
+    body.elder .btn-sm,
+    body.elder .elder-btn,
+    body.elder .lang-select,
+    body.elder .desktop-tab,
+    body.elder .mobile-tab,
+    body.elder .chip,
+    body.elder .search-input,
+    body.elder .toggle-pill,
+    body.elder .speak-btn {
+      min-height: 64px;
+      font-size: 20px;
+      padding: 12px 18px;
+    }
+
+    body.elder .speak-label {
+      display: inline;
+    }
+
+    body.elder .code-chip {
+      font-size: 18px;
+      padding: 4px 10px;
+    }
+
+    body.elder .avatar {
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+    }
+
+    body.elder .item-emoji {
+      width: 68px;
+      height: 68px;
+      font-size: 36px;
+    }
+
+    body.elder .mobile-bottom-nav {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body.elder .main-container {
+      padding-bottom: 160px;
+    }
+
+    @media (min-width: 768px) {
+      body.elder .main-container {
+        padding-bottom: 64px;
+      }
+    }
+
+    /* =========================================================================
+       MODAL & TOASTS (No alert() / confirm())
+       ========================================================================= */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(22, 56, 84, 0.48);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 250;
+    }
+
+    .modal-dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 24px;
+      max-width: 640px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-modal);
+    }
+
+    .modal-title {
+      margin: 0 0 6px;
+      font-size: 19px;
+      color: var(--indigo);
+    }
+
+    .modal-desc {
+      margin: 0 0 14px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .toast-region {
+      position: fixed;
+      bottom: 80px;
+      right: 16px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: calc(100vw - 32px);
+    }
+
+    @media (min-width: 768px) {
+      .toast-region {
+        bottom: 22px;
+        right: 22px;
+      }
+    }
+
+    .toast {
+      background: var(--indigo);
+      color: #ffffff;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 10px 26px rgba(22, 56, 84, 0.25);
+      animation: toastPop 0.2s ease;
+    }
+
+    .toast-green { background: var(--green-text); }
+    .toast-amber { background: var(--amber-text); }
+    .toast-red   { background: var(--red-text); }
+
+    @keyframes toastPop {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* =========================================================================
+       PRINT STYLES — CLEAN A4 TRILINGUAL POSTER ONLY
+       ========================================================================= */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 14mm;
+      }
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      .app-header,
+      .live-banner-wrap,
+      .mobile-bottom-nav,
+      .no-print,
+      .modal-backdrop,
+      .toast-region {
+        display: none !important;
+      }
+      .main-container {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .card {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .poster-sheet {
+        max-width: 100% !important;
+        border: 3px solid #1f4b6e !important;
+        padding: 32px 26px !important;
+        page-break-inside: avoid;
+      }
+      .trilingual-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =======================================================================
+       TOP STICKY HEADER
+       ======================================================================= -->
+  <header class="app-header" role="banner">
+    <div class="header-inner">
+      <div class="header-row-top">
+        <div class="brand-cluster">
+          <div class="brand-logo" aria-hidden="true">隣</div>
+          <div class="brand-text-wrap">
+            <div class="brand-line">
+              <span>お隣 Otonari</span>
+              <span class="badge badge-indigo" id="hdr-role-badge">Group Admin</span>
+            </div>
+            <div class="building-line">
+              <span id="hdr-building-name">Sakura Heights · さくらハイツ</span>
+              <span class="code-chip" id="hdr-join-code">SAKURA-2611</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-controls">
+          <span class="admin-pill">
+            <span class="admin-avatar" aria-hidden="true">S</span>
+            <span id="hdr-admin-pill">Sato (Group Admin)</span>
+          </span>
+
+          <select id="lang-select" class="lang-select" aria-label="Interface Language" onchange="setLang(this.value)">
+            <option value="en">EN · English</option>
+            <option value="ja">日本語</option>
+            <option value="ja-easy">やさしい日本語</option>
+            <option value="bn">বাংলা</option>
+          </select>
+
+          <button id="elder-toggle-btn" class="elder-btn" type="button" aria-pressed="false" onclick="toggleElderMode()">
+            <span aria-hidden="true">Aa</span>
+            <span id="hdr-elder-label">Elder Mode / 大文字</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Desktop Navigation Tabs (>= 768px) -->
+      <nav class="desktop-nav" aria-label="Group Admin Sections">
+        <button class="desktop-tab active" data-tab="neighbors" onclick="setTab('neighbors')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span data-i18n-tab="neighbors">Neighbors</span>
+          <span class="nav-count" id="desktop-pending-badge">1</span>
+        </button>
+
+        <button class="desktop-tab" data-tab="shelf" onclick="setTab('shelf')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          <span data-i18n-tab="shelf">Shelf</span>
+        </button>
+
+        <button class="desktop-tab" data-tab="loans" onclick="setTab('loans')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          <span data-i18n-tab="loans">Loans</span>
+          <span class="nav-count" id="desktop-overdue-badge">1</span>
+        </button>
+
+        <button class="desktop-tab" data-tab="poster" onclick="setTab('poster')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7z"/><path d="M14 7h3v3h-3z"/><path d="M7 14h3v3H7z"/><path d="M14 14h3v3h-3z"/></svg>
+          <span data-i18n-tab="poster">Poster &amp; Notices</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- =======================================================================
+       LIVE PINNED SHELF BANNER (Rendered when an announcement is pinned)
+       ======================================================================= -->
+  <div id="live-banner-wrap" class="live-banner-wrap hidden" role="status"></div>
+
+  <!-- =======================================================================
+       MAIN CONTENT REGION
+       ======================================================================= -->
+  <main id="main-content" class="main-container"></main>
+
+  <!-- =======================================================================
+       MOBILE FIXED BOTTOM NAVIGATION (< 768px)
+       ======================================================================= -->
+  <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+    <button class="mobile-tab active" data-tab="neighbors" onclick="setTab('neighbors')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span data-i18n-tab="neighbors">Neighbors</span>
+      <span class="nav-count" id="mobile-pending-badge">1</span>
+    </button>
+
+    <button class="mobile-tab" data-tab="shelf" onclick="setTab('shelf')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      <span data-i18n-tab="shelf">Shelf</span>
+    </button>
+
+    <button class="mobile-tab" data-tab="loans" onclick="setTab('loans')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      <span data-i18n-tab="loans">Loans</span>
+      <span class="nav-count" id="mobile-overdue-badge">1</span>
+    </button>
+
+    <button class="mobile-tab" data-tab="poster" onclick="setTab('poster')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7z"/><path d="M14 7h3v3h-3z"/><path d="M7 14h3v3H7z"/><path d="M14 14h3v3h-3z"/></svg>
+      <span data-i18n-tab="poster">Poster</span>
+    </button>
+  </nav>
+
+  <!-- Modal & Toast Containers -->
+  <div id="modal-root" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-dialog" id="modal-dialog"></div>
+  </div>
+  <div id="toast-region" class="toast-region" aria-live="polite"></div>
+
+  <!-- =======================================================================
+       APPLICATION LOGIC & 4-LANGUAGE DICTIONARY
+       ======================================================================= -->
+  <script>
+    /* -----------------------------------------------------------------------
+       1. 4-LANGUAGE UI & DOMAIN DICTIONARY (en, ja, ja-easy, bn)
+       ----------------------------------------------------------------------- */
+    const I18N = {
+      en: {
+        roleBadge: "Group Admin",
+        buildingTitle: "Sakura Heights · Nagasaki",
+        adminPill: "Sato (Group Admin)",
+        elderLabel: "Elder Mode / 大文字",
+        readAloud: "Read Aloud",
+        tabs: { neighbors: "Neighbors", shelf: "Shelf", loans: "Loans", poster: "Poster & Notices" },
+        bannerTag: "Pinned Building Announcement",
+        unpin: "Unpin",
+        pendingTitle: "Pending Join Requests",
+        pendingNone: "No pending join requests right now.",
+        simQrBtn: "+ Simulate QR Scan",
+        approve: "Approve",
+        decline: "Decline",
+        requestedVia: "Requested via QR poster",
+        newNeighborTrust: "New neighbor, no returns yet",
+        activeNeighbors: "Active Neighbors",
+        searchNeighbors: "Search neighbor by name or language...",
+        filters: { all: "All", admins: "Admins", trusted: "Trusted", muted: "Muted", inLoan: "In Active Loan" },
+        roles: { group_admin: "Group Admin", co_admin: "Co-Admin", member: "Member" },
+        trustedLabel: "Trusted",
+        grantTrust: "Endorse Trust",
+        mutedBadge: "Muted",
+        muteBorrow: "Mute Borrowing",
+        unmuteBorrow: "Unmute Borrowing",
+        makeCoAdmin: "Make Co-Admin",
+        removeAdmin: "Remove Co-Admin",
+        safeRemove: "Safe Remove",
+        joinedTrust: (days, onTime, late) =>
+          onTime === 0 && late === 0
+            ? `Joined ${days}d ago · 0 returns yet`
+            : `Joined ${days}d ago · ${onTime} on time, ${late} late`,
+        activeLoanTag: (id, role, status) => `Loan #${id} (${role} · ${status})`,
+        lenderRole: "Lender",
+        borrowerRole: "Borrower",
+        shelfTitle: "Shelf Moderation",
+        shelfSub: "Manage trusted-only restrictions or temporarily hide available items.",
+        shelfFilters: { all: "All", available: "Available", lent: "Lent", trusted: "Trusted Only", hidden: "Hidden" },
+        ownerLabel: "Owner",
+        spotLabel: "Spot",
+        maxDays: (d) => `Max ${d}d`,
+        statusLabels: { available: "Available", lent: "Lent", hidden: "Hidden" },
+        trustedOnly: "Trusted Only",
+        hideItem: "Hide from Shelf",
+        restoreItem: "Restore to Shelf",
+        cannotHideLent: "Locked while item is lent (protects active return tracking).",
+        loansTitle: "Loans & Gentle Mediation",
+        loansSub: "Fixed multilingual check-ins and condition photo verification — zero free-text typing.",
+        loanStatus: { overdue: "OVERDUE (1 day late)", active: "ACTIVE (Due in 14h)", returned: "RETURNED (On time)" },
+        sendCheckIn: "Send Gentle Check-in",
+        resolveReturn: "Resolve & Mark Returned",
+        photoBefore: "Handover Photo (Before)",
+        photoAfter: "Return Photo (After)",
+        posterTitle: "Printable A4 QR Join Poster",
+        posterSub: "Post at the entrance or mailbox notice board. Rotating the code invalidates old posters immediately.",
+        rotateCode: "Rotate Join Code",
+        printPoster: "Print A4 Poster",
+        noticesTitle: "Structured Building Announcements",
+        noticesSub: "Zero free-text: choose a vetted template translated across all 4 languages.",
+        pinBanner: "Pin to Shelf Banner",
+        unpinBanner: "Unpin Banner",
+        activityTitle: "Recent Group Activity Log",
+        activitySub: "Transparent log of local caretaker actions during this session.",
+        spots: {
+          entrance: "Building entrance",
+          mailboxes: "Near mailboxes",
+          bike_parking: "Bike parking"
+        },
+        items: {
+          futon_dryer: "Futon dryer",
+          takoyaki_maker: "Takoyaki maker",
+          ladder: "Stepladder",
+          projector: "Projector",
+          power_drill: "Power drill",
+          hot_plate: "Hot plate",
+          suitcase: "Suitcase",
+          bluetooth_speaker: "Bluetooth speaker",
+          rice_cooker_large: "Large rice cooker"
+        }
+      },
+
+      ja: {
+        roleBadge: "グループ管理人",
+        buildingTitle: "さくらハイツ · 長崎市",
+        adminPill: "佐藤（管理人）",
+        elderLabel: "大文字モード",
+        readAloud: "読み上げ",
+        tabs: { neighbors: "ご近所さん", shelf: "共有棚", loans: "貸し借り", poster: "掲示・お知らせ" },
+        bannerTag: "ピン留め中のお知らせ",
+        unpin: "解除",
+        pendingTitle: "参加承認待ち",
+        pendingNone: "現在、承認待ちの参加申請はありません。",
+        simQrBtn: "+ QR読取をテスト",
+        approve: "承認する",
+        decline: "見送る",
+        requestedVia: "掲示ポスターのQRから申請",
+        newNeighborTrust: "新しいご近所さん・返却実績なし",
+        activeNeighbors: "参加中のご近所さん",
+        searchNeighbors: "お名前や言語で検索...",
+        filters: { all: "すべて", admins: "管理人", trusted: "信頼済み", muted: "一時停止", inLoan: "貸借中" },
+        roles: { group_admin: "グループ管理人", co_admin: "副管理人", member: "メンバー" },
+        trustedLabel: "信頼済み",
+        grantTrust: "信頼バッジを付与",
+        mutedBadge: "借用一時停止",
+        muteBorrow: "借用を一時停止",
+        unmuteBorrow: "一時停止を解除",
+        makeCoAdmin: "副管理人にする",
+        removeAdmin: "副管理人を外す",
+        safeRemove: "安全に退出処理",
+        joinedTrust: (days, onTime, late) =>
+          onTime === 0 && late === 0
+            ? `${days}日前に参加 · 返却実績なし`
+            : `${days}日前に参加 · 期限内 ${onTime}回 / 遅延 ${late}回`,
+        activeLoanTag: (id, role, status) => `貸借 #${id}（${role} · ${status}）`,
+        lenderRole: "貸主",
+        borrowerRole: "借主",
+        shelfTitle: "共有棚の管理",
+        shelfSub: "「信頼済みのみ」の設定や、貸出中でないアイテムの非表示を行えます。",
+        shelfFilters: { all: "すべて", available: "貸出可", lent: "貸出中", trusted: "信頼済みのみ", hidden: "非表示" },
+        ownerLabel: "持ち主",
+        spotLabel: "受け渡し場所",
+        maxDays: (d) => `最大${d}日`,
+        statusLabels: { available: "貸出可", lent: "貸出中", hidden: "非表示" },
+        trustedOnly: "信頼済みのみ",
+        hideItem: "棚から隠す",
+        restoreItem: "棚に戻す",
+        cannotHideLent: "貸出中のため非表示にできません（返却確認を保護するため）。",
+        loansTitle: "貸し借りとやさしい仲介",
+        loansSub: "自由入力なし・定型フレーズと状態写真で安心してサポートします。",
+        loanStatus: { overdue: "返却期限超過（1日遅れ）", active: "貸出中（残り14時間）", returned: "返却完了（期限内）" },
+        sendCheckIn: "やさしい確認を送る",
+        resolveReturn: "返却済みにする",
+        photoBefore: "受け渡し時の写真（前）",
+        photoAfter: "返却時の写真（後）",
+        posterTitle: "印刷用 A4 QR参加ポスター",
+        posterSub: "エントランスや集合ポストに掲示してください。コードを更新すると旧ポスターは無効になります。",
+        rotateCode: "参加コードを更新",
+        printPoster: "A4ポスターを印刷",
+        noticesTitle: "定型お知らせ（自由入力なし）",
+        noticesSub: "4言語対応の定型文を選ぶだけで、全員に自分の言語で届きます。",
+        pinBanner: "共有棚バナーに固定",
+        unpinBanner: "バナー固定を解除",
+        activityTitle: "グループ管理ログ",
+        activitySub: "このセッションで行われた管理操作の履歴です。",
+        spots: {
+          entrance: "建物の玄関",
+          mailboxes: "集合ポスト前",
+          bike_parking: "駐輪場"
+        },
+        items: {
+          futon_dryer: "布団乾燥機",
+          takoyaki_maker: "たこ焼き器",
+          ladder: "脚立",
+          projector: "プロジェクター",
+          power_drill: "電動ドリル",
+          hot_plate: "ホットプレート",
+          suitcase: "スーツケース",
+          bluetooth_speaker: "Bluetoothスピーカー",
+          rice_cooker_large: "大型炊飯器"
+        }
+      },
+
+      "ja-easy": {
+        roleBadge: "かんりにん",
+        buildingTitle: "さくらハイツ · ながさき",
+        adminPill: "さとう（かんりにん）",
+        elderLabel: "おおきい もじ",
+        readAloud: "よみあげ",
+        tabs: { neighbors: "ごきんじょ", shelf: "たな", loans: "かし かり", poster: "ポスター" },
+        bannerTag: "いま の おしらせ",
+        unpin: "けす",
+        pendingTitle: "はいりたい ひと",
+        pendingNone: "いま まっている ひと は いません。",
+        simQrBtn: "+ QRテスト",
+        approve: "OK に する",
+        decline: "ことわる",
+        requestedVia: "ポスター の QR から",
+        newNeighborTrust: "あたらしい ひと・まだ 0かい",
+        activeNeighbors: "いっしょ の ごきんじょ",
+        searchNeighbors: "なまえ で さがす...",
+        filters: { all: "ぜんぶ", admins: "かんりにん", trusted: "あんしん", muted: "おやすみ", inLoan: "かしかり中" },
+        roles: { group_admin: "かんりにん", co_admin: "てつだい", member: "メンバー" },
+        trustedLabel: "あんしん",
+        grantTrust: "あんしん に する",
+        mutedBadge: "かりる の おやすみ",
+        muteBorrow: "かりる の を とめる",
+        unmuteBorrow: "また かりられる",
+        makeCoAdmin: "てつだい に する",
+        removeAdmin: "てつだい を やめる",
+        safeRemove: "グループ から だす",
+        joinedTrust: (days, onTime, late) =>
+          onTime === 0 && late === 0
+            ? `${days}にち まえ から · まだ 0かい`
+            : `${days}にち まえ から · じかん どおり ${onTime}かい`,
+        activeLoanTag: (id, role, status) => `#${id}（${role} · ${status}）`,
+        lenderRole: "かした ひと",
+        borrowerRole: "かりた ひと",
+        shelfTitle: "たな の もの",
+        shelfSub: "あんしん の ひと だけ に したり、かくしたり できます。",
+        shelfFilters: { all: "ぜんぶ", available: "かりられる", lent: "かしだし中", trusted: "あんしん だけ", hidden: "かくれ中" },
+        ownerLabel: "もちぬし",
+        spotLabel: "わたす ばしょ",
+        maxDays: (d) => `${d}にち まで`,
+        statusLabels: { available: "かりられる", lent: "かしだし中", hidden: "かくしている" },
+        trustedOnly: "あんしん だけ",
+        hideItem: "たな から かくす",
+        restoreItem: "たな に もどす",
+        cannotHideLent: "いま かしている ので かくせません。",
+        loansTitle: "かし かり の てつだい",
+        loansSub: "やさしい きまった ことば で おしらせ できます。",
+        loanStatus: { overdue: "かえす ひ を すぎた（1にち）", active: "かりている（あと14じかん）", returned: "かえした（じかん どおり）" },
+        sendCheckIn: "やさしい おしらせ",
+        resolveReturn: "かえした こと に する",
+        photoBefore: "わたした とき の しゃしん",
+        photoAfter: "かえした とき の しゃしん",
+        posterTitle: "いんさつ ポスター (QR)",
+        posterSub: "げんかん に はって ください。コード を かえると ふるい ポスター は つかえません。",
+        rotateCode: "コード を かえる",
+        printPoster: "ポスター を いんさつ",
+        noticesTitle: "みんな へ の おしらせ",
+        noticesSub: "えらぶ だけ で 4つ の ことば に なります。",
+        pinBanner: "うえ に だす",
+        unpinBanner: "うえ から けす",
+        activityTitle: "かんり の きろく",
+        activitySub: "きょう やった こと の きろく です。",
+        spots: {
+          entrance: "1かい の げんかん",
+          mailboxes: "ポスト の ちかく",
+          bike_parking: "じてんしゃ おきば"
+        },
+        items: {
+          futon_dryer: "ふとん かわかす きかい",
+          takoyaki_maker: "たこやき き",
+          ladder: "きゃたつ（はしご）",
+          projector: "えいが うつす きかい",
+          power_drill: "でんどう ドリル",
+          hot_plate: "ホットプレート",
+          suitcase: "おおきい かばん",
+          bluetooth_speaker: "スピーカー",
+          rice_cooker_large: "おおきい すいはんき"
+        }
+      },
+
+      bn: {
+        roleBadge: "গ্রুপ অ্যাডমিন",
+        buildingTitle: "সাকুরা হাইটস · নাগাসাকি",
+        adminPill: "সাতো (গ্রুপ অ্যাডমিন)",
+        elderLabel: "বড় অক্ষর / 大文字",
+        readAloud: "পড়ে শোনান",
+        tabs: { neighbors: "প্রতিবেশী", shelf: "শেলফ", loans: "ধার ও ফেরত", poster: "পোস্টার ও নোটিশ" },
+        bannerTag: "পিন করা বিল্ডিং নোটিশ",
+        unpin: "সরান",
+        pendingTitle: "যোগদানের অনুরোধ",
+        pendingNone: "বর্তমানে কোনো অপেক্ষমাণ অনুরোধ নেই।",
+        simQrBtn: "+ QR স্ক্যান টেস্ট",
+        approve: "অনুমোদন করুন",
+        decline: "প্রত্যাখ্যান",
+        requestedVia: "QR পোস্টারের মাধ্যমে অনুরোধ",
+        newNeighborTrust: "নতুন প্রতিবেশী, এখনো ফেরতের ইতিহাস নেই",
+        activeNeighbors: "সক্রিয় প্রতিবেশীরা",
+        searchNeighbors: "নাম বা ভাষা দিয়ে খুঁজুন...",
+        filters: { all: "সব", admins: "অ্যাডমিন", trusted: "বিশ্বস্ত", muted: "মিউট", inLoan: "চলমান ধার" },
+        roles: { group_admin: "গ্রুপ অ্যাডমিন", co_admin: "সহ-অ্যাডমিন", member: "সদস্য" },
+        trustedLabel: "বিশ্বস্ত",
+        grantTrust: "বিশ্বস্ত ব্যাজ দিন",
+        mutedBadge: "ধার নেওয়া বন্ধ",
+        muteBorrow: "ধার নেওয়া বন্ধ করুন",
+        unmuteBorrow: "আবার চালু করুন",
+        makeCoAdmin: "সহ-অ্যাডমিন করুন",
+        removeAdmin: "সহ-অ্যাডমিন সরান",
+        safeRemove: "নিরাপদ অপসারণ",
+        joinedTrust: (days, onTime, late) =>
+          onTime === 0 && late === 0
+            ? `${days} দিন আগে যোগ দিয়েছেন · এখনো ফেরত নেই`
+            : `${days} দিন আগে যোগ দিয়েছেন · সময়মতো ${onTime}, দেরি ${late}`,
+        activeLoanTag: (id, role, status) => `লোন #${id} (${role} · ${status})`,
+        lenderRole: "মালিক",
+        borrowerRole: "গ্রহীতা",
+        shelfTitle: "শেলফ পরিচালনা",
+        shelfSub: "শুধুমাত্র বিশ্বস্তদের জন্য সীমাবদ্ধ করুন বা উপলব্ধ জিনিস সাময়িকভাবে লুকান।",
+        shelfFilters: { all: "সব", available: "উপলব্ধ", lent: "ধার দেওয়া", trusted: "শুধু বিশ্বস্ত", hidden: "লুকানো" },
+        ownerLabel: "মালিক",
+        spotLabel: "হস্তান্তর স্থান",
+        maxDays: (d) => `সর্বোচ্চ ${d} দিন`,
+        statusLabels: { available: "উপলব্ধ", lent: "ধার দেওয়া", hidden: "লুকানো" },
+        trustedOnly: "শুধু বিশ্বস্ত",
+        hideItem: "শেলফ থেকে লুকান",
+        restoreItem: "শেলফে ফিরিয়ে আনুন",
+        cannotHideLent: "জিনিসটি ধার দেওয়া অবস্থায় লুকানো যাবে না।",
+        loansTitle: "ধার ও বিনয়ী মধ্যস্থতা",
+        loansSub: "কোনো ফ্রি-টেক্সট নয় — নির্দিষ্ট বহুভাষিক বার্তা ও ছবির মাধ্যমে নিরাপদ সহায়তা।",
+        loanStatus: { overdue: "সময় পার হয়েছে (১ দিন দেরি)", active: "চলমান (১৪ ঘণ্টা বাকি)", returned: "ফেরত দেওয়া হয়েছে" },
+        sendCheckIn: "বিনয়ী খোঁজ নিন",
+        resolveReturn: "ফেরত সম্পন্ন করুন",
+        photoBefore: "হস্তান্তরের ছবি (আগে)",
+        photoAfter: "ফেরতের ছবি (পরে)",
+        posterTitle: "প্রিন্টযোগ্য A4 QR পোস্টার",
+        posterSub: "প্রবেশদ্বার বা মেইলবক্স বোর্ডে লাগান। কোড পরিবর্তন করলে পুরনো পোস্টার বাতিল হবে।",
+        rotateCode: "কোড পরিবর্তন করুন",
+        printPoster: "A4 পোস্টার প্রিন্ট করুন",
+        noticesTitle: "নির্দিষ্ট বিল্ডিং নোটিশ",
+        noticesSub: "ফ্রি-টেক্সট ছাড়াই ৪ ভাষায় অনূদিত নোটিশ বেছে নিন।",
+        pinBanner: "শেলফ ব্যানারে পিন করুন",
+        unpinBanner: "ব্যানার সরান",
+        activityTitle: "সাম্প্রতিক গ্রুপ কার্যকলাপ",
+        activitySub: "এই সেশনে নেওয়া সকল অ্যাডমিন পদক্ষেপের স্বচ্ছ তালিকা।",
+        spots: {
+          entrance: "বিল্ডিংয়ের প্রবেশদ্বার",
+          mailboxes: "মেইলবক্সের কাছে",
+          bike_parking: "সাইকেল পার্কিং"
+        },
+        items: {
+          futon_dryer: "লেপ-তোষক শুকানোর যন্ত্র",
+          takoyaki_maker: "তাকোয়াকি মেকার",
+          ladder: "মই / স্টেপল্যাডার",
+          projector: "প্রজেক্টর",
+          power_drill: "ইলেকট্রিক ড্রিল",
+          hot_plate: "হট প্লেট",
+          suitcase: "স্যুটকেস",
+          bluetooth_speaker: "ব্লুটুথ স্পিকার",
+          rice_cooker_large: "বড় রাইস কুকার"
+        }
+      }
+    };
+
+    /* Fixed 3 Structured Mediation Phrases across all 4 languages */
+    const MEDIATION_PHRASES = [
+      {
+        key: "admin.gentleReminder",
+        title: "Polite return check-in",
+        desc: "Polite building check-in: please remember to arrange return when convenient.",
+        text: {
+          en: "Hello from Sakura Heights Group Admin: just a polite check-in regarding {item}. Please arrange return at {spot} when convenient. Thank you!",
+          ja: "さくらハイツ管理人よりやさしいお知らせです。{item}のご返却について、ご都合のよいタイミングで{spot}での受け渡しをご相談いただけますでしょうか。",
+          "ja-easy": "さくらハイツ の かんりにん です。{item} を かえす こと の やさしい おしらせ です。じかん が ある とき、{spot} で かえす じかん を きめて ください。",
+          bn: "সাকুরা হাইটস গ্রুপ অ্যাডমিনের পক্ষ থেকে বিনয়ী খোঁজখবর: {item} ফেরত দেওয়ার জন্য সুবিধামতো {spot}-এ সময় ঠিক করে নিন। ধন্যবাদ!"
+        }
+      },
+      {
+        key: "admin.spotAssist",
+        title: "Offer handover spot assistance",
+        desc: "Building admin can assist with handover at the shared spot if schedules don't match.",
+        text: {
+          en: "Sakura Heights Admin notice: if your schedules don't match for {item}, I am happy to assist with handover at {spot}.",
+          ja: "さくらハイツ管理人よりお知らせです。{item}のお時間が合わない場合、{spot}での受け渡しを管理人がお手伝いできます。",
+          "ja-easy": "さくらハイツ の かんりにん です。{item} を わたす じかん が あわない とき、{spot} で かんりにん が てつだえます。",
+          bn: "সাকুরা হাইটস অ্যাডমিন নোটিশ: {item} হস্তান্তরের সময় না মিললে, আমি {spot}-এ হস্তান্তরে সাহায্য করতে পারি।"
+        }
+      },
+      {
+        key: "admin.receivedAtDesk",
+        title: "Confirm item held safely at management desk",
+        desc: "Item was safely dropped off at the building management desk for pickup.",
+        text: {
+          en: "Sakura Heights Admin update: {item} has been safely dropped off at the building management desk and is ready for pickup.",
+          ja: "さくらハイツ管理人よりご連絡です。{item}を管理人室にて大切にお預かりしております。ご都合のよい時にお受け取りください。",
+          "ja-easy": "さくらハイツ の かんりにん です。{item} を かんりにんしつ で あずかって います。いつでも とりに きて ください。",
+          bn: "সাকুরা হাইটস অ্যাডমিন আপডেট: {item} নিরাপদে বিল্ডিং ম্যানেজমেন্ট ডেস্কে রাখা হয়েছে এবং এখন সংগ্রহের জন্য প্রস্তুত।"
+        }
+      }
+    ];
+
+    /* Fixed 4 Structured Building Announcements across all 4 languages */
+    const ANNOUNCEMENTS = [
+      {
+        key: "notice.welcome",
+        shortLabel: "Welcome new neighbors",
+        text: {
+          en: "Welcome new neighbors to Sakura Heights — feel free to borrow everyday items from our shared shelf!",
+          ja: "さくらハイツへようこそ！新しいご近所の皆さま、共有棚の日用品をどうぞ気軽にお借りください。",
+          "ja-easy": "さくらハイツ へ ようこそ！あたらしい ごきんじょ の みなさん、たな の もの を つかって みて ください。",
+          bn: "সাকুরা হাইটসে নতুন প্রতিবেশীদের স্বাগতম — আমাদের শেয়ার করা শেলফ থেকে নিঃসংকোচে দৈনন্দিন জিনিস ধার নিন!"
+        }
+      },
+      {
+        key: "notice.newPoster",
+        shortLabel: "QR join poster updated",
+        text: {
+          en: "Notice board QR code was updated — please use the new lobby poster if inviting family or housemates.",
+          ja: "掲示板のQRコードを更新しました。ご家族や同居の方をご招待される際は新しいポスターをご利用ください。",
+          "ja-easy": "けいじばん の QRコード が あたらしく なりました。かぞく を よぶ とき は あたらしい ポスター を つかって ください。",
+          bn: "নোটিশ বোর্ডের QR কোড আপডেট করা হয়েছে — পরিবারের সদস্য বা রুমমেটদের আমন্ত্রণ জানাতে নতুন পোস্টার ব্যবহার করুন।"
+        }
+      },
+      {
+        key: "notice.rainySeason",
+        shortLabel: "Rainy week futon dryers & dehumidifiers",
+        text: {
+          en: "Rainy week ahead in Nagasaki — futon dryers and dehumidifiers are available on the shared shelf.",
+          ja: "今週は雨予報が続きます。共有棚に布団乾燥機や除湿機がございますのでご活用ください。",
+          "ja-easy": "こんしゅう は あめ が おおいです。たな に ふとん かわかす きかい が あります。つかって ください。",
+          bn: "নাগাসাকিতে সামনে বৃষ্টির সপ্তাহ — শেয়ার করা শেলফে লেপ-তোষক শুকানোর যন্ত্র ও ডিহিউমিডিফায়ার রয়েছে।"
+        }
+      },
+      {
+        key: "notice.entranceTidy",
+        shortLabel: "Keep handover spots neat",
+        text: {
+          en: "Please keep our shared handover spots (building entrance & mailboxes) neat after exchanging items.",
+          ja: "受け渡し場所（玄関・集合ポスト付近）は、お渡し後にきれいに整えてご利用ください。",
+          "ja-easy": "もの を わたす ばしょ（げんかん・ポスト）は つかった あと きれい に して ください。",
+          bn: "জিনিস বিনিময়ের পর অনুগ্রহ করে আমাদের হস্তান্তর স্থান (প্রবেশদ্বার ও মেইলবক্স) পরিষ্কার ও গুছিয়ে রাখুন।"
+        }
+      }
+    ];
+
+    /* -----------------------------------------------------------------------
+       2. APPLICATION STATE (Seeded for Sakura Heights)
+       ----------------------------------------------------------------------- */
+    const SAFE_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+    const SIMULATED_SCAN_QUEUE = [
+      { name: "Kenji", lang: "ja" },
+      { name: "Fatima", lang: "bn" },
+      { name: "Mei", lang: "ja-easy" },
+      { name: "Lukas", lang: "en" }
+    ];
+    let simScanCursor = 0;
+
+    const state = {
+      lang: "en",
+      elderMode: false,
+      activeTab: "neighbors",
+      joinCode: "SAKURA-2611",
+      neighborSearch: "",
+      neighborFilter: "all",
+      shelfFilter: "all",
+      selectedNoticeKey: "notice.welcome",
+      pinnedNoticeKey: null,
+
+      pendingRequests: [
+        {
+          id: "req-rahim",
+          name: "Rahim",
+          lang: "en",
+          viaCode: "SAKURA-2611"
+        }
+      ],
+
+      neighbors: [
+        { id: "u-sato", name: "Sato", lang: "ja", role: "group_admin", trusted: true, muted: false, joinedDays: 30, onTime: 3, late: 0 },
+        { id: "u-tanaka", name: "Tanaka", lang: "ja", role: "co_admin", trusted: true, muted: false, joinedDays: 30, onTime: 2, late: 0 },
+        { id: "u-yamamoto", name: "Yamamoto", lang: "ja", role: "member", trusted: true, muted: false, joinedDays: 30, onTime: 1, late: 0 },
+        { id: "u-maria", name: "Maria", lang: "en", role: "member", trusted: true, muted: false, joinedDays: 30, onTime: 1, late: 0 },
+        { id: "u-ayesha", name: "Ayesha", lang: "bn", role: "member", trusted: false, muted: false, joinedDays: 30, onTime: 0, late: 0 }
+      ],
+
+      shelfItems: [
+        { id: "i-1", key: "futon_dryer", emoji: "🛏️", ownerId: "u-sato", ownerName: "Sato", spot: "entrance", maxDays: 3, status: "lent", trustedOnly: false, hidden: false, loanId: 202 },
+        { id: "i-2", key: "takoyaki_maker", emoji: "🐙", ownerId: "u-sato", ownerName: "Sato", spot: "entrance", maxDays: 2, status: "available", trustedOnly: false, hidden: false, loanId: null },
+        { id: "i-3", key: "ladder", emoji: "🪜", ownerId: "u-sato", ownerName: "Sato", spot: "bike_parking", maxDays: 1, status: "available", trustedOnly: false, hidden: false, loanId: null },
+        { id: "i-4", key: "projector", emoji: "📽️", ownerId: "u-tanaka", ownerName: "Tanaka", spot: "mailboxes", maxDays: 2, status: "available", trustedOnly: true, hidden: false, loanId: null },
+        { id: "i-5", key: "power_drill", emoji: "🔩", ownerId: "u-tanaka", ownerName: "Tanaka", spot: "mailboxes", maxDays: 1, status: "available", trustedOnly: false, hidden: false, loanId: null },
+        { id: "i-6", key: "hot_plate", emoji: "🍳", ownerId: "u-yamamoto", ownerName: "Yamamoto", spot: "entrance", maxDays: 2, status: "available", trustedOnly: false, hidden: false, loanId: null },
+        { id: "i-7", key: "suitcase", emoji: "🧳", ownerId: "u-maria", ownerName: "Maria", spot: "entrance", maxDays: 7, status: "available", trustedOnly: false, hidden: false, loanId: null },
+        { id: "i-8", key: "bluetooth_speaker", emoji: "🔊", ownerId: "u-ayesha", ownerName: "Ayesha", spot: "mailboxes", maxDays: 2, status: "lent", trustedOnly: false, hidden: false, loanId: 201 },
+        { id: "i-9", key: "rice_cooker_large", emoji: "🍚", ownerId: "u-ayesha", ownerName: "Ayesha", spot: "entrance", maxDays: 2, status: "available", trustedOnly: false, hidden: false, loanId: null }
+      ],
+
+      loans: [
+        {
+          id: 201,
+          itemId: "i-8",
+          itemKey: "bluetooth_speaker",
+          emoji: "🔊",
+          borrowerId: "u-yamamoto",
+          borrowerName: "Yamamoto",
+          borrowerLang: "ja",
+          lenderId: "u-ayesha",
+          lenderName: "Ayesha",
+          lenderLang: "bn",
+          spot: "mailboxes",
+          status: "overdue",
+          hasBeforePhoto: true,
+          hasAfterPhoto: false,
+          timeline: [
+            { time: "Nov 21, 18:10", key: "handover.confirmed", note: "Handover confirmed near mailboxes · Before condition photo saved." },
+            { time: "Nov 23, 18:01", key: "sys.overdue", note: "Automated due reminder delivered to Yamamoto (ja) & Ayesha (bn)." }
+          ]
+        },
+        {
+          id: 202,
+          itemId: "i-1",
+          itemKey: "futon_dryer",
+          emoji: "🛏️",
+          borrowerId: "u-maria",
+          borrowerName: "Maria",
+          borrowerLang: "en",
+          lenderId: "u-sato",
+          lenderName: "Sato",
+          lenderLang: "ja",
+          spot: "entrance",
+          status: "active",
+          hasBeforePhoto: true,
+          hasAfterPhoto: false,
+          timeline: [
+            { time: "Nov 23, 10:05", key: "handover.confirmed", note: "Handover confirmed at building entrance · Before condition photo saved." }
+          ]
+        },
+        {
+          id: 198,
+          itemId: "i-4",
+          itemKey: "projector",
+          emoji: "📽️",
+          borrowerId: "u-maria",
+          borrowerName: "Maria",
+          borrowerLang: "en",
+          lenderId: "u-tanaka",
+          lenderName: "Tanaka",
+          lenderLang: "ja",
+          spot: "mailboxes",
+          status: "returned",
+          hasBeforePhoto: true,
+          hasAfterPhoto: true,
+          timeline: [
+            { time: "Nov 15, 19:00", key: "handover.confirmed", note: "Handover confirmed near mailboxes." },
+            { time: "Nov 17, 17:45", key: "return.confirmed", note: "Returned on time · Both before & after condition photos verified." }
+          ]
+        }
+      ],
+
+      activityLog: [
+        { time: "17:15", text: "System flagged Loan #201 (Bluetooth speaker) as 1 day overdue." },
+        { time: "16:40", text: "Rahim submitted a join request via QR poster SAKURA-2611." }
+      ]
+    };
+
+    /* -----------------------------------------------------------------------
+       3. UTILITIES (Translation, Speech, Safe Join Code, SVG QR & Photos)
+       ----------------------------------------------------------------------- */
+    function t() {
+      return I18N[state.lang] || I18N.en;
+    }
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function nowClock() {
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function logActivity(text) {
+      state.activityLog.unshift({ time: nowClock(), text });
+    }
+
+    function generateSafeJoinCode() {
+      const seg = () => {
+        let s = "";
+        for (let i = 0; i < 4; i++) {
+          s += SAFE_CODE_CHARS[Math.floor(Math.random() * SAFE_CODE_CHARS.length)];
+        }
+        return s;
+      };
+      return `${seg()}-${seg()}`;
+    }
+
+    function langNameBadge(code) {
+      const map = { en: "EN", ja: "JA", "ja-easy": "やさしい", bn: "BN" };
+      return map[code] || code.toUpperCase();
+    }
+
+    function speakText(text, langCode) {
+      if (!("speechSynthesis" in window)) {
+        showToast("Speech synthesis is not supported in this browser.", "amber");
+        return;
+      }
+      try {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        const map = { en: "en-US", ja: "ja-JP", "ja-easy": "ja-JP", bn: "bn-BD" };
+        utter.lang = map[langCode || state.lang] || "en-US";
+        utter.rate = state.elderMode ? 0.88 : 1.0;
+        window.speechSynthesis.speak(utter);
+        showToast(`🔊 ${t().readAloud} (${langNameBadge(langCode || state.lang)})`);
+      } catch (e) {
+        showToast("Audio playback unavailable on this device.", "amber");
+      }
+    }
+
+    function renderSpeakBtn(text, langCode) {
+      const safeText = esc(text).replace(/'/g, "\\'");
+      const lc = esc(langCode || state.lang);
+      return `<button class="speak-btn" type="button" title="${esc(t().readAloud)}" aria-label="${esc(t().readAloud)}" onclick="speakText('${safeText}', '${lc}')"><span aria-hidden="true">🔊</span><span class="speak-label">${esc(t().readAloud)}</span></button>`;
+    }
+
+    function showToast(msg, tone = "default") {
+      const region = document.getElementById("toast-region");
+      const el = document.createElement("div");
+      el.className = "toast" + (tone !== "default" ? ` toast-${tone}` : "");
+      el.textContent = msg;
+      region.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = "0";
+        el.style.transition = "opacity 0.25s ease";
+        setTimeout(() => el.remove(), 260);
+      }, 3400);
+    }
+
+    function openModal(html) {
+      document.getElementById("modal-dialog").innerHTML = html;
+      document.getElementById("modal-root").classList.remove("hidden");
+    }
+
+    function closeModal() {
+      document.getElementById("modal-root").classList.add("hidden");
+    }
+
+    document.getElementById("modal-root").addEventListener("click", (e) => {
+      if (e.target.id === "modal-root") closeModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeModal();
+    });
+
+    /** Deterministic inline SVG QR code that changes visibly whenever the join code rotates */
+    function buildQrSvg(code) {
+      let hash = 2166136261;
+      for (let i = 0; i < code.length; i++) {
+        hash ^= code.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      const n = 21;
+      const cell = 7;
+      const pad = 10;
+      const size = n * cell + pad * 2;
+      let svg = `<rect width="${size}" height="${size}" fill="#ffffff"/>`;
+
+      const finder = (r0, c0) => {
+        const x = pad + c0 * cell;
+        const y = pad + r0 * cell;
+        svg += `<rect x="${x}" y="${y}" width="${7 * cell}" height="${7 * cell}" rx="4" fill="#1f4b6e"/>`;
+        svg += `<rect x="${x + cell}" y="${y + cell}" width="${5 * cell}" height="${5 * cell}" rx="2" fill="#ffffff"/>`;
+        svg += `<rect x="${x + 2 * cell}" y="${y + 2 * cell}" width="${3 * cell}" height="${3 * cell}" rx="1.5" fill="#1f4b6e"/>`;
+      };
+      finder(0, 0);
+      finder(0, n - 7);
+      finder(n - 7, 0);
+
+      const inFinder = (r, c) => (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
+
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          if (inFinder(r, c)) continue;
+          const v = Math.abs((hash + r * 73 + c * 41 + r * c * 19) % 11);
+          if (v < 5 || (r === 6 && c % 2 === 0) || (c === 6 && r % 2 === 0)) {
+            svg += `<rect x="${pad + c * cell}" y="${pad + r * cell}" width="${cell - 0.6}" height="${cell - 0.6}" rx="1.2" fill="#212427"/>`;
+          }
+        }
+      }
+      return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="QR code for ${esc(code)}">${svg}</svg>`;
+    }
+
+    /** Crisp inline SVG condition photo thumbnail for loans */
+    function buildConditionPhotoSvg(itemKey, stage) {
+      const bg = stage === "before" ? "#eaf1f6" : "#eaf5ee";
+      const accent = stage === "before" ? "#1f4b6e" : "#1f6b3b";
+      const label = stage === "before" ? "OK · Handover" : "OK · Returned";
+      let shape = "";
+
+      if (itemKey === "bluetooth_speaker") {
+        shape = `
+          <rect x="64" y="34" width="132" height="54" rx="18" fill="${accent}"/>
+          <circle cx="96" cy="61" r="16" fill="#ffffff" opacity="0.22"/>
+          <circle cx="164" cy="61" r="16" fill="#ffffff" opacity="0.22"/>
+          <circle cx="96" cy="61" r="7" fill="#ffffff" opacity="0.55"/>
+          <circle cx="164" cy="61" r="7" fill="#ffffff" opacity="0.55"/>`;
+      } else if (itemKey === "futon_dryer") {
+        shape = `
+          <rect x="78" y="30" width="84" height="62" rx="12" fill="#ffffff" stroke="${accent}" stroke-width="3"/>
+          <path d="M162 54 C188 54, 188 76, 206 76" stroke="${accent}" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <circle cx="106" cy="56" r="9" fill="${accent}" opacity="0.25"/>`;
+      } else {
+        shape = `
+          <rect x="66" y="38" width="128" height="48" rx="10" fill="#ffffff" stroke="${accent}" stroke-width="3"/>
+          <circle cx="162" cy="62" r="15" fill="${accent}"/>
+          <circle cx="162" cy="62" r="8" fill="#a8c9e2"/>`;
+      }
+
+      return `<svg viewBox="0 0 260 116" width="100%" style="display:block;border-radius:8px;background:${bg};" aria-label="${esc(label)}">
+        <rect width="260" height="116" fill="${bg}"/>
+        <rect x="14" y="84" width="232" height="20" rx="5" fill="#dfd7c8"/>
+        ${shape}
+        <text x="130" y="19" text-anchor="middle" font-size="11" font-weight="700" fill="${accent}" font-family="sans-serif">${esc(label)}</text>
+      </svg>`;
+    }
+
+    /** Dynamic active loan lookup for any neighbor (guarantees Safe Removal syncs live!) */
+    function getNeighborActiveLoans(userId) {
+      return state.loans.filter((l) => l.status !== "returned" && (l.borrowerId === userId || l.lenderId === userId));
+    }
+
+    function getAdminCount() {
+      return state.neighbors.filter((n) => n.role === "group_admin" || n.role === "co_admin").length;
+    }
+
+    /* -----------------------------------------------------------------------
+       4. HEADER CONTROLS & NAVIGATION
+       ----------------------------------------------------------------------- */
+    function setLang(lang) {
+      state.lang = lang;
+      renderAll();
+    }
+
+    function toggleElderMode() {
+      state.elderMode = !state.elderMode;
+      document.body.classList.toggle("elder", state.elderMode);
+      const btn = document.getElementById("elder-toggle-btn");
+      btn.classList.toggle("active", state.elderMode);
+      btn.setAttribute("aria-pressed", String(state.elderMode));
+      showToast(state.elderMode ? "Elder Mode ON (22px font · 64px targets)" : "Standard display mode restored");
+    }
+
+    function setTab(tab) {
+      state.activeTab = tab;
+      document.querySelectorAll("[data-tab]").forEach((el) => {
+        el.classList.toggle("active", el.dataset.tab === tab);
+      });
+      renderAll();
+    }
+
+    function renderHeaderAndBanner() {
+      const dict = t();
+      document.getElementById("hdr-role-badge").textContent = dict.roleBadge;
+      document.getElementById("hdr-building-name").textContent = dict.buildingTitle;
+      document.getElementById("hdr-join-code").textContent = state.joinCode;
+      document.getElementById("hdr-admin-pill").textContent = dict.adminPill;
+      document.getElementById("hdr-elder-label").textContent = dict.elderLabel;
+
+      document.querySelectorAll("[data-i18n-tab]").forEach((el) => {
+        const key = el.dataset.i18nTab;
+        el.textContent = dict.tabs[key];
+      });
+
+      // Live unread pending badge
+      const pCount = state.pendingRequests.length;
+      ["desktop-pending-badge", "mobile-pending-badge"].forEach((id) => {
+        const b = document.getElementById(id);
+        b.textContent = pCount;
+        b.classList.toggle("hidden", pCount === 0);
+      });
+
+      // Live overdue badge
+      const oCount = state.loans.filter((l) => l.status === "overdue").length;
+      ["desktop-overdue-badge", "mobile-overdue-badge"].forEach((id) => {
+        const b = document.getElementById(id);
+        b.textContent = oCount;
+        b.classList.toggle("hidden", oCount === 0);
+      });
+
+      // Live Pinned Shelf Banner
+      const bannerWrap = document.getElementById("live-banner-wrap");
+      if (state.pinnedNoticeKey) {
+        const ann = ANNOUNCEMENTS.find((a) => a.key === state.pinnedNoticeKey);
+        if (ann) {
+          const text = ann.text[state.lang];
+          bannerWrap.classList.remove("hidden");
+          bannerWrap.innerHTML = `
+            <div class="live-banner">
+              <div class="live-banner-content">
+                <div class="live-banner-tag">📌 ${esc(dict.bannerTag)}</div>
+                <p class="live-banner-text">${esc(text)}</p>
+              </div>
+              <div class="actions-row">
+                ${renderSpeakBtn(text, state.lang)}
+                <button class="btn btn-sm" type="button" onclick="unpinAnnouncement()">${esc(dict.unpin)}</button>
+              </div>
+            </div>
+          `;
+        }
+      } else {
+        bannerWrap.classList.add("hidden");
+        bannerWrap.innerHTML = "";
+      }
+    }
+
+    function renderAll() {
+      renderHeaderAndBanner();
+      const main = document.getElementById("main-content");
+      if (state.activeTab === "neighbors") renderNeighborsTab(main);
+      else if (state.activeTab === "shelf") renderShelfTab(main);
+      else if (state.activeTab === "loans") renderLoansTab(main);
+      else if (state.activeTab === "poster") renderPosterTab(main);
+    }
+
+    /* -----------------------------------------------------------------------
+       5. TAB 1: NEIGHBORS (Pending Queue + Active Roster + Guardrails)
+       ----------------------------------------------------------------------- */
+    function renderNeighborsTab(container) {
+      const dict = t();
+
+      // Pending Join Requests Section
+      let pendingBody = "";
+      if (state.pendingRequests.length === 0) {
+        pendingBody = `<p class="entity-meta" style="margin:0;">✓ ${esc(dict.pendingNone)}</p>`;
+      } else {
+        pendingBody = `<div class="stack">` + state.pendingRequests.map((req) => `
+          <div class="card card-pending" style="margin-bottom:0;">
+            <div class="card-top" style="margin-bottom:8px;">
+              <div class="identity">
+                <div class="avatar" style="background:var(--amber-bg);color:var(--amber-text);">${esc(req.name[0])}</div>
+                <div>
+                  <div class="entity-name">
+                    ${esc(req.name)}
+                    <span class="badge badge-indigo">${esc(langNameBadge(req.lang))}</span>
+                    <span class="badge badge-amber">Pending</span>
+                  </div>
+                  <div class="entity-meta">
+                    ${esc(dict.requestedVia)} <span class="code-chip">${esc(req.viaCode)}</span> · ${esc(dict.newNeighborTrust)}
+                  </div>
+                </div>
+              </div>
+              <div class="actions-row">
+                <button class="btn btn-green" type="button" onclick="approvePending('${req.id}')">✓ ${esc(dict.approve)}</button>
+                <button class="btn btn-red-outline" type="button" onclick="declinePending('${req.id}')">✕ ${esc(dict.decline)}</button>
+              </div>
+            </div>
+          </div>
+        `).join("") + `</div>`;
+      }
+
+      // Filter Active Neighbors
+      const q = state.neighborSearch.trim().toLowerCase();
+      const filtered = state.neighbors.filter((n) => {
+        const loans = getNeighborActiveLoans(n.id);
+        if (q && !n.name.toLowerCase().includes(q) && !n.lang.toLowerCase().includes(q)) return false;
+        if (state.neighborFilter === "admins" && n.role === "member") return false;
+        if (state.neighborFilter === "trusted" && !n.trusted) return false;
+        if (state.neighborFilter === "muted" && !n.muted) return false;
+        if (state.neighborFilter === "inLoan" && loans.length === 0) return false;
+        return true;
+      });
+
+      const filterKeys = ["all", "admins", "trusted", "muted", "inLoan"];
+      const filterChips = filterKeys.map((fk) => `
+        <button class="chip ${state.neighborFilter === fk ? "active" : ""}" type="button" onclick="setNeighborFilter('${fk}')">
+          ${esc(dict.filters[fk])}
+        </button>
+      `).join("");
+
+      const neighborCards = filtered.length === 0
+        ? `<div class="card"><p class="entity-meta" style="margin:0;text-align:center;">No neighbors match the current search or filter.</p></div>`
+        : filtered.map((n) => {
+            const activeLoans = getNeighborActiveLoans(n.id);
+            const hasActiveLoan = activeLoans.length > 0;
+            const trustLine = dict.joinedTrust(n.joinedDays, n.onTime, n.late);
+            const isAnyAdmin = n.role === "group_admin" || n.role === "co_admin";
+
+            const loanBadges = activeLoans.map((l) => {
+              const roleStr = l.lenderId === n.id ? dict.lenderRole : dict.borrowerRole;
+              const isOver = l.status === "overdue";
+              return `<span class="badge ${isOver ? "badge-red" : "badge-indigo"}">● ${esc(dict.activeLoanTag(l.id, roleStr, l.status.toUpperCase()))}</span>`;
+            }).join("");
+
+            return `
+              <div class="card">
+                <div class="card-top">
+                  <div class="identity">
+                    <div class="avatar">${esc(n.name[0])}</div>
+                    <div>
+                      <div class="entity-name">
+                        ${esc(n.name)}
+                        <span class="badge badge-muted">${esc(langNameBadge(n.lang))}</span>
+                        <span class="badge ${isAnyAdmin ? "badge-indigo" : "badge-muted"}">${esc(dict.roles[n.role])}</span>
+                      </div>
+                      <div class="entity-meta">${esc(trustLine)}</div>
+                    </div>
+                  </div>
+                  ${renderSpeakBtn(`${n.name}. ${trustLine}`, state.lang)}
+                </div>
+
+                <div class="badge-row">
+                  ${n.trusted ? `<span class="badge badge-green">🔒 ${esc(dict.trustedLabel)}</span>` : ""}
+                  ${n.muted ? `<span class="badge badge-amber">🔇 ${esc(dict.mutedBadge)}</span>` : ""}
+                  ${loanBadges}
+                </div>
+
+                <div class="actions-row">
+                  <button class="btn btn-sm ${n.trusted ? "btn-soft" : ""}" type="button" onclick="toggleTrust('${n.id}')">
+                    🔒 ${n.trusted ? esc(dict.trustedLabel) + " ✓" : esc(dict.grantTrust)}
+                  </button>
+
+                  <button class="btn btn-sm ${n.muted ? "btn-amber" : ""}" type="button" onclick="toggleMute('${n.id}')">
+                    ${n.muted ? "🔊 " + esc(dict.unmuteBorrow) : "🔇 " + esc(dict.muteBorrow)}
+                  </button>
+
+                  <button class="btn btn-sm" type="button" onclick="toggleAdminRole('${n.id}')">
+                    ${isAnyAdmin ? "↓ " + esc(dict.removeAdmin) : "★ " + esc(dict.makeCoAdmin)}
+                  </button>
+
+                  <button class="btn btn-sm btn-red-outline" type="button" onclick="attemptSafeRemove('${n.id}')">
+                    ${hasActiveLoan ? "🔒 " : ""}${esc(dict.safeRemove)}
+                  </button>
+                </div>
+
+                ${hasActiveLoan ? `
+                  <div class="inline-note note-indigo">
+                    <span>ℹ️ Safe-Leave Guard: Removal is locked while Loan #${activeLoans[0].id} is active.</span>
+                  </div>
+                ` : ""}
+              </div>
+            `;
+          }).join("");
+
+      container.innerHTML = `
+        <div class="card" style="background:var(--surface-soft);">
+          <div class="section-head" style="margin-bottom:10px;">
+            <h2 class="section-title" style="font-size:17px;">⏳ ${esc(dict.pendingTitle)} (${state.pendingRequests.length})</h2>
+            <button class="btn btn-sm btn-soft" type="button" onclick="simulateQrScan()">${esc(dict.simQrBtn)}</button>
+          </div>
+          ${pendingBody}
+        </div>
+
+        <div class="section-head" style="margin-top:20px;">
+          <div>
+            <h1 class="section-title">👥 ${esc(dict.activeNeighbors)} (${state.neighbors.length})</h1>
+          </div>
+        </div>
+
+        <div class="toolbar-row">
+          <input
+            id="neighbor-search"
+            class="search-input"
+            type="search"
+            placeholder="${esc(dict.searchNeighbors)}"
+            value="${esc(state.neighborSearch)}"
+            oninput="onNeighborSearch(this.value)"
+          />
+          <div class="chips-bar" role="group" aria-label="Neighbor filters">${filterChips}</div>
+        </div>
+
+        <div class="stack">${neighborCards}</div>
+      `;
+    }
+
+    function onNeighborSearch(val) {
+      state.neighborSearch = val;
+      renderNeighborsTab(document.getElementById("main-content"));
+      const inp = document.getElementById("neighbor-search");
+      if (inp) {
+        inp.focus();
+        inp.setSelectionRange(val.length, val.length);
+      }
+    }
+
+    function setNeighborFilter(filter) {
+      state.neighborFilter = filter;
+      renderAll();
+    }
+
+    function simulateQrScan() {
+      const sample = SIMULATED_SCAN_QUEUE[simScanCursor % SIMULATED_SCAN_QUEUE.length];
+      simScanCursor += 1;
+      state.pendingRequests.push({
+        id: "req-" + Date.now(),
+        name: sample.name,
+        lang: sample.lang,
+        viaCode: state.joinCode
+      });
+      logActivity(`Simulated QR scan: ${sample.name} (${sample.lang}) requested to join via ${state.joinCode}.`);
+      renderAll();
+      showToast(`${sample.name} scanned poster ${state.joinCode} and requested to join!`, "default");
+    }
+
+    function approvePending(reqId) {
+      const idx = state.pendingRequests.findIndex((r) => r.id === reqId);
+      if (idx === -1) return;
+      const req = state.pendingRequests.splice(idx, 1)[0];
+      state.neighbors.push({
+        id: "u-" + Date.now(),
+        name: req.name,
+        lang: req.lang,
+        role: "member",
+        trusted: false,
+        muted: false,
+        joinedDays: 0,
+        onTime: 0,
+        late: 0
+      });
+      logActivity(`Approved join request for ${req.name} (${req.lang}).`);
+      renderAll();
+      showToast(`Approved ${req.name} — added to Sakura Heights!`, "green");
+    }
+
+    function declinePending(reqId) {
+      const idx = state.pendingRequests.findIndex((r) => r.id === reqId);
+      if (idx === -1) return;
+      const req = state.pendingRequests.splice(idx, 1)[0];
+      logActivity(`Declined join request from ${req.name}.`);
+      renderAll();
+      showToast(`Declined request from ${req.name}`, "amber");
+    }
+
+    function toggleTrust(userId) {
+      const n = state.neighbors.find((u) => u.id === userId);
+      if (!n) return;
+      n.trusted = !n.trusted;
+      logActivity(`${n.trusted ? "Granted" : "Revoked"} Trusted badge for ${n.name}.`);
+      renderAll();
+      showToast(n.trusted ? `🔒 ${n.name} is now a Trusted Neighbor` : `Removed Trusted badge from ${n.name}`, "green");
+    }
+
+    function toggleMute(userId) {
+      const n = state.neighbors.find((u) => u.id === userId);
+      if (!n) return;
+      n.muted = !n.muted;
+      logActivity(`${n.muted ? "Muted" : "Unmuted"} borrowing privileges for ${n.name}.`);
+      renderAll();
+      showToast(n.muted ? `🔇 Borrowing paused for ${n.name}` : `🔊 Borrowing restored for ${n.name}`, n.muted ? "amber" : "green");
+    }
+
+    function toggleAdminRole(userId) {
+      const n = state.neighbors.find((u) => u.id === userId);
+      if (!n) return;
+      const isAnyAdmin = n.role === "group_admin" || n.role === "co_admin";
+
+      if (isAnyAdmin) {
+        if (getAdminCount() <= 1) {
+          showToast("Last-Admin Guardrail: Every building must keep at least one Group Admin.", "red");
+          return;
+        }
+        n.role = "member";
+        logActivity(`Demoted ${n.name} from Admin to Member.`);
+        renderAll();
+        showToast(`${n.name} is now a regular Member`, "amber");
+      } else {
+        n.role = "co_admin";
+        logActivity(`Promoted ${n.name} to Co-Admin.`);
+        renderAll();
+        showToast(`★ Promoted ${n.name} to Co-Admin`, "green");
+      }
+    }
+
+    function attemptSafeRemove(userId) {
+      const n = state.neighbors.find((u) => u.id === userId);
+      if (!n) return;
+
+      // Guardrail 1: Active/Overdue loan check (mirrors leaveGroup.ts)
+      const activeLoans = getNeighborActiveLoans(n.id);
+      if (activeLoans.length > 0) {
+        const ids = activeLoans.map((l) => `#${l.id}`).join(", ");
+        showToast(`Cannot remove ${n.name} while Loan ${ids} is active. Finish or resolve the loan first.`, "red");
+        return;
+      }
+
+      // Guardrail 2: Last-Admin protection
+      const isAnyAdmin = n.role === "group_admin" || n.role === "co_admin";
+      if (isAnyAdmin && getAdminCount() <= 1) {
+        showToast("Cannot remove the last Group Admin. Promote a Co-Admin first.", "red");
+        return;
+      }
+
+      const ownedAvailCount = state.shelfItems.filter((i) => i.ownerId === n.id && i.status === "available" && !i.hidden).length;
+
+      openModal(`
+        <h3 class="modal-title" id="modal-title">Safe Remove Neighbor — ${esc(n.name)}</h3>
+        <p class="modal-desc">${esc(n.name)} has 0 active loans and can safely leave Sakura Heights. Confirming will perform:</p>
+        <ul style="margin:0 0 14px;padding-left:20px;font-size:14px;color:var(--text-main);display:flex;flex-direction:column;gap:6px;">
+          <li>Soft-delete ${ownedAvailCount} available shelf item${ownedAvailCount === 1 ? "" : "s"} owned by ${esc(n.name)}</li>
+          <li>Cancel any open pending borrow requests</li>
+          <li>Revoke device session token for Sakura Heights</li>
+        </ul>
+        <div class="modal-footer">
+          <button class="btn" type="button" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-red-outline" type="button" onclick="confirmSafeRemove('${n.id}')">Confirm Safe Remove</button>
+        </div>
+      `);
+    }
+
+    function confirmSafeRemove(userId) {
+      const idx = state.neighbors.findIndex((u) => u.id === userId);
+      if (idx === -1) return;
+      const removed = state.neighbors.splice(idx, 1)[0];
+
+      // Soft-hide their available items (leaveGroup.ts behavior)
+      state.shelfItems.forEach((item) => {
+        if (item.ownerId === removed.id && item.status === "available") {
+          item.hidden = true;
+        }
+      });
+
+      logActivity(`Safely removed ${removed.name} (soft-deleted available items & revoked session token).`);
+      closeModal();
+      renderAll();
+      showToast(`Safely removed ${removed.name} from Sakura Heights`, "amber");
+    }
+
+    /* -----------------------------------------------------------------------
+       6. TAB 2: SHELF MODERATION
+       ----------------------------------------------------------------------- */
+    function renderShelfTab(container) {
+      const dict = t();
+      const filterKeys = ["all", "available", "lent", "trusted", "hidden"];
+      const chipsHtml = filterKeys.map((fk) => `
+        <button class="chip ${state.shelfFilter === fk ? "active" : ""}" type="button" onclick="setShelfFilter('${fk}')">
+          ${esc(dict.shelfFilters[fk])}
+        </button>
+      `).join("");
+
+      const filtered = state.shelfItems.filter((item) => {
+        if (state.shelfFilter === "available") return item.status === "available" && !item.hidden;
+        if (state.shelfFilter === "lent") return item.status === "lent";
+        if (state.shelfFilter === "trusted") return item.trustedOnly;
+        if (state.shelfFilter === "hidden") return item.hidden;
+        return true;
+      });
+
+      const cards = filtered.length === 0
+        ? `<div class="card"><p class="entity-meta" style="margin:0;text-align:center;">No shelf items match this filter.</p></div>`
+        : filtered.map((item) => {
+            const itemName = dict.items[item.key] || item.key;
+            const spotName = dict.spots[item.spot] || item.spot;
+            const isLent = item.status === "lent";
+            const statusKey = item.hidden ? "hidden" : item.status;
+            const statusClass = statusKey === "available" ? "badge-green" : statusKey === "lent" ? "badge-indigo" : "badge-muted";
+
+            return `
+              <div class="card ${item.hidden ? "card-dimmed" : ""}">
+                <div class="card-top">
+                  <div class="identity">
+                    <div class="item-emoji" aria-hidden="true">${item.emoji}</div>
+                    <div>
+                      <div class="entity-name">
+                        ${esc(itemName)}
+                        <span class="badge ${statusClass}">${esc(dict.statusLabels[statusKey])}</span>
+                        ${item.trustedOnly ? `<span class="badge badge-indigo">🔒 ${esc(dict.trustedOnly)}</span>` : ""}
+                      </div>
+                      <div class="entity-meta">
+                        ${esc(dict.ownerLabel)}: <strong>${esc(item.ownerName)}</strong> ·
+                        ${esc(dict.spotLabel)}: ${esc(spotName)} ·
+                        ${esc(dict.maxDays(item.maxDays))}
+                      </div>
+                    </div>
+                  </div>
+                  ${renderSpeakBtn(`${itemName}. ${dict.ownerLabel}: ${item.ownerName}. ${spotName}.`, state.lang)}
+                </div>
+
+                <div class="actions-row">
+                  <label class="toggle-pill">
+                    <input class="toggle-switch" type="checkbox" ${item.trustedOnly ? "checked" : ""} onchange="toggleItemTrusted('${item.id}')" />
+                    <span>🔒 ${esc(dict.trustedOnly)}</span>
+                  </label>
+
+                  <button
+                    class="btn btn-sm ${item.hidden ? "btn-primary" : ""}"
+                    type="button"
+                    ${isLent ? `disabled title="${esc(dict.cannotHideLent)}"` : ""}
+                    onclick="toggleItemHidden('${item.id}')"
+                  >
+                    ${item.hidden ? "↺ " + esc(dict.restoreItem) : "🙈 " + esc(dict.hideItem)}
+                  </button>
+                </div>
+
+                ${isLent ? `
+                  <div class="inline-note note-indigo">
+                    <span>ℹ️ ${esc(dict.cannotHideLent)}</span>
+                  </div>
+                ` : ""}
+              </div>
+            `;
+          }).join("");
+
+      container.innerHTML = `
+        <div class="section-head">
+          <div>
+            <h1 class="section-title">📦 ${esc(dict.shelfTitle)} (${state.shelfItems.length})</h1>
+            <p class="section-sub">${esc(dict.shelfSub)}</p>
+          </div>
+        </div>
+        <div class="chips-bar" style="margin-bottom:14px;" role="group" aria-label="Shelf filters">${chipsHtml}</div>
+        <div class="stack">${cards}</div>
+      `;
+    }
+
+    function setShelfFilter(f) {
+      state.shelfFilter = f;
+      renderAll();
+    }
+
+    function toggleItemTrusted(itemId) {
+      const item = state.shelfItems.find((i) => i.id === itemId);
+      if (!item) return;
+      item.trustedOnly = !item.trustedOnly;
+      const name = t().items[item.key];
+      logActivity(`Set "${item.key}" Trusted-Only to ${item.trustedOnly ? "ON" : "OFF"}.`);
+      renderAll();
+      showToast(`${name}: ${item.trustedOnly ? "Trusted neighbors only 🔒" : "Visible to all group neighbors"}`);
+    }
+
+    function toggleItemHidden(itemId) {
+      const item = state.shelfItems.find((i) => i.id === itemId);
+      if (!item || item.status === "lent") return;
+      item.hidden = !item.hidden;
+      const name = t().items[item.key];
+      logActivity(`${item.hidden ? "Hidden" : "Restored"} shelf item "${item.key}".`);
+      renderAll();
+      showToast(item.hidden ? `Hidden "${name}" from shelf` : `Restored "${name}" to shelf`, item.hidden ? "amber" : "green");
+    }
+
+    /* -----------------------------------------------------------------------
+       7. TAB 3: LOANS & GENTLE MEDIATION (Dual-Language Live Preview)
+       ----------------------------------------------------------------------- */
+    function renderLoansTab(container) {
+      const dict = t();
+
+      const cards = state.loans.map((loan) => {
+        const itemName = dict.items[loan.itemKey] || loan.itemKey;
+        const spotName = dict.spots[loan.spot] || loan.spot;
+        const badgeCls = loan.status === "overdue" ? "badge-red" : loan.status === "active" ? "badge-indigo" : "badge-green";
+
+        const photosHtml = `
+          <div class="photo-strip">
+            ${loan.hasBeforePhoto ? `
+              <div class="photo-thumb">
+                <div class="photo-thumb-head"><span>📸 ${esc(dict.photoBefore)}</span><span class="badge badge-green">Saved</span></div>
+                ${buildConditionPhotoSvg(loan.itemKey, "before")}
+              </div>
+            ` : ""}
+            ${loan.hasAfterPhoto ? `
+              <div class="photo-thumb">
+                <div class="photo-thumb-head"><span>📸 ${esc(dict.photoAfter)}</span><span class="badge badge-green">Verified</span></div>
+                ${buildConditionPhotoSvg(loan.itemKey, "after")}
+              </div>
+            ` : ""}
+          </div>
+        `;
+
+        const timelineHtml = loan.timeline.map((ev) => `
+          <div class="timeline-bubble">
+            <div class="timeline-bubble-top">
+              <span class="code-chip" style="font-size:11px;">${esc(ev.key)}</span>
+              <span>${esc(ev.time)}</span>
+            </div>
+            <div>${esc(ev.note)}</div>
+          </div>
+        `).join("");
+
+        return `
+          <div class="card ${loan.status === "overdue" ? "card-overdue" : ""}">
+            <div class="card-top">
+              <div class="identity">
+                <div class="item-emoji" aria-hidden="true">${loan.emoji}</div>
+                <div>
+                  <div class="entity-name">
+                    Loan #${loan.id} · ${esc(itemName)}
+                    <span class="badge ${badgeCls}">${esc(dict.loanStatus[loan.status])}</span>
+                  </div>
+                  <div class="entity-meta">
+                    ${esc(dict.borrowerRole)}: <strong>${esc(loan.borrowerName)}</strong> (${esc(langNameBadge(loan.borrowerLang))}) ·
+                    ${esc(dict.lenderRole)}: <strong>${esc(loan.lenderName)}</strong> (${esc(langNameBadge(loan.lenderLang))}) ·
+                    ${esc(dict.spotLabel)}: ${esc(spotName)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            ${photosHtml}
+
+            ${loan.status !== "returned" ? `
+              <div class="actions-row" style="margin-top:8px;">
+                <button class="btn btn-primary" type="button" onclick="openMediationModal(${loan.id})">
+                  ✉️ ${esc(dict.sendCheckIn)}
+                </button>
+                ${loan.status === "overdue" ? `
+                  <button class="btn btn-green" type="button" onclick="resolveOverdueLoan(${loan.id})">
+                    ✓ ${esc(dict.resolveReturn)}
+                  </button>
+                ` : ""}
+              </div>
+            ` : ""}
+
+            <div class="loan-timeline">${timelineHtml}</div>
+          </div>
+        `;
+      }).join("");
+
+      container.innerHTML = `
+        <div class="section-head">
+          <div>
+            <h1 class="section-title">🤝 ${esc(dict.loansTitle)}</h1>
+            <p class="section-sub">${esc(dict.loansSub)}</p>
+          </div>
+        </div>
+        <div class="stack">${cards}</div>
+      `;
+    }
+
+    function renderMediationPhrase(phraseKey, loan, targetLang) {
+      const phrase = MEDIATION_PHRASES.find((p) => p.key === phraseKey) || MEDIATION_PHRASES[0];
+      const langDict = I18N[targetLang] || I18N.en;
+      const itemText = langDict.items[loan.itemKey] || loan.itemKey;
+      const spotText = langDict.spots[loan.spot] || loan.spot;
+      return phrase.text[targetLang]
+        .replace(/\{item\}/g, itemText)
+        .replace(/\{spot\}/g, spotText);
+    }
+
+    let mediationSelectedKey = MEDIATION_PHRASES[0].key;
+
+    function openMediationModal(loanId, presetKey) {
+      const loan = state.loans.find((l) => l.id === loanId);
+      if (!loan) return;
+      mediationSelectedKey = presetKey || MEDIATION_PHRASES[0].key;
+
+      const optionsHtml = MEDIATION_PHRASES.map((p) => `
+        <label class="mediation-option ${p.key === mediationSelectedKey ? "selected" : ""}">
+          <input
+            type="radio"
+            name="mediation-key"
+            value="${esc(p.key)}"
+            ${p.key === mediationSelectedKey ? "checked" : ""}
+            onchange="openMediationModal(${loan.id}, '${esc(p.key)}')"
+          />
+          <div>
+            <div style="font-weight:800;font-size:14px;">
+              <span class="code-chip" style="margin-right:6px;">${esc(p.key)}</span>${esc(p.title)}
+            </div>
+            <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">${esc(p.desc)}</div>
+          </div>
+        </label>
+      `).join("");
+
+      const borrowerText = renderMediationPhrase(mediationSelectedKey, loan, loan.borrowerLang);
+      const lenderText = renderMediationPhrase(mediationSelectedKey, loan, loan.lenderLang);
+
+      openModal(`
+        <h3 class="modal-title" id="modal-title">✉️ Gentle Mediation — Loan #${loan.id}</h3>
+        <p class="modal-desc">Choose 1 fixed structured phrase (zero free-text). Each neighbor automatically reads it in their own language.</p>
+
+        <div class="stack">${optionsHtml}</div>
+
+        <div class="dual-preview">
+          <div class="dual-box">
+            <div class="dual-box-head">
+              <span>Borrower: ${esc(loan.borrowerName)} (${esc(langNameBadge(loan.borrowerLang))})</span>
+              ${renderSpeakBtn(borrowerText, loan.borrowerLang)}
+            </div>
+            <p class="dual-box-text">${esc(borrowerText)}</p>
+          </div>
+
+          <div class="dual-box">
+            <div class="dual-box-head">
+              <span>Lender: ${esc(loan.lenderName)} (${esc(langNameBadge(loan.lenderLang))})</span>
+              ${renderSpeakBtn(lenderText, loan.lenderLang)}
+            </div>
+            <p class="dual-box-text">${esc(lenderText)}</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn" type="button" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" type="button" onclick="sendMediationNotice(${loan.id})">Send Structured Notice</button>
+        </div>
+      `);
+    }
+
+    function sendMediationNotice(loanId) {
+      const loan = state.loans.find((l) => l.id === loanId);
+      if (!loan) return;
+      const phrase = MEDIATION_PHRASES.find((p) => p.key === mediationSelectedKey) || MEDIATION_PHRASES[0];
+
+      loan.timeline.unshift({
+        time: nowClock(),
+        key: phrase.key,
+        note: `Admin Sato sent "${phrase.title}" to ${loan.borrowerName} (${loan.borrowerLang}) & ${loan.lenderName} (${loan.lenderLang}).`
+      });
+
+      logActivity(`Sent mediation notice (${phrase.key}) on Loan #${loan.id} to ${loan.borrowerName} & ${loan.lenderName}.`);
+      closeModal();
+      renderAll();
+      showToast(`Structured notice (${phrase.key}) delivered in both neighbors' languages!`, "green");
+    }
+
+    function resolveOverdueLoan(loanId) {
+      const loan = state.loans.find((l) => l.id === loanId);
+      if (!loan || loan.status === "returned") return;
+
+      loan.status = "returned";
+      loan.hasAfterPhoto = true;
+      loan.timeline.unshift({
+        time: nowClock(),
+        key: "admin.resolvedReturn",
+        note: `Admin Sato marked Loan #${loan.id} returned after in-person confirmation. Item returned to shelf.`
+      });
+
+      // Set linked item back to available on Shelf
+      const shelfItem = state.shelfItems.find((i) => i.id === loan.itemId);
+      if (shelfItem) {
+        shelfItem.status = "available";
+        shelfItem.loanId = null;
+      }
+
+      // Record return on borrower's trust stats
+      const borrower = state.neighbors.find((n) => n.id === loan.borrowerId);
+      if (borrower) borrower.late += 1;
+
+      logActivity(`Resolved Loan #${loan.id} (${loan.itemKey}) as returned — unlocked Safe Remove for ${loan.borrowerName} & ${loan.lenderName}.`);
+      renderAll();
+      showToast(`Loan #${loan.id} marked returned! Item is available again and Safe Remove is unlocked.`, "green");
+    }
+
+    /* -----------------------------------------------------------------------
+       8. TAB 4: POSTER, STRUCTURED NOTICES & GROUP ACTIVITY LOG
+       ----------------------------------------------------------------------- */
+    function renderPosterTab(container) {
+      const dict = t();
+      const selectedAnn = ANNOUNCEMENTS.find((a) => a.key === state.selectedNoticeKey) || ANNOUNCEMENTS[0];
+      const isPinned = state.pinnedNoticeKey === selectedAnn.key;
+
+      const noticeOptions = ANNOUNCEMENTS.map((ann) => `
+        <label class="mediation-option ${ann.key === state.selectedNoticeKey ? "selected" : ""}">
+          <input
+            type="radio"
+            name="building-notice"
+            value="${esc(ann.key)}"
+            ${ann.key === state.selectedNoticeKey ? "checked" : ""}
+            onchange="selectAnnouncement('${esc(ann.key)}')"
+          />
+          <div style="flex:1;">
+            <div style="font-weight:800;font-size:14px;">
+              <span class="code-chip" style="margin-right:6px;">${esc(ann.key)}</span>
+              ${esc(ann.shortLabel)}
+              ${state.pinnedNoticeKey === ann.key ? `<span class="badge badge-green" style="margin-left:6px;">📌 Pinned</span>` : ""}
+            </div>
+            <div style="font-size:13.5px;color:var(--text-muted);margin-top:3px;">${esc(ann.text[state.lang])}</div>
+          </div>
+        </label>
+      `).join("");
+
+      const activityRows = state.activityLog.map((ev) => `
+        <div class="activity-row">
+          <span>${esc(ev.text)}</span>
+          <span class="activity-time">${esc(ev.time)}</span>
+        </div>
+      `).join("");
+
+      container.innerHTML = `
+        <!-- Printable A4 QR Join Poster Card -->
+        <div class="card">
+          <div class="section-head no-print">
+            <div>
+              <h1 class="section-title">📋 ${esc(dict.posterTitle)}</h1>
+              <p class="section-sub">${esc(dict.posterSub)}</p>
+            </div>
+          </div>
+
+          <div class="poster-sheet">
+            <div class="poster-kicker">OTONARI · おとなり · ওতোনারি</div>
+            <h2 class="poster-building">Sakura Heights · さくらハイツ</h2>
+            <div class="poster-city">Nagasaki · 長崎市</div>
+
+            <div class="poster-qr-frame">
+              ${buildQrSvg(state.joinCode)}
+            </div>
+
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">
+                JOIN CODE · 参加コード · যোগদান কোড
+              </div>
+              <div class="poster-code-box">${esc(state.joinCode)}</div>
+            </div>
+
+            <div class="trilingual-grid">
+              <div class="tri-box">
+                <strong>🇯🇵 日本語</strong>
+                スマホでQRを読み取り、ご自身の言語を選んで参加してください。ご近所さんと気軽に日用品を借りあえます。
+              </div>
+              <div class="tri-box">
+                <strong>🇬🇧 English</strong>
+                Scan the QR code with your phone, choose your language, and borrow everyday items from next door.
+              </div>
+              <div class="tri-box">
+                <strong>🇧🇩 বাংলা</strong>
+                ফোন দিয়ে QR কোড স্ক্যান করুন, আপনার ভাষা নির্বাচন করুন এবং পাশের প্রতিবেশীর কাছ থেকে প্রয়োজনীয় জিনিস ধার নিন।
+              </div>
+            </div>
+
+            <div class="poster-footer">Otonari (おとなり) · https://otonari.app/join</div>
+          </div>
+
+          <div class="actions-row no-print" style="justify-content:center;">
+            <button class="btn btn-soft" type="button" onclick="rotateJoinCode()">🔄 ${esc(dict.rotateCode)}</button>
+            <button class="btn btn-primary" type="button" onclick="window.print()">🖨️ ${esc(dict.printPoster)}</button>
+          </div>
+        </div>
+
+        <!-- Structured Building Announcements -->
+        <div class="card no-print">
+          <div class="section-head">
+            <div>
+              <h2 class="section-title">📢 ${esc(dict.noticesTitle)}</h2>
+              <p class="section-sub">${esc(dict.noticesSub)}</p>
+            </div>
+          </div>
+
+          <div class="stack">${noticeOptions}</div>
+
+          <div class="lang-preview-4">
+            <div class="lang-preview-card">
+              <div class="lang-preview-top">
+                <span>English (en)</span>
+                ${renderSpeakBtn(selectedAnn.text.en, "en")}
+              </div>
+              <div>${esc(selectedAnn.text.en)}</div>
+            </div>
+            <div class="lang-preview-card">
+              <div class="lang-preview-top">
+                <span>日本語 (ja)</span>
+                ${renderSpeakBtn(selectedAnn.text.ja, "ja")}
+              </div>
+              <div>${esc(selectedAnn.text.ja)}</div>
+            </div>
+            <div class="lang-preview-card">
+              <div class="lang-preview-top">
+                <span>やさしい日本語 (ja-easy)</span>
+                ${renderSpeakBtn(selectedAnn.text["ja-easy"], "ja-easy")}
+              </div>
+              <div>${esc(selectedAnn.text["ja-easy"])}</div>
+            </div>
+            <div class="lang-preview-card">
+              <div class="lang-preview-top">
+                <span>বাংলা (bn)</span>
+                ${renderSpeakBtn(selectedAnn.text.bn, "bn")}
+              </div>
+              <div>${esc(selectedAnn.text.bn)}</div>
+            </div>
+          </div>
+
+          <div class="actions-row" style="margin-top:14px;">
+            ${isPinned ? `
+              <button class="btn btn-amber" type="button" onclick="unpinAnnouncement()">✕ ${esc(dict.unpinBanner)}</button>
+            ` : `
+              <button class="btn btn-primary" type="button" onclick="pinSelectedAnnouncement()">📌 ${esc(dict.pinBanner)}</button>
+            `}
+          </div>
+        </div>
+
+        <!-- Recent Group Activity Log -->
+        <div class="card no-print">
+          <div class="section-head">
+            <div>
+              <h2 class="section-title">📝 ${esc(dict.activityTitle)} (${state.activityLog.length})</h2>
+              <p class="section-sub">${esc(dict.activitySub)}</p>
+            </div>
+          </div>
+          <div class="activity-list">${activityRows}</div>
+        </div>
+      `;
+    }
+
+    function rotateJoinCode() {
+      const oldCode = state.joinCode;
+      state.joinCode = generateSafeJoinCode();
+      logActivity(`Rotated building join code ${oldCode} → ${state.joinCode} (old poster invalidated).`);
+      renderAll();
+      showToast(`New join code generated: ${state.joinCode} — QR poster updated!`, "green");
+    }
+
+    function selectAnnouncement(key) {
+      state.selectedNoticeKey = key;
+      renderAll();
+    }
+
+    function pinSelectedAnnouncement() {
+      state.pinnedNoticeKey = state.selectedNoticeKey;
+      logActivity(`Pinned structured announcement "${state.selectedNoticeKey}" to the Live Shelf Banner.`);
+      renderAll();
+      showToast("Announcement pinned to the top Shelf Banner!", "green");
+    }
+
+    function unpinAnnouncement() {
+      const prev = state.pinnedNoticeKey;
+      state.pinnedNoticeKey = null;
+      if (prev) logActivity(`Unpinned announcement "${prev}" from the Shelf Banner.`);
+      renderAll();
+      showToast("Shelf Banner unpinned");
+    }
+
+    /* -----------------------------------------------------------------------
+       9. INITIAL BOOT
+       ----------------------------------------------------------------------- */
+    window.addEventListener("DOMContentLoaded", () => {
+      renderAll();
+    });
+  </script>
+</body>
+</html>
