@@ -1,6 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
 import Avatar from '../components/Avatar.tsx';
-import { BlockIcon, BuildingIcon } from '../components/Icons.tsx';
+import GroupIcon from '../components/GroupIcon.tsx';
 import { useMember } from '../core/UserContext.ts';
 import Banner from '../features/message/Banner.tsx';
 import NotificationBell from '../features/message/NotificationBell.tsx';
@@ -11,7 +11,6 @@ import { navTabsFor } from './navTabs.ts';
 // bell, and below it the banner for pinned announcements & new messages.
 export default function Header({ adminAlertCount = 0 }: { adminAlertCount?: number }) {
   const { user, group, lang, inbox } = useMember();
-  const GroupIcon = group.type === 'block' ? BlockIcon : BuildingIcon;
   const tabs = navTabsFor(user);
 
   return (
@@ -21,7 +20,7 @@ export default function Header({ adminAlertCount = 0 }: { adminAlertCount?: numb
           <Link to="/" className="header-brand">
             <span className="header-logo">{t(lang, 'appName')}</span>
             <span className="header-group">
-              <GroupIcon className="icon-xs" />
+              <GroupIcon group={group} className={group.image ? '' : 'icon-xs'} />
               <span className="header-group-name">{group.name}</span>
             </span>
           </Link>

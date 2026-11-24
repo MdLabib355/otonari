@@ -18,6 +18,7 @@ export interface GroupRow {
   name: string;
   type: GroupType;
   city: string;
+  image: string | null;
   join_policy: JoinPolicy;
   lifecycle_status: GroupLifecycleStatus;
   invite_code_version: number;

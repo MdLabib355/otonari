@@ -2,6 +2,9 @@
   "meta": { "lang": "ja", "name": "日本語", "locale": "ja-JP", "speech": "ja-JP" },
 
   "ui": {
+    "groupAdmin.groupImage": "グループの画像",
+    "groupAdmin.groupImageHint": "グループの方と、参加コードを入力した方に表示されます。",
+
     "auth.forgot": "パスワードをお忘れですか?",
     "auth.resetTitle": "新しいパスワードを設定",
     "profile.title": "プロフィール",

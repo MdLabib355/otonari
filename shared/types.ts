@@ -55,6 +55,7 @@ export interface Group {
   name: string;
   type: GroupType;
   city: string;
+  image: string | null; // URL of the group's icon
   join_policy: JoinPolicy;
   lifecycle_status: GroupLifecycleStatus;
   invite_code_version: number;
@@ -90,6 +91,7 @@ export interface GroupPreview {
   name: string;
   type: GroupType;
   city: string;
+  image: string | null;
   member_count: number;
   join_policy: JoinPolicy;
   lifecycle_status: GroupLifecycleStatus;

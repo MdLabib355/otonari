@@ -56,6 +56,8 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
 - **Profile** (`/profile`, every role, also without a group): photo, nickname, and a new password (the old one is
   needed; other devices are logged out). **Forgot password?**: email → code → new password twice (all devices are logged
   out). Not for Google-only accounts; not for the passwords of demo accounts.
+- **Group image**: group admins choose or remove it (`/group-admin`); it is the icon of the group in the header, in
+  Settings, on the admin page and on the join page. Without one: a building or block icon.
 - Neighbors see only nicknames and profile photos. Emails are seen by their owner and by super admins.
 - Seeded accounts have a public password, so they work only in demo mode. There is no "continue as".
 
@@ -191,7 +193,7 @@ otonari/
 │       │   ├── shrinkPhoto.ts  # smaller JPEG without GPS, before every upload
 │       │   └── useInbox.ts     # my unread messages (banner, Loans badge, loan page)
 │       ├── components/     # used by several features: ChipGroup  FilterStrip  Icons  SpeakButton  TipCard
-│       │                   # TrustLine  Avatar
+│       │                   # TrustLine  Avatar  GroupIcon  ImageEditor
 │       ├── features/       # one folder per feature, like the modules of the server
 │       │   ├── landing/    # Landing (/ for visitors)  SamplePhrase
 │       │   ├── group/      # Join (/join)  NewGroup  Poster (/poster)
@@ -257,7 +259,8 @@ CREATE TABLE groups (
   code TEXT UNIQUE NOT NULL,          -- join code, e.g. 'SAKURA-2611'
   name TEXT NOT NULL,                 -- shown as-is (proper noun)
   type TEXT NOT NULL CHECK (type IN ('building','block')),
-  city TEXT NOT NULL
+  city TEXT NOT NULL,
+  image TEXT                          -- the group's icon, like users.avatar; NULL = none
 );
 
 CREATE TABLE users (
@@ -381,6 +384,7 @@ and `group_id` becomes NULL: they are no longer counted or listed as a member.
 | `POST /api/v1/auth/email-codes` `{email,purpose:'register'\|'login'\|'reset',lang}` | anyone | sends a 6-digit code (`409` email taken / `404` no account, `429` too many attempts) | – |
 | `POST /api/v1/auth/email-codes/verify` `{email,code,purpose}` / `POST /api/v1/auth/register` or `/auth/reset-password` `{ticket,password}` | anyone | → `{ticket}` (15 minutes) / new account or new password → `{token,user,group}` | – |
 | `POST /api/v1/me/password` `{current_password,password}` | user | new password (`403` wrong or demo account) | – |
+| `POST /api/v1/group-admin/image` (multipart `photo`) / `DELETE /api/v1/group-admin/image` | group admin | the group's icon → `group` | – |
 | `POST /api/v1/me/avatar` (multipart `photo`) / `DELETE /api/v1/me/avatar` | user | profile photo → `{user,group}` | – |
 | `POST /api/v1/auth/login` `{email,password}` / `POST /api/v1/auth/login-with-code` `{email,code}` | anyone | → `{token,user,group}` (`401` wrong, `403` deactivated, `409 {use_google}`) | – |
 | `POST /api/v1/auth/google` `{credential,lang}` | anyone | checks Google's ID token, logs in (creates the account if new) | – |

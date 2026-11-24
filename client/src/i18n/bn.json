@@ -2,6 +2,9 @@
   "meta": { "lang": "bn", "name": "বাংলা", "locale": "bn-BD", "speech": "bn-BD" },
 
   "ui": {
+    "groupAdmin.groupImage": "গ্রুপের ছবি",
+    "groupAdmin.groupImageHint": "গ্রুপের সবাই এবং যাঁরা যোগদানের কোড দেন, তাঁরা এটি দেখতে পান।",
+
     "auth.forgot": "পাসওয়ার্ড ভুলে গেছেন?",
     "auth.resetTitle": "নতুন পাসওয়ার্ড দিন",
     "profile.title": "আপনার প্রোফাইল",

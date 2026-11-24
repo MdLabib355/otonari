@@ -2,14 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { GroupPreview, Me } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
-import { BlockIcon, BuildingIcon, UsersIcon } from '../../components/Icons.tsx';
+import GroupIcon from '../../components/GroupIcon.tsx';
+import { UsersIcon } from '../../components/Icons.tsx';
 import { api, errorStatus } from '../../core/api.ts';
 import { useUser } from '../../core/UserContext.ts';
 import { LANGUAGES } from '../../data/catalog.ts';
 import { meta, t } from '../../i18n/index.ts';
 import NewGroup from './NewGroup.tsx';
-
-const GROUP_ICONS = { building: BuildingIcon, block: BlockIcon };
 
 // For people who are logged in, but not in a neighborhood yet: join one with the code from its poster, or
 // start a new one. The QR code on the poster opens /join?code=SAKURA-2611.
@@ -68,7 +67,6 @@ export default function Join() {
   }
 
   const languageOptions = LANGUAGES.map((language) => ({ value: language, label: meta(language).name }));
-  const GroupIcon = GROUP_ICONS[preview?.type ?? 'building'];
 
   return (
     <section className="narrow-page surface-card">
@@ -112,7 +110,7 @@ export default function Join() {
           <div aria-live="polite">
             {preview && (
               <div className="group-preview">
-                <GroupIcon className="group-icon-svg" />
+                <GroupIcon group={preview} className="group-icon-svg" />
                 <div>
                   <strong>{t(lang, 'join.groupFound', { group: preview.name, city: preview.city })}</strong>
                   <p className="inline-icon-text">

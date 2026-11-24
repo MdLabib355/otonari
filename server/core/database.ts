@@ -69,6 +69,7 @@ export async function createTables() {
       name TEXT NOT NULL,
       type TEXT NOT NULL CHECK (type IN ('building','block')),
       city TEXT NOT NULL,
+      image TEXT, -- the group's icon, like users.avatar; NULL = none
       join_policy TEXT NOT NULL DEFAULT 'open'
         CHECK (join_policy IN ('open','approval_required','locked')),
       lifecycle_status TEXT NOT NULL DEFAULT 'active'
@@ -225,6 +226,7 @@ export async function addNewColumns() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS muted_until TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS trust_override TEXT;
 
+    ALTER TABLE groups ADD COLUMN IF NOT EXISTS image TEXT;
     ALTER TABLE groups ADD COLUMN IF NOT EXISTS join_policy TEXT NOT NULL DEFAULT 'open';
     ALTER TABLE groups ADD COLUMN IF NOT EXISTS lifecycle_status TEXT NOT NULL DEFAULT 'active';
     ALTER TABLE groups ADD COLUMN IF NOT EXISTS invite_code_version INTEGER NOT NULL DEFAULT 1;
