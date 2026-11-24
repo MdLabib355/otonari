@@ -4,6 +4,7 @@
 
 import express from 'express';
 import demoRoutes from '../modules/demo/demoRoutes.ts';
+import groupAdminRoutes from '../modules/groupAdmin/groupAdminRoutes.ts';
 import groupRoutes from '../modules/group/groupRoutes.ts';
 import itemRoutes from '../modules/item/itemRoutes.ts';
 import loanRoutes from '../modules/loan/loanRoutes.ts';
@@ -16,6 +17,7 @@ export function createV1(): express.Router {
   // Each module's routes use full paths (e.g. '/join'). Login is checked per route with requireUser
   // (see core/auth.ts).
   v1.use(groupRoutes);
+  v1.use(groupAdminRoutes);
   v1.use(userRoutes);
   v1.use(itemRoutes);
   v1.use(loanRoutes);
