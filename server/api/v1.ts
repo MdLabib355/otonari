@@ -9,6 +9,7 @@ import groupRoutes from '../modules/group/groupRoutes.ts';
 import itemRoutes from '../modules/item/itemRoutes.ts';
 import loanRoutes from '../modules/loan/loanRoutes.ts';
 import messageRoutes from '../modules/message/messageRoutes.ts';
+import superAdminRoutes from '../modules/superAdmin/superAdminRoutes.ts';
 import userRoutes from '../modules/user/userRoutes.ts';
 
 export function createV1(): express.Router {
@@ -22,6 +23,7 @@ export function createV1(): express.Router {
   v1.use(itemRoutes);
   v1.use(loanRoutes);
   v1.use(messageRoutes);
+  v1.use(superAdminRoutes);
 
   // Demo-only routes ("continue as a neighbor"): only when DEMO_MODE=true in server/.env.
   if (process.env.DEMO_MODE === 'true') {

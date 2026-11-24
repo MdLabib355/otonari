@@ -1,11 +1,7 @@
 // Automatic polite reminders, so the lender never has to ask (CLAUDE.md section 6).
-// Every 30 seconds, for each active loan without a return photo:
-//   24 hours or less to go  → 'sys.dueSoon' to the borrower
-//   overdue                 → 'sys.overdue' to the borrower, and 'sys.overdueLender' ("we reminded
-//                             them for you") to the lender
-// reminded_soon_at / reminded_overdue_at remember what was sent, so nothing is ever sent twice,
-// not even after a server restart.
+// Tracks last-run health telemetry for the Super Admin Operations dashboard.
 
+import type { ReminderHealth } from '../../../shared/types.ts';
 import { transaction } from '../../core/database.ts';
 import type { LoanRow } from '../../types.ts';
 import { createMessage } from '../message/messageModel.ts';
@@ -14,6 +10,19 @@ import { listNotYetReturned, markRemindedOverdue, markRemindedSoon } from './loa
 const CHECK_EVERY_MS = 30_000;
 const DAY = 24 * 60 * 60 * 1000;
 const FROM_SYSTEM = null; // reminders have no sender
+
+let lastRunAt: string | null = null;
+let lastCheckedLoans = 0;
+let lastError: string | null = null;
+
+export function getReminderHealth(): ReminderHealth {
+  return {
+    interval_seconds: CHECK_EVERY_MS / 1000,
+    last_run_at: lastRunAt,
+    last_checked_loans: lastCheckedLoans,
+    last_error: lastError,
+  };
+}
 
 async function remind(loan: LoanRow) {
   const timeLeft = Date.parse(loan.end_at) - Date.now();
@@ -30,11 +39,22 @@ async function remind(loan: LoanRow) {
 }
 
 // One transaction: a reminder and its "already sent" time are saved together, or not at all.
-// With a return photo the borrower has done their part (only "I got it back" is missing): no reminders.
-export async function checkReminders() {
-  await transaction(async () => {
-    for (const loan of await listNotYetReturned()) await remind(loan);
-  });
+export async function checkReminders(): Promise<{ checkedLoans: number; ranAt: string }> {
+  try {
+    let checked = 0;
+    await transaction(async () => {
+      const loans = await listNotYetReturned();
+      checked = loans.length;
+      for (const loan of loans) await remind(loan);
+    });
+    lastRunAt = new Date().toISOString();
+    lastCheckedLoans = checked;
+    lastError = null;
+    return { checkedLoans: checked, ranAt: lastRunAt };
+  } catch (error) {
+    lastError = error instanceof Error ? error.message : String(error);
+    throw error;
+  }
 }
 
 export function startReminders() {
