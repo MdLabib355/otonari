@@ -2,8 +2,13 @@
   "meta": { "lang": "bn", "name": "বাংলা", "locale": "bn-BD", "speech": "bn-BD" },
 
   "ui": {
+    "auth.codeTitle": "৬ সংখ্যার কোডটি লিখুন",
+    "auth.codeSentTo": "কোড পাঠানো হয়েছে:",
+    "auth.codeHelp": "কোডটি ১০ মিনিট কাজ করবে। ইনবক্সে ইমেইল না পেলে স্প্যাম ফোল্ডার দেখুন।",
+    "auth.resend": "কোড আবার পাঠান",
+    "auth.codeResent": "নতুন কোড পাঠানো হয়েছে।",
+
     "auth.continueEmail": "ইমেইল দিয়ে চালিয়ে যান",
-    "auth.checkCode": "কোড যাচাই করুন",
     "auth.passwordAgain": "পাসওয়ার্ড আবার লিখুন",
     "auth.passwordsDiffer": "দুটি পাসওয়ার্ড মিলছে না।",
     "auth.startAgain": "সময় শেষ হয়ে গেছে। আবার শুরু করুন।",
@@ -22,7 +27,6 @@
     "auth.password": "পাসওয়ার্ড",
     "auth.passwordHint": "কমপক্ষে {n}টি অক্ষর",
     "auth.code": "৬ সংখ্যার কোড",
-    "auth.codeSent": "আপনাকে একটি কোড পাঠিয়েছি। এটি ১০ মিনিট কাজ করবে।",
     "auth.sendCode": "কোড পাঠান",
     "auth.otherEmail": "অন্য ইমেইল ব্যবহার করুন",
     "auth.or": "অথবা",

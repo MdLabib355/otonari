@@ -2,8 +2,13 @@
   "meta": { "lang": "ja-easy", "name": "やさしい にほんご", "locale": "ja-JP", "speech": "ja-JP" },
 
   "ui": {
+    "auth.codeTitle": "6つの すうじを いれる",
+    "auth.codeSentTo": "コードを おくりました:",
+    "auth.codeHelp": "コードは 10ぷん つかえます。メールが ない ときは、めいわくメールを みて ください。",
+    "auth.resend": "もう いちど おくる",
+    "auth.codeResent": "あたらしい コードを おくりました。",
+
     "auth.continueEmail": "メールで つづける",
-    "auth.checkCode": "コードを たしかめる",
     "auth.passwordAgain": "もう いちど パスワード",
     "auth.passwordsDiffer": "パスワードが ちがいます。",
     "auth.startAgain": "じかんが すぎました。はじめから やって ください。",
@@ -22,7 +27,6 @@
     "auth.password": "パスワード",
     "auth.passwordHint": "{n}もじ いじょう",
     "auth.code": "6つの すうじ",
-    "auth.codeSent": "コードを おくりました。10ぷん つかえます。",
     "auth.sendCode": "コードを おくる",
     "auth.otherEmail": "ほかの メールを つかう",
     "auth.or": "または",

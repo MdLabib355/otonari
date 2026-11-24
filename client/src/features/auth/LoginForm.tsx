@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import type { AuthConfig, Login } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
 import { api } from '../../core/api.ts';
@@ -6,60 +6,83 @@ import { useUser } from '../../core/UserContext.ts';
 import { t, type UiKey } from '../../i18n/index.ts';
 import { authError } from './authErrors.ts';
 import AuthField from './AuthField.tsx';
-import CodeField from './CodeField.tsx';
+import CodeStep from './CodeStep.tsx';
 
 type Way = 'password' | 'code';
 
 interface Props {
   config: AuthConfig;
   onLogin: (answer: Login) => void;
+  onCodeStep: (now: boolean) => void; // the code has the page for itself
 }
 
 // With an email address: with the password, or without one (a code is sent to the address).
-export default function LoginForm({ config, onLogin }: Props) {
+export default function LoginForm({ config, onLogin, onCodeStep }: Props) {
   const { lang } = useUser();
   const [way, setWay] = useState<Way>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [codeSent, setCodeSent] = useState(false);
-  const [code, setCode] = useState('');
   const [problem, setProblem] = useState<UiKey | null>(null);
   const [busy, setBusy] = useState(false);
 
   function chooseWay(next: Way) {
     setWay(next);
     setCodeSent(false);
-    setCode('');
     setProblem(null);
   }
 
-  async function nextStep() {
-    if (way === 'password') {
-      onLogin(await api.post<Login>('/auth/login', { email, password }));
-    } else if (codeSent) {
-      onLogin(await api.post<Login>('/auth/login-with-code', { email, code }));
-    } else {
-      await api.post('/auth/email-codes', { email, purpose: 'login', lang });
-      setCodeSent(true);
-    }
-  }
+  useEffect(() => onCodeStep(codeSent), [codeSent]);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  // Everything that talks to the server: shows what went wrong.
+  async function tryTo(action: () => Promise<void>, wrong: UiKey) {
     setBusy(true);
     setProblem(null);
     try {
-      await nextStep();
+      await action();
     } catch (error) {
-      setProblem(authError(error, way === 'password' ? 'auth.wrongPassword' : 'auth.wrongCode'));
+      setProblem(authError(error, wrong));
     }
     setBusy(false);
+  }
+
+  async function loginWithPassword() {
+    onLogin(await api.post<Login>('/auth/login', { email, password }));
+  }
+
+  async function sendCode() {
+    await api.post('/auth/email-codes', { email, purpose: 'login', lang });
+    setCodeSent(true);
+  }
+
+  async function loginWithCode(code: string) {
+    onLogin(await api.post<Login>('/auth/login-with-code', { email, code }));
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (way === 'password') tryTo(loginWithPassword, 'auth.wrongPassword');
+    else tryTo(sendCode, 'auth.wrongCode');
   }
 
   const ways: { value: Way; label: string }[] = [
     { value: 'password', label: t(lang, 'auth.wayPassword') },
     { value: 'code', label: t(lang, 'auth.wayCode') },
   ];
+
+  if (codeSent) {
+    return (
+      <CodeStep
+        email={email}
+        mailboxUrl={config.mailbox_url}
+        busy={busy}
+        problem={problem}
+        onCode={(code) => tryTo(() => loginWithCode(code), 'auth.wrongCode')}
+        onResend={() => tryTo(sendCode, 'auth.wrongCode')}
+        onBack={() => chooseWay('code')}
+      />
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit}>
@@ -75,7 +98,6 @@ export default function LoginForm({ config, onLogin }: Props) {
         value={email}
         onText={setEmail}
         autoComplete="username"
-        readOnly={codeSent}
       />
       {way === 'password' && (
         <AuthField
@@ -88,17 +110,11 @@ export default function LoginForm({ config, onLogin }: Props) {
           maxLength={128}
         />
       )}
-      {codeSent && <CodeField code={code} mailboxUrl={config.mailbox_url} onText={setCode} />}
       {problem && <p className="error">{t(lang, problem)}</p>}
       <div className="actions">
         <button type="submit" className="button-primary" disabled={busy}>
-          {t(lang, way === 'code' && !codeSent ? 'auth.sendCode' : 'auth.login')}
+          {t(lang, way === 'code' ? 'auth.sendCode' : 'auth.login')}
         </button>
-        {codeSent && (
-          <button type="button" className="button-secondary" onClick={() => chooseWay('code')}>
-            {t(lang, 'auth.otherEmail')}
-          </button>
-        )}
       </div>
     </form>
   );

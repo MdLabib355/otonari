@@ -2,8 +2,13 @@
   "meta": { "lang": "ja", "name": "日本語", "locale": "ja-JP", "speech": "ja-JP" },
 
   "ui": {
+    "auth.codeTitle": "6桁のコードを入力",
+    "auth.codeSentTo": "コードの送信先:",
+    "auth.codeHelp": "コードは10分間有効です。受信トレイに見当たらない場合は、迷惑メールフォルダをご確認ください。",
+    "auth.resend": "コードを再送する",
+    "auth.codeResent": "新しいコードをお送りしました。",
+
     "auth.continueEmail": "メールアドレスで続ける",
-    "auth.checkCode": "コードを確認する",
     "auth.passwordAgain": "パスワード(確認用)",
     "auth.passwordsDiffer": "パスワードが一致しません。",
     "auth.startAgain": "時間切れです。最初からやり直してください。",
@@ -22,7 +27,6 @@
     "auth.password": "パスワード",
     "auth.passwordHint": "{n}文字以上",
     "auth.code": "6桁のコード",
-    "auth.codeSent": "コードをお送りしました。10分間有効です。",
     "auth.sendCode": "コードを送る",
     "auth.otherEmail": "別のメールアドレスを使う",
     "auth.or": "または",

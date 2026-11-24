@@ -2,8 +2,13 @@
   "meta": { "lang": "en", "name": "English", "locale": "en-US", "speech": "en-US" },
 
   "ui": {
+    "auth.codeTitle": "Enter the 6-digit code",
+    "auth.codeSentTo": "We sent a code to",
+    "auth.codeHelp": "The code works for 10 minutes. If you don't see the email in your inbox, check your spam folder.",
+    "auth.resend": "Resend code",
+    "auth.codeResent": "We sent a new code.",
+
     "auth.continueEmail": "Continue with email",
-    "auth.checkCode": "Check the code",
     "auth.passwordAgain": "Type the password again",
     "auth.passwordsDiffer": "The two passwords are different.",
     "auth.startAgain": "This took too long. Please start again.",
@@ -22,7 +27,6 @@
     "auth.password": "Password",
     "auth.passwordHint": "At least {n} characters",
     "auth.code": "6-digit code",
-    "auth.codeSent": "We sent you a code. It works for 10 minutes.",
     "auth.sendCode": "Send the code",
     "auth.otherEmail": "Use another email",
     "auth.or": "or",
