@@ -131,6 +131,7 @@ export interface MyItem {
   spot: string;
   trusted_only: boolean;
   status: ItemStatus;
+  photo: string | null; // URL of the owner's photo of it
 }
 
 // GET /api/v1/items
@@ -170,6 +171,7 @@ export interface LoanSummary {
   start_at: string;
   end_at: string;
   item_key: string;
+  item_photo: string | null;
   spot: string;
   other_nickname: string;
   other_lang: Lang;
@@ -183,7 +185,7 @@ export interface MyLoans {
 }
 
 export type Person = Pick<User, 'id' | 'nickname' | 'lang'> & { avatar?: string | null };
-export type LoanItem = Pick<MyItem, 'id' | 'item_key' | 'max_days' | 'spot' | 'status'>;
+export type LoanItem = Pick<MyItem, 'id' | 'item_key' | 'max_days' | 'spot' | 'status' | 'photo'>;
 
 export interface Message {
   id: number;
@@ -279,6 +281,7 @@ export interface GroupAdminLoan {
   id: number;
   item_id: number;
   item_key: string;
+  item_photo: string | null;
   spot: string;
   status: LoanStatus;
   is_overdue: boolean;

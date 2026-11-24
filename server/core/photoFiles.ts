@@ -45,6 +45,23 @@ export async function storePhoto(req: Request, res: Response, next: NextFunction
   next();
 }
 
+// The same for a photo that may be missing: where it is goes to req.optionalPhoto.
+export async function storeOptionalPhoto(req: Request, res: Response, next: NextFunction) {
+  if (!req.file) return next();
+  await storePhoto(req, res, () => {
+    req.optionalPhoto = req.photo;
+    next();
+  });
+}
+
+// Middleware after storeOptionalPhoto: a photo of a refused request is of no use.
+export function deleteRefusedPhoto(req: Request, res: Response, next: NextFunction) {
+  res.on('finish', () => {
+    if (res.statusCode >= 400 && req.optionalPhoto) deletePhoto(req.optionalPhoto);
+  });
+  next();
+}
+
 // The URL for the browser. A signed S3 URL works for an hour, so it is made for every answer, never stored.
 export async function photoUrl(photo: string | null): Promise<string | null> {
   return photo?.startsWith(S3_PREFIX) ? signedUrl(photo.slice(S3_PREFIX.length)) : photo;

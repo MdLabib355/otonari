@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { CatalogCategoryRecord, CatalogItemRecord, Lang } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
+import ItemVisual from '../../components/ItemVisual.tsx';
 import { api, ApiError } from '../../core/api.ts';
 import { LANGUAGES } from '../../data/catalog.ts';
 import { meta, renderPhrase } from '../../i18n/index.ts';
@@ -19,7 +20,7 @@ const INSPECTABLE_PHRASES = [
   'platform.escalationNotice',
 ];
 
-const EMPTY_FORM = { item_key: '', emoji: '🧰', category: 'kitchen', ...EMPTY_LABELS };
+const EMPTY_FORM = { item_key: '', category: 'kitchen', ...EMPTY_LABELS };
 
 export interface CatalogPhraseStudioProps {
   catalog: CatalogItemRecord[];
@@ -128,8 +129,10 @@ export default function CatalogPhraseStudio({ catalog, categories, onRefresh, on
               {filtered.map((item) => (
                 <tr key={item.item_key}>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <span style={{ fontSize: 20, marginRight: 8 }}>{item.emoji}</span>
-                    <span className="ga-code-chip">{item.item_key}</span>
+                    <span className="inline-icon-text">
+                      <ItemVisual itemKey={item.item_key} categoryKey={item.category} alt="" size="sm" />
+                      <span className="ga-code-chip">{item.item_key}</span>
+                    </span>
                   </td>
                   <td>
                     <span className="ga-badge ga-badge-muted">{item.category}</span>
@@ -231,20 +234,6 @@ export default function CatalogPhraseStudio({ catalog, categories, onRefresh, on
                 <p className="ga-meta" style={{ marginBottom: 12 }}>
                   All 4 language labels are required to guarantee zero untranslated keys.
                 </p>
-                <div className="sa-form-row">
-                  <div className="field">
-                    <label className="label" htmlFor="ci-emoji">
-                      Emoji
-                    </label>
-                    <input
-                      id="ci-emoji"
-                      className="text-input"
-                      required
-                      maxLength={8}
-                      value={form.emoji}
-                      onChange={(e) => setForm({ ...form, emoji: e.target.value })}
-                    />
-                  </div>
                   <div className="field">
                     <label className="label" htmlFor="ci-cat">
                       Category
@@ -264,7 +253,6 @@ export default function CatalogPhraseStudio({ catalog, categories, onRefresh, on
                         ))}
                     </select>
                   </div>
-                </div>
                 <div className="field">
                   <label className="label" htmlFor="ci-key">
                     item_key (snake_case)

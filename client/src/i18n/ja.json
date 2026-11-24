@@ -132,6 +132,8 @@
     "notifications.empty": "未読のお知らせはありません。",
     "notifications.markAllRead": "すべて既読にする",
     "common.cancel": "キャンセル",
+    "myItems.edit": "編集する",
+    "myItems.photo": "物の写真(任意)",
     "common.close": "閉じる",
     "shelf.noMatch": "該当する物がありません。",
 

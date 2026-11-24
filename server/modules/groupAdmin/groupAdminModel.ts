@@ -10,6 +10,7 @@ import type {
 } from '../../../shared/types.ts';
 import { found, query, queryOne, transaction } from '../../core/database.ts';
 import type { CountRow, ItemRow, UserRow } from '../../types.ts';
+import { withPhotoUrl } from '../item/itemModel.ts';
 import { clearGroup } from '../user/userModel.ts';
 
 export async function findGroupMember(groupId: number, userId: number): Promise<UserRow | undefined> {
@@ -186,8 +187,8 @@ export async function updateMemberRole(groupId: number, userId: number, role: Gr
 }
 
 export async function listGroupItemsForAdmin(groupId: number): Promise<GroupAdminItem[]> {
-  return query<GroupAdminItem>(
-    `SELECT items.id, items.item_key, items.max_days, items.spot, items.trusted_only, items.status,
+  const items = await query<GroupAdminItem>(
+    `SELECT items.id, items.item_key, items.max_days, items.spot, items.trusted_only, items.status, items.photo,
             items.owner_id, users.nickname AS owner_nickname, items.hidden_at
      FROM items
      JOIN users ON users.id = items.owner_id
@@ -195,6 +196,7 @@ export async function listGroupItemsForAdmin(groupId: number): Promise<GroupAdmi
      ORDER BY items.id ASC`,
     [groupId]
   );
+  return Promise.all(items.map(withPhotoUrl));
 }
 
 export async function findGroupItem(groupId: number, itemId: number): Promise<ItemRow | undefined> {

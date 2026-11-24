@@ -4,6 +4,7 @@
 
 import type { LoanStatus, LoanSummary } from '../../../shared/types.ts';
 import { found, query, queryOne, transaction } from '../../core/database.ts';
+import { photoUrl } from '../../core/photoFiles.ts';
 import type { ItemRow, LoanRow } from '../../types.ts';
 import { setItemStatus } from '../item/itemModel.ts';
 import { createMessage, moveMessageDates } from '../message/messageModel.ts';
@@ -21,8 +22,9 @@ export async function getLoan(loanId: number): Promise<LoanRow> {
 // My loans from one side, newest first. As borrower the other person is the lender, and the other
 // way round. `unread` counts the messages to me in that loan that I haven't seen yet.
 async function listLoans(myColumn: LoanSide, otherColumn: LoanSide, userId: number): Promise<LoanSummary[]> {
-  return query<LoanSummary>(
-    `SELECT loans.id, loans.status, loans.start_at, loans.end_at, items.item_key, items.spot,
+  const loans = await query<LoanSummary>(
+    `SELECT loans.id, loans.status, loans.start_at, loans.end_at, items.item_key,
+            items.photo AS item_photo, items.spot,
             other.nickname AS other_nickname, other.lang AS other_lang,
             (SELECT COUNT(*)::int FROM messages
               WHERE messages.loan_id = loans.id AND messages.to_user_id = $1 AND messages.read_at IS NULL) AS unread
@@ -33,6 +35,7 @@ async function listLoans(myColumn: LoanSide, otherColumn: LoanSide, userId: numb
      ORDER BY loans.id DESC`,
     [userId]
   );
+  return Promise.all(loans.map(async (loan) => ({ ...loan, item_photo: await photoUrl(loan.item_photo) })));
 }
 
 export async function listBorrowing(userId: number): Promise<LoanSummary[]> {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Group, GroupMemberSummary, JoinPolicy, Lang, Role, User } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
+import { CheckIcon } from '../../components/Icons.tsx';
 import SpeakButton from '../../components/SpeakButton.tsx';
 import TrustLine from '../../components/TrustLine.tsx';
 import { api, ApiError } from '../../core/api.ts';
@@ -265,7 +266,8 @@ export default function NeighborsTab({
                     )
                   }
                 >
-                  {member.is_trusted ? `${t(lang, 'groupAdmin.trusted')} ✓` : t(lang, 'groupAdmin.endorseTrust')}
+                  {member.is_trusted && <CheckIcon className="icon-xs" />}
+                  {member.is_trusted ? t(lang, 'groupAdmin.trusted') : t(lang, 'groupAdmin.endorseTrust')}
                 </button>
 
                 {canRestrict && (

@@ -10,48 +10,47 @@ export const CATEGORIES = ['kitchen', 'cleaning', 'tools', 'living', 'outdoor'];
 
 export interface CatalogEntry {
   key: string;
-  emoji: string;
   category: string;
 }
 
 export const ITEMS: CatalogEntry[] = [
   // kitchen
-  { key: 'takoyaki_maker', emoji: '🐙', category: 'kitchen' },
-  { key: 'hot_plate', emoji: '🍳', category: 'kitchen' },
-  { key: 'rice_cooker_large', emoji: '🍚', category: 'kitchen' },
-  { key: 'donabe', emoji: '🍲', category: 'kitchen' },
-  { key: 'blender', emoji: '🥤', category: 'kitchen' },
-  { key: 'cassette_stove', emoji: '🔥', category: 'kitchen' },
-  { key: 'bread_maker', emoji: '🍞', category: 'kitchen' },
+  { key: 'takoyaki_maker', category: 'kitchen' },
+  { key: 'hot_plate', category: 'kitchen' },
+  { key: 'rice_cooker_large', category: 'kitchen' },
+  { key: 'donabe', category: 'kitchen' },
+  { key: 'blender', category: 'kitchen' },
+  { key: 'cassette_stove', category: 'kitchen' },
+  { key: 'bread_maker', category: 'kitchen' },
 
   // cleaning & laundry
-  { key: 'futon_dryer', emoji: '🛏️', category: 'cleaning' },
-  { key: 'vacuum_cleaner', emoji: '🧹', category: 'cleaning' },
-  { key: 'steam_iron', emoji: '👔', category: 'cleaning' },
-  { key: 'carpet_cleaner', emoji: '🧽', category: 'cleaning' },
-  { key: 'dehumidifier', emoji: '💧', category: 'cleaning' },
-  { key: 'high_pressure_washer', emoji: '🚿', category: 'cleaning' },
+  { key: 'futon_dryer', category: 'cleaning' },
+  { key: 'vacuum_cleaner', category: 'cleaning' },
+  { key: 'steam_iron', category: 'cleaning' },
+  { key: 'carpet_cleaner', category: 'cleaning' },
+  { key: 'dehumidifier', category: 'cleaning' },
+  { key: 'high_pressure_washer', category: 'cleaning' },
 
   // tools
-  { key: 'ladder', emoji: '🪜', category: 'tools' },
-  { key: 'power_drill', emoji: '🔩', category: 'tools' },
-  { key: 'tool_set', emoji: '🧰', category: 'tools' },
-  { key: 'extension_cord', emoji: '🔌', category: 'tools' },
-  { key: 'bicycle_pump', emoji: '🚲', category: 'tools' },
+  { key: 'ladder', category: 'tools' },
+  { key: 'power_drill', category: 'tools' },
+  { key: 'tool_set', category: 'tools' },
+  { key: 'extension_cord', category: 'tools' },
+  { key: 'bicycle_pump', category: 'tools' },
 
   // living
-  { key: 'projector', emoji: '📽️', category: 'living' },
-  { key: 'bluetooth_speaker', emoji: '🔊', category: 'living' },
-  { key: 'air_purifier', emoji: '🌬️', category: 'living' },
-  { key: 'electric_heater', emoji: '♨️', category: 'living' },
-  { key: 'board_game', emoji: '🎲', category: 'living' },
-  { key: 'baby_stroller', emoji: '👶', category: 'living' },
+  { key: 'projector', category: 'living' },
+  { key: 'bluetooth_speaker', category: 'living' },
+  { key: 'air_purifier', category: 'living' },
+  { key: 'electric_heater', category: 'living' },
+  { key: 'board_game', category: 'living' },
+  { key: 'baby_stroller', category: 'living' },
 
   // outdoor & travel
-  { key: 'lawn_mower', emoji: '🌱', category: 'outdoor' },
-  { key: 'hedge_trimmer', emoji: '✂️', category: 'outdoor' },
-  { key: 'camping_tent', emoji: '⛺', category: 'outdoor' },
-  { key: 'suitcase', emoji: '🧳', category: 'outdoor' },
+  { key: 'lawn_mower', category: 'outdoor' },
+  { key: 'hedge_trimmer', category: 'outdoor' },
+  { key: 'camping_tent', category: 'outdoor' },
+  { key: 'suitcase', category: 'outdoor' },
 ];
 
 // Handover spots: shared places only — never a home address or room number.
@@ -116,7 +115,7 @@ export function syncDynamicCatalog(records: CatalogItemRecord[]) {
   ITEMS.splice(
     0,
     ITEMS.length,
-    ...records.map((r) => ({ key: r.item_key, emoji: r.emoji, category: r.category }))
+    ...records.map((r) => ({ key: r.item_key, category: r.category }))
   );
   for (const r of records) saveLabels(dynamicItemLabels, r.item_key, r);
   changed();

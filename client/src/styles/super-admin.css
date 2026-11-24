@@ -513,14 +513,13 @@
   }
 }
 
-/* ---------- Categories ---------- */
-
-.item-svg {
-  display: block;
-  width: 1.6em;
-  height: 1.6em;
-  flex: none;
+/* Takes the free space beside an icon */
+.sa-grow {
+  flex: 1 1 240px;
+  min-width: 0;
 }
+
+/* ---------- Categories ---------- */
 
 .sa-category-grid {
   display: grid;
@@ -569,6 +568,11 @@
   background: var(--surface);
   color: var(--accent);
   cursor: pointer;
+}
+
+.sa-icon-option .item-svg {
+  width: 26px;
+  height: 26px;
 }
 
 .sa-icon-option.selected {

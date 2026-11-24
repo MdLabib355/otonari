@@ -2,8 +2,11 @@
 // unified with Otonari's account/session auth, S3/local storage, and Break-Glass governance.
 // Run with: DEMO_MODE=true node --test server/tests/*.test.ts
 
+import './testEnv.ts'; // first: it sets the settings that the other imports read
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import http from 'node:http';
+import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import express from 'express';
 import { createV1 } from '../api/v1.ts';
@@ -58,6 +61,34 @@ async function loginNickname(nickname: string): Promise<{ id: number; email: str
   const session = { id: row.id, email: row.email, token: loginRes.data.token as string, group_id: row.group_id };
   tokenCache.set(nickname, session);
   return session;
+}
+
+async function formReq(method: string, path: string, token: string, fields: Record<string, string | Blob>) {
+  const form = new FormData();
+  for (const [name, value] of Object.entries(fields)) form.append(name, value);
+  const res = await fetch(`${baseUrl}/api/v1${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  const text = await res.text();
+  return { status: res.status, data: text ? JSON.parse(text) : null };
+}
+
+// Only the first bytes are checked, so this is enough of a PNG.
+function pngFile(n: number): Blob {
+  return new Blob([Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, n)], { type: 'image/png' });
+}
+
+const uploadsDir = path.join(import.meta.dirname, '..', 'uploads');
+const uploadPath = (photo: string) => path.join(uploadsDir, path.basename(photo));
+const uploadExists = (photo: string) => fs.existsSync(uploadPath(photo));
+const countUploads = () => fs.readdirSync(uploadsDir).length;
+const makeUploadOld = (photo: string) => fs.utimesSync(uploadPath(photo), 0, 0);
+
+async function until(condition: () => boolean) {
+  for (let tries = 0; tries < 40 && !condition(); tries += 1) await new Promise((r) => setTimeout(r, 25));
+  assert.equal(condition(), true);
 }
 
 async function superAdminToken(): Promise<string> {
@@ -273,6 +304,73 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass, Catalog & Unif
 
     const audits = await apiReq('GET', '/super-admin/audit-logs?category=Catalog', { token });
     assert.ok(audits.data.some((a: { action: string }) => a.action === 'catalog.category_added'));
+  });
+
+  it('stores a photo per item: distinct on the shelf, owner replaces and clears it, orphan cleanup keeps it', async () => {
+    const maria = await loginNickname('Maria');
+    const ayesha = await loginNickname('Ayesha');
+    const add = async (token: string, extra: Record<string, string | Blob> = {}) =>
+      formReq('POST', '/items', token, { item_key: 'blender', max_days: '2', spot: 'mailbox', trusted_only: 'false', ...extra });
+
+    const one = await add(maria.token, { photo: pngFile(1) });
+    const two = await add(ayesha.token, { photo: pngFile(2) });
+    const plain = await apiReq('POST', '/items', {
+      token: maria.token,
+      body: { item_key: 'blender', max_days: 2, spot: 'mailbox' },
+    });
+    assert.deepEqual([one.status, two.status, plain.status], [201, 201, 201]);
+    assert.equal(plain.data.photo, null);
+    assert.equal(one.data.trusted_only, false);
+
+    const photosOnShelf = async () => {
+      const shelf = await apiReq('GET', '/items', { token: ayesha.token });
+      return new Map<number, string | null>(shelf.data.map((i: { id: number; photo: string | null }) => [i.id, i.photo]));
+    };
+    const shelf = await photosOnShelf();
+    assert.ok(shelf.get(one.data.id) && shelf.get(two.data.id));
+    assert.notEqual(shelf.get(one.data.id), shelf.get(two.data.id));
+    assert.equal(uploadExists(one.data.photo), true);
+
+    // Not an image, too large, wrong values: refused, and nothing is left behind
+    const filesBefore = countUploads();
+    assert.equal((await add(maria.token, { photo: new Blob(['hello']) })).status, 400);
+    assert.equal((await add(maria.token, { photo: new Blob([new Uint8Array(5 * 1024 * 1024 + 1)]) })).status, 413);
+    assert.equal((await add(maria.token, { photo: pngFile(3), spot: 'room 203' })).status, 400);
+    assert.equal((await formReq('PATCH', `/items/${one.data.id}`, ayesha.token, { photo: pngFile(4) })).status, 403);
+    await until(() => countUploads() === filesBefore);
+
+    // The owner replaces the photo and changes the settings; the old file is deleted
+    const replaced = await formReq('PATCH', `/items/${one.data.id}`, maria.token, {
+      photo: pngFile(5),
+      max_days: '7',
+      spot: 'entrance',
+      trusted_only: 'true',
+    });
+    assert.equal(replaced.status, 200);
+    assert.notEqual(replaced.data.photo, one.data.photo);
+    assert.deepEqual([replaced.data.max_days, replaced.data.spot, replaced.data.trusted_only], [7, 'entrance', true]);
+    assert.equal(uploadExists(one.data.photo), false);
+
+    const badDays = await apiReq('PATCH', `/items/${one.data.id}`, { token: maria.token, body: { max_days: 5 } });
+    assert.equal(badDays.status, 400);
+
+    // The cleanup of unused files keeps photos of items, people and groups
+    const avatar = await formReq('POST', '/me/avatar', maria.token, { photo: pngFile(6) });
+    const image = await formReq('POST', '/group-admin/image', (await loginNickname('Sato')).token, { photo: pngFile(7) });
+    const kept = [replaced.data.photo, avatar.data.user.avatar, image.data.image];
+    for (const photo of kept) makeUploadOld(photo);
+    const cleanup = await apiReq('POST', '/super-admin/operations/cleanup-uploads', {
+      token: await superAdminToken(),
+      body: { dry_run: false },
+    });
+    assert.equal(cleanup.status, 200);
+    for (const photo of kept) assert.equal(uploadExists(photo), true, `${photo} is in use`);
+
+    const cleared = await apiReq('PATCH', `/items/${one.data.id}`, { token: maria.token, body: { clear_photo: true } });
+    assert.equal(cleared.status, 200);
+    assert.equal(cleared.data.photo, null);
+    assert.equal(uploadExists(replaced.data.photo), false);
+    assert.equal((await photosOnShelf()).get(one.data.id), null);
   });
 
   it('enforces lent-item hide lock (409) and allows hiding/restoring available items', async () => {

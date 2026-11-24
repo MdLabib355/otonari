@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { GroupAdminLoan, Lang } from '../../../../shared/types.ts';
 import SpeakButton from '../../components/SpeakButton.tsx';
 import { api, ApiError } from '../../core/api.ts';
-import { findItem } from '../../data/catalog.ts';
+import ItemVisual from '../../components/ItemVisual.tsx';
 import { displayName, formatDate, itemName, meta, renderPhrase, spotName, t } from '../../i18n/index.ts';
 
 const MEDIATION_KEYS = ['admin.gentleReminder', 'admin.spotAssist', 'admin.receivedAtDesk'] as const;
@@ -86,9 +86,7 @@ export default function LoansTab({ lang, loans, onRefresh, onNotify }: LoansTabP
             <div key={loan.id} className={`ga-card ${loan.is_overdue ? 'ga-card-overdue' : ''}`}>
               <div className="ga-card-top">
                 <div className="ga-identity">
-                  <div className="ga-item-emoji" aria-hidden="true">
-                    {findItem(loan.item_key)?.emoji ?? '📦'}
-                  </div>
+                  <ItemVisual itemKey={loan.item_key} photo={loan.item_photo} alt="" />
                   <div>
                     <div className="ga-entity-name">
                       <span>

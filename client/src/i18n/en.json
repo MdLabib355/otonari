@@ -132,6 +132,8 @@
     "notifications.empty": "You're all caught up.",
     "notifications.markAllRead": "Mark all read",
     "common.cancel": "Cancel",
+    "myItems.edit": "Edit",
+    "myItems.photo": "Photo of the item (optional)",
     "common.close": "Close",
     "shelf.noMatch": "No items match.",
 

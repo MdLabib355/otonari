@@ -130,6 +130,7 @@ export async function createTables() {
       max_days INTEGER NOT NULL DEFAULT 3,
       spot TEXT NOT NULL,
       trusted_only BOOLEAN NOT NULL DEFAULT false,
+      photo TEXT, -- the owner's photo of it, like users.avatar; NULL = none
       status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','lent')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
       removed_at TIMESTAMPTZ,
@@ -246,6 +247,7 @@ export async function addNewColumns() {
     ALTER TABLE groups ADD COLUMN IF NOT EXISTS suspension_reason TEXT;
 
     ALTER TABLE items ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ;
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS photo TEXT;
 
     -- There are no co-admins anymore: they become equal group admins, before the roles are limited to three.
     -- (One statement list = one transaction, so nobody can be made a co-admin in between.)

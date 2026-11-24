@@ -13,6 +13,7 @@ export default function MyItems() {
   const { lang } = useUser();
   const [items, setItems] = useState<MyItem[] | null>(null); // null = still loading
   const [failed, setFailed] = useState(false);
+  const [editing, setEditing] = useState<MyItem | null>(null); // the item I'm about to change
   const [itemKey, setItemKey] = useState<string | null>(null); // the item I'm about to add
 
   function loadItems() {
@@ -30,6 +31,11 @@ export default function MyItems() {
     setItemKey(null);
     loadItems();
     window.scrollTo({ top: 0, behavior: 'smooth' }); // the new item appears in the list at the top
+  }
+
+  function handleEdited() {
+    setEditing(null);
+    loadItems();
   }
 
   async function removeItem(id: number) {
@@ -69,6 +75,7 @@ export default function MyItems() {
                   key={item.id}
                   item={item}
                   lang={lang}
+                  onEdit={setEditing}
                   onRemove={removeItem}
                   onTrustedOnly={changeTrustedOnly}
                 />
@@ -85,7 +92,16 @@ export default function MyItems() {
       </div>
 
       {itemKey && (
-        <AddItemDialog lang={lang} itemKey={itemKey} onAdded={handleAdded} onClose={() => setItemKey(null)} />
+        <AddItemDialog lang={lang} itemKey={itemKey} onSaved={handleAdded} onClose={() => setItemKey(null)} />
+      )}
+      {editing && (
+        <AddItemDialog
+          lang={lang}
+          itemKey={editing.item_key}
+          item={editing}
+          onSaved={handleEdited}
+          onClose={() => setEditing(null)}
+        />
       )}
     </section>
   );

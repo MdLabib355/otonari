@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Lang } from '../../../../shared/types.ts';
 import FilterStrip from '../../components/FilterStrip.tsx';
+import ItemVisual from '../../components/ItemVisual.tsx';
 import { useCatalog } from '../../data/catalog.ts';
 import { categoryName, itemName, t } from '../../i18n/index.ts';
 
@@ -23,9 +24,7 @@ export default function Catalog({ lang, onPick }: { lang: Lang; onPick: (itemKey
           <div className="catalog-grid">
             {items.filter((item) => item.category === key).map((item) => (
               <button key={item.key} type="button" className="catalog-item" onClick={() => onPick(item.key)}>
-                <span className="catalog-emoji" aria-hidden="true">
-                  {item.emoji}
-                </span>
+                <ItemVisual itemKey={item.key} alt="" size="sm" />
                 <span>{itemName(lang, item.key)}</span>
               </button>
             ))}

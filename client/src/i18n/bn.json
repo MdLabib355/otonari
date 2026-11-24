@@ -132,6 +132,8 @@
     "notifications.empty": "কোনো অপঠিত নোটিফিকেশন নেই।",
     "notifications.markAllRead": "সব পঠিত করুন",
     "common.cancel": "বাতিল",
+    "myItems.edit": "সম্পাদনা",
+    "myItems.photo": "জিনিসের ছবি (ঐচ্ছিক)",
     "common.close": "বন্ধ করুন",
     "shelf.noMatch": "কোনো জিনিস পাওয়া যায়নি।",
 

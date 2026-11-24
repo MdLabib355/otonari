@@ -3,7 +3,7 @@ import type { GroupAdminItem, Lang } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
 import SpeakButton from '../../components/SpeakButton.tsx';
 import { api, ApiError } from '../../core/api.ts';
-import { findItem } from '../../data/catalog.ts';
+import ItemVisual from '../../components/ItemVisual.tsx';
 import { displayName, itemName, spotName, t } from '../../i18n/index.ts';
 
 type ShelfFilter = 'all' | 'available' | 'lent' | 'trusted' | 'hidden';
@@ -92,9 +92,7 @@ export default function ShelfTab({ lang, items, onRefresh, onNotify }: ShelfTabP
               <div key={item.id} className={`ga-card ${isHidden ? 'ga-card-dimmed' : ''}`}>
                 <div className="ga-card-top">
                   <div className="ga-identity">
-                    <div className="ga-item-emoji" aria-hidden="true">
-                      {findItem(item.item_key)?.emoji ?? '📦'}
-                    </div>
+                    <ItemVisual itemKey={item.item_key} photo={item.photo} alt="" />
                     <div>
                       <div className="ga-entity-name">
                         <span>{label}</span>

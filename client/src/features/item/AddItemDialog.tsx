@@ -1,109 +1,72 @@
-import { useEffect, useRef, useState } from 'react';
-import type { Lang } from '../../../../shared/types.ts';
-import ChipGroup from '../../components/ChipGroup.tsx';
-import { CloseIcon } from '../../components/Icons.tsx';
+import { useState } from 'react';
+import type { Lang, MyItem } from '../../../../shared/types.ts';
+import ItemVisual from '../../components/ItemVisual.tsx';
+import Modal from '../../components/Modal.tsx';
+import PhotoField, { appendPhoto, type PhotoChange } from '../../components/PhotoField.tsx';
 import { api } from '../../core/api.ts';
-import { DURATIONS, SPOTS, findItem } from '../../data/catalog.ts';
-import { itemName, spotName, t } from '../../i18n/index.ts';
-import TrustedSwitch from './TrustedSwitch.tsx';
+import { itemName, t } from '../../i18n/index.ts';
+import LendingFields, { NEW_LENDING, appendLending, type Lending } from './LendingFields.tsx';
 
 interface Props {
   lang: Lang;
   itemKey: string;
-  onAdded: () => void;
+  item?: MyItem; // to change one of my items; without it: a new one
+  onSaved: () => void;
   onClose: () => void;
 }
 
-// Spot names are lowercase because they sit inside sentences ("at the building entrance").
-// On a chip they look better with a capital letter (no effect on Japanese or Bengali).
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-// How I lend the item I picked. It starts with sensible defaults, so often one tap is enough.
-// <dialog> is the browser's own dialog: it keeps the keyboard focus inside, and Escape closes it.
-export default function AddItemDialog({ lang, itemKey, onAdded, onClose }: Props) {
-  const [maxDays, setMaxDays] = useState(3);
-  const [spot, setSpot] = useState('entrance');
-  const [trustedOnly, setTrustedOnly] = useState(false);
+// How I lend an item: the one I have just picked in the catalog, or one that I already lend.
+export default function AddItemDialog({ lang, itemKey, item, onSaved, onClose }: Props) {
+  const [lending, setLending] = useState<Lending>(item ?? NEW_LENDING);
+  const [photo, setPhoto] = useState<PhotoChange>(undefined);
   const [busy, setBusy] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [failed, setFailed] = useState(false);
-  const dialog = useRef<HTMLDialogElement>(null);
 
-  useEffect(() => {
-    if (!dialog.current?.open) dialog.current?.showModal();
-  }, []);
-
-  async function addItem() {
+  async function save() {
     setBusy(true);
     setFailed(false);
     try {
-      await api.post('/items', { item_key: itemKey, max_days: maxDays, spot, trusted_only: trustedOnly });
-      onAdded();
+      const form = new FormData();
+      appendLending(form, lending);
+      appendPhoto(form, photo);
+      if (item) {
+        await api.patch(`/items/${item.id}`, form);
+      } else {
+        form.append('item_key', itemKey);
+        await api.post('/items', form);
+      }
+      onSaved();
     } catch {
       setFailed(true);
       setBusy(false);
     }
   }
 
-  const durationOptions = DURATIONS.map((n) => ({
-    value: n,
-    label: n === 1 ? t(lang, 'borrow.day') : t(lang, 'borrow.days', { n }),
-  }));
-  const spotOptions = SPOTS.map((key) => ({ value: key, label: capitalize(spotName(lang, key)) }));
-
   return (
-    <dialog
-      ref={dialog}
-      className="modal-backdrop"
-      aria-labelledby="add-item-title"
+    <Modal
+      title={itemName(lang, itemKey)}
+      icon={<ItemVisual itemKey={itemKey} alt="" size="sm" />}
       onClose={onClose}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose(); // a tap beside the dialog
-      }}
     >
-      <div className="modal-dialog">
-        <div className="modal-header">
-          <div className="inline-icon-text">
-            <span className="item-emoji" aria-hidden="true">
-              {findItem(itemKey)?.emoji}
-            </span>
-            <h2 id="add-item-title">{itemName(lang, itemKey)}</h2>
-          </div>
-          <button type="button" className="icon-close-btn" aria-label={t(lang, 'common.close')} onClick={onClose}>
-            <CloseIcon className="icon-sm" />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <div className="field">
-            <p className="label">{t(lang, 'myItems.maxDays')}</p>
-            <ChipGroup
-              label={t(lang, 'myItems.maxDays')}
-              options={durationOptions}
-              value={maxDays}
-              onChange={setMaxDays}
-            />
-          </div>
-          <div className="field">
-            <p className="label">{t(lang, 'myItems.spot')}</p>
-            <ChipGroup label={t(lang, 'myItems.spot')} options={spotOptions} value={spot} onChange={setSpot} />
-          </div>
-          <TrustedSwitch lang={lang} checked={trustedOnly} onChange={setTrustedOnly} />
-          <p className="hint">{t(lang, 'trust.explain')}</p>
-          <p className="hint">{t(lang, 'trust.hint')}</p>
-          {failed && <p className="error">{t(lang, 'common.error')}</p>}
-        </div>
-
-        <div className="modal-footer">
-          <button type="button" className="button-secondary" onClick={onClose}>
-            {t(lang, 'common.cancel')}
-          </button>
-          <button type="button" className="button-primary" disabled={busy} onClick={addItem}>
-            {findItem(itemKey)?.emoji} {t(lang, 'myItems.save')}
-          </button>
-        </div>
+      <div className="modal-body">
+        <PhotoField lang={lang} current={item?.photo} change={photo} onChange={setPhoto} onBusy={setPreparing} />
+        <LendingFields
+          lang={lang}
+          value={lending}
+          onChange={setLending}
+          spotLocked={item !== undefined && item.status !== 'available'}
+        />
+        {failed && <p className="error">{t(lang, 'common.error')}</p>}
       </div>
-    </dialog>
+      <div className="modal-footer">
+        <button type="button" className="button-secondary" onClick={onClose}>
+          {t(lang, 'common.cancel')}
+        </button>
+        <button type="button" className="button-primary" disabled={busy || preparing} onClick={save}>
+          {t(lang, item ? 'profile.save' : 'myItems.save')}
+        </button>
+      </div>
+    </Modal>
   );
 }

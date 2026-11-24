@@ -12,6 +12,7 @@ import { createMessage } from '../message/messageModel.ts';
 
 interface GroupLoanQueryRow extends LoanRow {
   item_key: string;
+  item_photo: string | null;
   spot: string;
   borrower_nickname: string;
   borrower_lang: Lang;
@@ -59,7 +60,7 @@ async function listTimelineForLoan(loanId: number): Promise<GroupAdminLoanTimeli
 export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdminLoan[]> {
   const rows = await query<GroupLoanQueryRow>(
     `SELECT loans.*,
-            items.item_key, items.spot,
+            items.item_key, items.photo AS item_photo, items.spot,
             borrower.nickname AS borrower_nickname, borrower.lang AS borrower_lang,
             lender.nickname AS lender_nickname, lender.lang AS lender_lang,
             dispute.reason_key AS flagged_reason,
@@ -98,8 +99,9 @@ export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdmi
   return Promise.all(
     rows.map(async (row) => {
       const isOverdue = row.status === 'active' && !row.return_photo && Date.parse(row.end_at) < now;
-      const [timeline, signedHandover, signedReturn] = await Promise.all([
+      const [timeline, itemPhoto, signedHandover, signedReturn] = await Promise.all([
         listTimelineForLoan(row.id),
+        photoUrl(row.item_photo),
         photoUrl(row.handover_photo),
         photoUrl(row.return_photo),
       ]);
@@ -107,6 +109,7 @@ export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdmi
         id: row.id,
         item_id: row.item_id,
         item_key: row.item_key,
+        item_photo: itemPhoto,
         spot: row.spot,
         status: row.status,
         is_overdue: isOverdue,

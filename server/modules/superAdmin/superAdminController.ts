@@ -270,7 +270,7 @@ export async function listCatalog() {
 
 export async function createCatalogEntry(req: Request) {
   const itemKey = toText(req.body?.item_key).toLowerCase();
-  const emoji = toText(req.body?.emoji);
+  const emoji = toText(req.body?.emoji); // not shown anymore; older clients still send it
   const category = toText(req.body?.category);
   const labelEn = toText(req.body?.label_en);
   const labelJa = toText(req.body?.label_ja);
@@ -280,7 +280,7 @@ export async function createCatalogEntry(req: Request) {
   if (!ITEM_KEY_PATTERN.test(itemKey)) {
     return refuse(400, 'item_key must be snake_case (2-40 lowercase letters, digits, underscores)');
   }
-  if (!emoji || emoji.length > 8) return refuse(400, 'emoji is required');
+  if (emoji.length > 8) return refuse(400, 'emoji is too long');
   if (!(await isActiveCategoryKey(category))) return refuse(400, 'category must be an active category');
   if (!labelEn || !labelJa || !labelJaEasy || !labelBn) {
     return refuse(400, 'All 4 language translations (en, ja, ja-easy, bn) are required');
@@ -309,7 +309,7 @@ export async function createCatalogEntry(req: Request) {
     action: 'catalog.item_added',
     targetType: 'catalog',
     targetId: itemKey,
-    detail: `Added ${emoji} ${itemKey} (${category}) with verified 4-locale translations.`,
+    detail: `Added ${itemKey} (${category}) with verified 4-locale translations.`,
     ipAddress: req.ip ?? null,
   });
 
@@ -338,8 +338,8 @@ export async function updateCatalogEntry(req: Request) {
   if (nextCategory !== existing.category && !(await isActiveCategoryKey(nextCategory))) {
     return refuse(400, 'category must be an active category');
   }
-  if (!nextEn || !nextJa || !nextJaEasy || !nextBn || !nextEmoji) {
-    return refuse(400, 'Emoji and all 4 language translations must remain non-empty');
+  if (!nextEn || !nextJa || !nextJaEasy || !nextBn) {
+    return refuse(400, 'All 4 language translations must remain non-empty');
   }
 
   const updated = await updateCatalogItemRecord(itemKey, {

@@ -81,8 +81,3 @@
   border-color: var(--accent);
   background: var(--bg);
 }
-
-.catalog-emoji {
-  font-size: 1.8em;
-  line-height: 1;
-}

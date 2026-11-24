@@ -1,4 +1,4 @@
-// The icons of the app's controls. (Household items keep their emoji, see data/catalog.ts.)
+// The icons of the app's controls. (Household items: ItemIcons.tsx.)
 // The shapes are from Heroicons 2.2 (https://heroicons.com, MIT license, (c) Tailwind Labs, Inc.).
 
 function outlineIcon(paths: string[]) {

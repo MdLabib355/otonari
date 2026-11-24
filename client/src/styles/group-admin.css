@@ -146,19 +146,6 @@
   flex-shrink: 0;
 }
 
-.ga-item-emoji {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  font-size: 1.6em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
 .ga-entity-name {
   display: flex;
   flex-wrap: wrap;
@@ -482,11 +469,6 @@
 body.elder .ga-avatar {
   width: 58px;
   height: 58px;
-}
-
-body.elder .ga-item-emoji {
-  width: 64px;
-  height: 64px;
 }
 
 body.elder .ga-badge {
