@@ -1,0 +1,110 @@
+/* ---------- Item Page ---------- */
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap);
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.item-header h1 {
+  margin: 0;
+}
+
+.item-header .muted {
+  margin: 2px 0 0;
+}
+
+.item-header-emoji {
+  font-size: 3em;
+  line-height: 1;
+}
+
+.item-facts {
+  margin: 12px 0 18px;
+  color: var(--muted);
+}
+
+.notice {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+.tip-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid rgba(31, 75, 110, 0.18);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  background: #f2f6fa;
+  font-size: 0.92em;
+  line-height: 1.5;
+}
+
+.tip-icon {
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+.tip-card p {
+  margin: 0;
+}
+
+.chip-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.period {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.period-pill {
+  display: inline-block;
+  margin: 12px 0 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.88em;
+  font-weight: 600;
+}
+
+.preview {
+  margin-bottom: 20px;
+}
+
+.preview-bubble {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius) var(--radius) var(--radius) 4px;
+  background: var(--surface);
+  font-size: 1.05em;
+  line-height: 1.6;
+}
+
+/* No padding while there is no banner */
+.alerts-container:empty {
+  padding: 0;
+}

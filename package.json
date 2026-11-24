@@ -3,17 +3,18 @@
   "private": true,
   "description": "Borrow from next door, in your own language. A PWA for neighbors in Japan.",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.18"
   },
   "scripts": {
     "postinstall": "npm install --prefix client && npm install --prefix server",
     "dev": "concurrently --names server,client --prefix-colors blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "seed": "node server/db/seed.js",
-    "seed:empty": "node server/db/seed.js --empty",
-    "test": "node --test --test-concurrency=1 server/test/*.test.js",
+    "db": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db",
+    "seed": "node server/seed.ts",
+    "seed:empty": "node server/seed.ts --empty",
     "build": "npm run build --prefix client",
     "render-build": "npm install --include=dev && npm run build",
-    "start": "node server/index.js"
+    "typecheck": "npm run typecheck --prefix server && npm run typecheck --prefix client",
+    "start": "node server/index.ts"
   },
   "devDependencies": {
     "concurrently": "^10.0.7"

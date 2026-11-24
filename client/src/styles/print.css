@@ -1,0 +1,61 @@
+/* ---------- Printing: Join Poster on One A4 Page ---------- */
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  .app-header,
+  .bottom-nav,
+  .banner-area,
+  .print-button {
+    display: none !important;
+  }
+
+  body {
+    background: none;
+  }
+
+  .app-shell,
+  .page,
+  .narrow-page,
+  body.elder .page {
+    max-width: none;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .poster {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 270mm;
+    margin: 0;
+    padding: 16mm 15mm 0;
+    border: none;
+    box-shadow: none;
+    font-size: 13.5pt;
+  }
+
+  .poster h1 {
+    font-size: 1.6em;
+  }
+
+  .poster-qr {
+    min-height: 50mm;
+    max-width: 110mm;
+  }
+
+  .poster .big-code {
+    font-size: 3em;
+  }
+
+  .poster-texts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4mm;
+    font-size: 0.9em;
+  }
+}

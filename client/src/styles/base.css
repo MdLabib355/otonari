@@ -1,0 +1,47 @@
+/* Otonari: responsive mobile-first CSS with full-bleed desktop navigation,
+   Heroicons SVG styling, Elder Mode scaling, and single-page A4 poster print. */
+
+:root {
+  --accent: #1f4b6e; /* Japanese indigo (藍色) */
+  --accent-hover: #173a56;
+  --accent-soft: #e6eff6;
+  --danger: #b3261e;
+  --danger-soft: #fdecec;
+  --warn: #9a5b00;
+  --stamp-border: #d4a017;
+  --stamp-bg: #fff9e6;
+  --quiet: #ede8df;
+  --bg: #f6f2ea; /* warm washi off-white */
+  --surface: #ffffff;
+  --text: #232629;
+  --muted: #66635d;
+  --border: #e4ddd1;
+  --border-hover: #cbc2b4;
+  --radius: 14px;
+  --radius-lg: 18px;
+  --tap: 44px; /* elder mode raises this to 64px */
+  --container-max: 1024px;
+  --shadow-sm: 0 1px 2px rgba(25, 35, 48, 0.05);
+  --shadow-md: 0 6px 20px rgba(25, 35, 48, 0.08);
+  --shadow-lg: 0 14px 36px rgba(25, 35, 48, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", Meiryo,
+    "Noto Sans JP", "Nirmala UI", "Noto Sans Bengali", sans-serif;
+  /* Natural readable base size; elder mode scales this cleanly to 22px. */
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}

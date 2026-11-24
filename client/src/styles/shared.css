@@ -1,0 +1,68 @@
+/* ---------- Shared Text & Badges ---------- */
+
+.subtitle {
+  margin: -4px 0 14px;
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.empty {
+  padding: 24px 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+section > h1,
+.subtitle,
+.group-preview,
+.demo-user,
+.muted,
+.notice,
+.bubble,
+.banner-text,
+.poster {
+  overflow-wrap: anywhere;
+}
+
+.section-title-mobile {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-available,
+.badge-pending,
+.badge-accepted,
+.badge-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badge-reserved,
+.badge-lent,
+.badge-declined,
+.badge-cancelled,
+.badge-returned {
+  background: var(--quiet);
+  color: var(--muted);
+}
+
+.badge-mine {
+  border: 1px solid var(--border);
+  color: var(--muted);
+}

@@ -1,0 +1,114 @@
+/* ---------- Polish Pass: Search Clear, Add/Edit Modal, Loan Stepper, Manager KPIs & Lang Switcher ---------- */
+
+.search-clear-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.search-clear-btn:hover {
+  background: var(--quiet);
+  color: var(--text);
+}
+
+.empty-filter-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
+}
+
+/* Preview header with target language pill */
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.preview-header .label {
+  margin: 0;
+}
+
+.empty-filter-state p {
+  margin: 0;
+}
+
+/* 4-step visual loan lifecycle stepper */
+.loan-stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 14px 0 0;
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  list-style: none;
+}
+
+.stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.stepper-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-hover);
+  background: var(--surface);
+  font-size: 0.76em;
+  font-weight: 700;
+}
+
+.stepper-step.current {
+  color: var(--accent);
+}
+
+.stepper-step.current .stepper-dot {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.stepper-step.done {
+  color: var(--accent);
+}
+
+.stepper-step.done .stepper-dot {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.stepper-label {
+  font-size: 0.72em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}

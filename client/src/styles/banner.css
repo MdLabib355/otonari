@@ -1,0 +1,57 @@
+/* ---------- Banners (Live Message & Due/Overdue) ---------- */
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+}
+
+.banner-emoji {
+  font-size: 1.8em;
+  line-height: 1;
+}
+
+.banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.banner-text p {
+  margin: 2px 0 0;
+  font-size: 0.95em;
+}
+
+.banner-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trust-line {
+  margin: 0;
+  color: var(--muted);
+}
+
+.banner .trust-line {
+  margin-top: 6px;
+  color: inherit;
+  font-weight: 600;
+}
+
+.banner-open {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}

@@ -1,16 +1,11 @@
-node_modules
-client/node_modules
-server/node_modules
-client/dist
+# What the images must not contain (and what would make the build slow)
 .git
-.gitignore
-.env
-server/.env
-docs
-*.md
-server/test
+**/node_modules
+**/.env
+**/dist
+**/*.db*
 server/uploads/*
 !server/uploads/.gitkeep
-dev-volume
-*.db*
-*.log
+docs
+old_client
+*.md

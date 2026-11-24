@@ -1,0 +1,168 @@
+/* ---------- Elder Mode (<body class="elder">) ---------- */
+
+body.elder {
+  --tap: 64px;
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+
+body.elder .page {
+  padding: 24px 16px 36px;
+}
+
+body.elder .field,
+body.elder .step,
+body.elder .quick-replies {
+  margin-bottom: 32px;
+}
+
+body.elder .label {
+  margin-bottom: 12px;
+}
+
+body.elder .chip-group,
+body.elder .chip-stack,
+body.elder .actions,
+body.elder .item-grid,
+body.elder .catalog-grid,
+body.elder .messages,
+body.elder .demo-buttons {
+  gap: 16px;
+}
+
+body.elder .my-item,
+body.elder .loan-card {
+  margin-bottom: 16px;
+  padding: 18px;
+}
+
+body.elder .bubble {
+  padding: 14px 18px;
+}
+
+body.elder .chip {
+  padding: 10px 20px;
+}
+
+body.elder .item-grid {
+  grid-template-columns: repeat(auto-fill, minmax(9.5em, 1fr));
+}
+
+body.elder .catalog-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.elder .item-header,
+body.elder .banner {
+  flex-wrap: wrap;
+}
+
+body.elder .my-item-text {
+  flex-basis: 8em;
+}
+
+body.elder .my-item .button-secondary {
+  width: 100%;
+}
+
+body.elder .badge {
+  white-space: normal;
+}
+
+body.elder .shelf-search-row,
+body.elder .page-header-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+body.elder .app-header-inner {
+  height: auto;
+  min-height: 74px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+body.elder .bottom-nav a {
+  height: 76px;
+}
+
+body.elder .search-input,
+body.elder .available-toggle,
+body.elder .filter-chip {
+  height: auto;
+  min-height: var(--tap);
+}
+
+body.elder .available-toggle {
+  align-self: flex-start;
+}
+
+body.elder .filter-strip {
+  flex-wrap: wrap;
+}
+
+body.elder .speak-button {
+  gap: 10px;
+  width: auto;
+  padding: 0 18px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 600;
+  opacity: 1;
+}
+
+body.elder .speak-text {
+  display: inline;
+}
+
+body.elder .bubble-main {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+body.elder .bubble-main .speak-button {
+  margin: 12px 0 0;
+}
+
+body.elder .banner-buttons {
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+
+body.elder .banner-buttons > * {
+  flex: auto;
+  justify-content: center;
+}
+
+body.elder .modal-footer {
+  flex-direction: column-reverse;
+  align-items: stretch;
+}
+
+body.elder .icon-close-btn,
+body.elder .search-clear-btn {
+  min-width: var(--tap);
+  min-height: var(--tap);
+}
+
+body.elder .desktop-nav-link {
+  min-height: var(--tap);
+}
+
+body.elder .header-user-pill {
+  min-height: var(--tap);
+}
+
+body.elder .loan-stepper {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Not enough room for the group name beside the tabs. */
+@media (min-width: 768px) and (max-width: 959px) {
+  body.elder .header-group {
+    display: none;
+  }
+}

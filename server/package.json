@@ -3,17 +3,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.ts",
+    "typecheck": "tsc"
   },
   "nodemonConfig": {
     "watch": [
       "."
     ],
-    "ext": "js",
+    "ext": "ts",
+    "execMap": {
+      "ts": "node"
+    },
     "ignore": [
       "node_modules/",
-      "uploads/",
-      "test/"
+      "uploads/"
     ]
   },
   "dependencies": {
@@ -21,11 +24,15 @@
     "dotenv": "^18.0.10",
     "express": "^5.3.0",
     "multer": "^2.5.0",
-    "pg": "^8.13.0",
-    "swagger-ui-express": "^5.0.1",
-    "web-push": "^3.6.7"
+    "pg": "^8.23.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "nodemon": "^3.1.14",
+    "typescript": "^7.0.2"
   }
 }

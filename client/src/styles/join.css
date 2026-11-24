@@ -1,0 +1,119 @@
+/* ---------- Join & Public Pages ---------- */
+
+.brand {
+  margin-bottom: 18px;
+}
+
+.brand-name {
+  font-family: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.45em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.brand-tagline {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.group-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+.group-preview p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.group-preview strong {
+  display: block;
+}
+
+.group-icon-svg {
+  width: 2em;
+  height: 2em;
+  color: var(--accent);
+  flex: none;
+}
+
+.demo {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--border);
+}
+
+.demo h2 {
+  color: var(--muted);
+  font-size: 0.92em;
+}
+
+.demo-users {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.demo-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.demo-user:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.demo-user.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  cursor: default;
+}
+
+.demo-user span {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+.text-button {
+  min-height: var(--tap);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  text-decoration: underline;
+}
+
+.big-code {
+  margin: 10px 0 18px;
+  color: var(--accent);
+  font-size: 2.1em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-align: center;
+}

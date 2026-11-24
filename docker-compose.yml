@@ -1,39 +1,59 @@
+# Everything at once:  docker compose up
+# Then open http://localhost:8088  (another port:  OTONARI_PORT=9000 docker compose up)
+# The server fills an empty database with the demo data. Start again from zero:  docker compose down -v
+
+name: otonari
+
 services:
   db:
-    image: postgres:16-alpine
-    restart: unless-stopped
+    image: postgres:17-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-otonari}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-otonari}
-      POSTGRES_DB: ${POSTGRES_DB:-otonari}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Not a secret: this database can only be reached from the containers below.
+      POSTGRES_USER: otonari
+      POSTGRES_PASSWORD: otonari
+      POSTGRES_DB: otonari
     volumes:
-      - otonari_pgdata:/var/lib/postgresql/data
+      - database:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-otonari} -d ${POSTGRES_DB:-otonari}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      # 127.0.0.1: while the image sets itself up, it answers only on its local socket.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U otonari -d otonari']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    restart: on-failure
 
-  app:
+  server:
     build:
       context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
+      dockerfile: server/Dockerfile
+    init: true # stops immediately on Ctrl+C
+    environment:
+      PORT: 3001
+      DEMO_MODE: 'true'
+      DATABASE_URL: postgres://otonari:otonari@db:5432/otonari
+    volumes:
+      - photos:/app/server/uploads
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      PORT: 3001
-      DATABASE_URL: postgres://${POSTGRES_USER:-otonari}:${POSTGRES_PASSWORD:-otonari}@db:5432/${POSTGRES_DB:-otonari}
-      UPLOADS_DIR: /data/uploads
-      DEMO_MODE: ${DEMO_MODE:-true}
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3001/api/health']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    restart: on-failure
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
     ports:
-      - "${PORT:-3001}:3001"
-    volumes:
-      - otonari_uploads:/data/uploads
+      - '${OTONARI_PORT:-8088}:80'
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: on-failure
 
 volumes:
-  otonari_pgdata:
-  otonari_uploads:
+  database:
+  photos:

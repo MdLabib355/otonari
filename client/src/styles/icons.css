@@ -1,0 +1,24 @@
+/* ---------- Icons ---------- */
+
+.icon {
+  width: 1.35em;
+  height: 1.35em;
+  flex: none;
+  stroke-width: 1.85;
+}
+
+.icon-sm {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+.icon-xs {
+  width: 0.95em;
+  height: 0.95em;
+}
+
+.inline-icon-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
