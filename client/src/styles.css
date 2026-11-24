@@ -170,7 +170,7 @@ h2 {
   cursor: default;
 }
 
-/* Chips (components/ChipGroup.jsx): big tap targets, the selected one is filled */
+/* Chips (components/ChipGroup.tsx): big tap targets, the selected one is filled */
 .chip-group {
   display: flex;
   flex-wrap: wrap;

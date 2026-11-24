@@ -35,7 +35,7 @@ Otonari (お隣, "next door") is an installable web app (PWA) that lets neighbor
 
 ## How to run
 
-You need [Node.js](https://nodejs.org) 22.12 or newer. There are no API keys and nothing to sign up for.
+You need [Node.js](https://nodejs.org) 22.18 or newer. There are no API keys and nothing to sign up for.
 
 **1. Install** (once)
 
@@ -90,6 +90,7 @@ To install the app, choose "Install app" in the browser's menu ("Add to Home Scr
 | `npm run seed:empty` | The same reset, but with only the two groups and nobody in them: for a demo with real people. |
 | `npm run dev` | Server (port 3001) and client (port 5173) with automatic reload. |
 | `npm run build` | Builds the client. Run it again after every change. |
+| `npm run typecheck` | Checks the types of client and server. |
 | `npm start` | Runs the server with the built client on port 3001. |
 
 Settings in `server/.env`: `PORT`, and `DEMO_MODE`. With `DEMO_MODE=true`, an active loan has fast-forward buttons for the reminders, and the join page offers "continue as a neighbor": only for the demo neighbors from `npm run seed`, never for people who joined with a code. `DEMO_MODE=false` hides both.
@@ -108,35 +109,36 @@ The address is HTTPS, so phones can install the app. The free plan sleeps after 
 
 ## Tech stack
 
-- **Client:** React 18, Vite, react-router-dom, plain JavaScript and plain CSS, `qrcode` for the poster, `vite-plugin-pwa` to make it installable
-- **Server:** Node.js, Express, better-sqlite3, multer for photo uploads, cors, dotenv
+- **Client:** React 18, Vite, react-router-dom, TypeScript and plain CSS, `qrcode` for the poster, `vite-plugin-pwa` to make it installable
+- **Server:** Node.js (runs the TypeScript files directly), TypeScript, Express, better-sqlite3, multer for photo uploads, cors, dotenv
 - **Database:** one SQLite file (`server/otonari.db`); photos in `server/uploads/`
 - **Development:** concurrently, nodemon
 
-No TypeScript, CSS framework or state library: the code is meant to be read and explained by everyone on the team.
+No CSS framework or state library: the code is meant to be read and explained by everyone on the team.
 
 ## Project structure
 
 ```
 otonari/
+├── shared/types.ts           the types of the API answers, used by both sides
 ├── client/                   the React app
 │   ├── public/               the app icons (drawn by make-icons.ps1)
 │   └── src/
 │       ├── pages/            one file per screen: Join, Shelf, ItemPage, MyItems, Loans, LoanPage, Settings, Poster
 │       ├── components/       Banner, PhraseBubble, SpeakButton, PhotoCapture, TrustLine, TipCard, ...
-│       ├── i18n/             en.json, ja.json, ja-easy.json, bn.json, and index.js, which renders the phrases
-│       ├── data/catalog.js   the items, handover spots, quick replies and loan lengths to choose from
-│       ├── App.jsx           routes, bottom navigation, new-message banner
-│       └── api.js, useInbox.js, UserContext.js, serviceWorker.js, styles.css
+│       ├── i18n/             en.json, ja.json, ja-easy.json, bn.json, and index.ts, which renders the phrases
+│       ├── data/catalog.ts   the items, handover spots, quick replies and loan lengths to choose from
+│       ├── App.tsx           routes, bottom navigation, new-message banner
+│       └── api.ts, useInbox.ts, UserContext.ts, serviceWorker.ts, styles.css
 ├── server/                   the Express API
-│   ├── index.js              starts the server (and serves the built client)
-│   ├── db.js                 database tables and small helpers
+│   ├── index.ts              starts the server (and serves the built client)
+│   ├── db.ts                 database tables and small helpers
 │   ├── routes/               groups, items, loans, inbox, demo
-│   ├── reminders.js          the polite reminders, checked every 30 seconds
-│   ├── photos.js             photo uploads
-│   ├── auth.js               token → user
-│   ├── allowedKeys.js        the only keys and values the server accepts
-│   └── seed.js               the demo data
+│   ├── reminders.ts          the polite reminders, checked every 30 seconds
+│   ├── photos.ts             photo uploads
+│   ├── auth.ts               token → user
+│   ├── allowedKeys.ts        the only keys and values the server accepts
+│   └── seed.ts               the demo data
 ├── docs/screenshots/
 ├── CLAUDE.md                 our specification
 └── BUILD_PROMPTS.md          our build steps

@@ -1,0 +1,15 @@
+{
+  // Only checks the types (npm run typecheck). Node runs the .ts files directly, without a build step.
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "nodenext",
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true, // Node only removes types: no enums and the like
+    "verbatimModuleSyntax": true // types are imported with "import type"
+  },
+  "include": ["."]
+}

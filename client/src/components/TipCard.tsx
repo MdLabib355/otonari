@@ -1,0 +1,13 @@
+import type { Lang } from '../../../shared/types.ts';
+import { tip, type TipKey } from '../i18n/index.ts';
+
+// A small etiquette tip shown at the right moment:  <TipCard lang={lang} tipKey="beforeRequest" />
+// The texts are in the "tips" section of the language files.
+export default function TipCard({ lang, tipKey }: { lang: Lang; tipKey: TipKey }) {
+  return (
+    <aside className="tip-card">
+      <span aria-hidden="true">💡</span>
+      <p>{tip(lang, tipKey)}</p>
+    </aside>
+  );
+}

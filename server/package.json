@@ -3,12 +3,25 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.ts",
+    "typecheck": "tsc"
   },
   "nodemonConfig": {
-    "watch": ["."],
-    "ext": "js",
-    "ignore": ["node_modules/", "uploads/", "*.db", "*.db-journal", "*.db-wal", "*.db-shm"]
+    "watch": [
+      "."
+    ],
+    "ext": "ts",
+    "execMap": {
+      "ts": "node"
+    },
+    "ignore": [
+      "node_modules/",
+      "uploads/",
+      "*.db",
+      "*.db-journal",
+      "*.db-wal",
+      "*.db-shm"
+    ]
   },
   "dependencies": {
     "better-sqlite3": "^13.2.0",
@@ -18,6 +31,12 @@
     "multer": "^2.5.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^22.20.5",
+    "nodemon": "^3.1.14",
+    "typescript": "^7.0.2"
   }
 }

@@ -48,7 +48,7 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
   random join code (`XXXX-XXXX`) and a button to the group's poster. The creator does not become a member.
   If a group with a similar name exists in the same city, they are asked to look for its poster first
   ("Create anyway" is possible). Another group's code is never shown.
-- Add items to share by picking from the **fixed item catalog** (`client/src/data/catalog.js`),
+- Add items to share by picking from the **fixed item catalog** (`client/src/data/catalog.ts`),
   choosing max loan days and a **handover spot** (never a home address or room number).
 - Browse the shelf: all items in my group, with emoji icon, item name (in my language), owner nickname,
   status (available / lent / mine).
@@ -107,21 +107,24 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 
 ## 3. Tech stack (fixed)
 
-- **Client**: React 18 + Vite, **plain JavaScript (no TypeScript)**, `react-router-dom`, plain CSS
+- **Client**: React 18 + Vite, **TypeScript (strict)**, `react-router-dom`, plain CSS
   (`client/src/styles.css`), `vite-plugin-pwa`, `qrcode` (for the poster).
-- **Server**: Node.js 20+ (LTS), Express, `better-sqlite3`, `multer` (photo upload), `cors`, `dotenv`,
-  `nodemon` (dev only: restarts the server when a server `.js` file is saved).
+- **Server**: Node.js 22.18+ (runs the `.ts` files directly, no build step), TypeScript, Express, `better-sqlite3`, `multer` (photo upload), `cors`, `dotenv`,
+  `nodemon` (dev only: restarts the server when a server `.ts` file is saved).
 - **Database**: SQLite file `server/otonari.db` (git-ignored). Recreated + seeded with `npm run seed`.
 - **Photos**: saved to `server/uploads/` (git-ignored, keep `.gitkeep`), served at `/uploads/...`.
 - **Dev**: root `package.json` runs both with `concurrently` → `npm run dev`.
   Client on port 5173, server on port 3001, Vite proxies `/api` and `/uploads` to 3001.
-  The server runs under `nodemon` (config in `server/package.json`): it watches only server `.js` files and
+  The server runs under `nodemon` (config in `server/package.json`): it watches only server `.ts` files and
   ignores `node_modules`, `uploads/` and the database files, so database writes, seeding and photo uploads
   never restart it. (Not `node --watch`: on Windows it restarts when files are merely read.)
 - **For the demo, always use `npm run build` + `npm start` (no file watcher).**
 - **Deploy** (Render.com, one free Node web service): build `npm run render-build`, start `npm start`,
   environment `NODE_VERSION=22` and `DEMO_MODE=true` (Render sets `PORT`). The free plan loses the database
   and the photos on every restart, so a server that starts without any groups runs the normal seed.
+- **Types**: `shared/types.ts` (the API answers, used by both sides with `import type`) and `server/types.ts`
+  (database rows). `typescript` and the `@types/*` packages are dev dependencies; `npm run typecheck` checks
+  both sides. Vite and Node only remove the types, they don't check them.
 - **No API keys or secrets exist in this project.** `.env` holds only `PORT` and `DEMO_MODE`.
   `.env` is in `.gitignore`; commit `.env.example`.
 
@@ -133,55 +136,59 @@ push notifications, maps, payments, SMS/email, real accounts, admin panel.
 otonari/
 ├── CLAUDE.md
 ├── README.md
-├── package.json            # root: "dev", "seed", "seed:empty", "build", "render-build", "start" scripts
+├── package.json            # root: "dev", "seed", "seed:empty", "build", "render-build", "typecheck", "start" scripts
 ├── .gitignore              # node_modules, .env, server/otonari.db, server/uploads/*, client/dist
 ├── docs/screenshots/       # the pictures in README.md
+├── shared/types.ts         # types of the API answers, used by client and server
 ├── client/
 │   ├── index.html
-│   ├── vite.config.js      # react plugin, PWA plugin, proxy /api and /uploads → :3001
+│   ├── tsconfig.json       # type checking only
+│   ├── vite.config.ts      # react plugin, PWA plugin, proxy /api and /uploads → :3001
 │   ├── make-icons.ps1      # draws the icons in public/
 │   ├── public/             # icons for PWA (icon-192.png, icon-512.png, icon-maskable-512.png)
 │   └── src/
-│       ├── main.jsx
-│       ├── serviceWorker.js   # registers the service worker, reloads an open app after a deploy
-│       ├── App.jsx         # routes + bottom nav + notification banner
-│       ├── api.js          # fetch wrapper; adds "Authorization: Bearer <token>"
-│       ├── UserContext.js  # useUser(): me, my group, my language and my inbox, for every page
-│       ├── useInbox.js     # my unread messages (banner, Loans badge, loan page)
+│       ├── main.tsx
+│       ├── serviceWorker.ts   # registers the service worker, reloads an open app after a deploy
+│       ├── App.tsx         # routes + bottom nav + notification banner
+│       ├── api.ts          # fetch wrapper; adds "Authorization: Bearer <token>"
+│       ├── UserContext.ts  # useUser(): me, my group, my language and my inbox, for every page
+│       ├── useInbox.ts     # my unread messages (banner, Loans badge, loan page)
 │       ├── styles.css
 │       ├── i18n/
-│       │   ├── index.js    # t(), renderPhrase(), formatDate(), useLang()
+│       │   ├── index.ts    # t(), renderPhrase(), formatDate(), useLang()
 │       │   ├── en.json  ja.json  ja-easy.json  bn.json
 │       ├── data/
-│       │   └── catalog.js  # ITEMS, CATEGORIES, SPOTS, QUICK_REPLIES, DURATIONS
+│       │   └── catalog.ts  # ITEMS, CATEGORIES, SPOTS, QUICK_REPLIES, DURATIONS
 │       ├── components/
-│       │   ├── Banner.jsx         # new-message banner (polling)
-│       │   ├── PhraseBubble.jsx   # renders one message + "show original" + 🔊
-│       │   ├── SpeakButton.jsx
-│       │   ├── TipCard.jsx
-│       │   ├── TrustLine.jsx      # the borrower's record, on an incoming request
-│       │   ├── ChipGroup.jsx      # big tappable chips
-│       │   ├── NewGroup.jsx       # start a new neighborhood (on the Join page)
-│       │   └── PhotoCapture.jsx   # <input type="file" accept="image/*" capture="environment">
+│       │   ├── Banner.tsx         # new-message banner (polling)
+│       │   ├── PhraseBubble.tsx   # renders one message + "show original" + 🔊
+│       │   ├── SpeakButton.tsx
+│       │   ├── TipCard.tsx
+│       │   ├── TrustLine.tsx      # the borrower's record, on an incoming request
+│       │   ├── ChipGroup.tsx      # big tappable chips
+│       │   ├── NewGroup.tsx       # start a new neighborhood (on the Join page)
+│       │   └── PhotoCapture.tsx   # <input type="file" accept="image/*" capture="environment">
 │       └── pages/
-│           ├── Join.jsx        # /join (reads ?code=)
-│           ├── Shelf.jsx       # /  (group shelf)
-│           ├── ItemPage.jsx    # /item/:id (borrow request + preview)
-│           ├── MyItems.jsx     # /my-items (add/remove my items)
-│           ├── Loans.jsx       # /loans (incoming + outgoing)
-│           ├── LoanPage.jsx    # /loan/:id (messages, actions, photos, quick replies)
-│           ├── Settings.jsx    # /settings (language, elder mode, poster link, leave)
-│           └── Poster.jsx      # /poster (printable QR poster)
+│           ├── Join.tsx        # /join (reads ?code=)
+│           ├── Shelf.tsx       # /  (group shelf)
+│           ├── ItemPage.tsx    # /item/:id (borrow request + preview)
+│           ├── MyItems.tsx     # /my-items (add/remove my items)
+│           ├── Loans.tsx       # /loans (incoming + outgoing)
+│           ├── LoanPage.tsx    # /loan/:id (messages, actions, photos, quick replies)
+│           ├── Settings.tsx    # /settings (language, elder mode, poster link, leave)
+│           └── Poster.tsx      # /poster (printable QR poster)
 └── server/
-    ├── index.js            # express app, middleware, mounts routes, starts reminder job
-    ├── db.js               # opens SQLite, creates tables, small helper functions
-    ├── auth.js             # middleware: token → req.user
-    ├── allowedKeys.js      # the keys and values the server accepts (copied from catalog.js)
-    ├── photos.js           # photo upload: images only, max 5 MB, random file name
-    ├── seed.js             # resets DB and inserts demo data
-    ├── reminders.js        # setInterval(checkReminders, 30_000)
+    ├── tsconfig.json       # type checking only
+    ├── types.ts            # types of the database rows, req.user and req.loan
+    ├── index.ts            # express app, middleware, mounts routes, starts reminder job
+    ├── db.ts               # opens SQLite, creates tables, small helper functions
+    ├── auth.ts             # middleware: token → req.user
+    ├── allowedKeys.ts      # the keys and values the server accepts (copied from catalog.ts)
+    ├── photos.ts           # photo upload: images only, max 5 MB, random file name
+    ├── seed.ts             # resets DB and inserts demo data
+    ├── reminders.ts        # setInterval(checkReminders, 30_000)
     ├── routes/
-    │   ├── groups.js  items.js  loans.js  inbox.js  demo.js
+    │   ├── groups.ts  items.ts  loans.ts  inbox.ts  demo.ts
     ├── uploads/.gitkeep
     ├── .npmrc              # ignore-scripts: better-sqlite3 has ready-made binaries, npm must not compile it
     └── .env.example        # PORT=3001  DEMO_MODE=true
@@ -218,7 +225,7 @@ CREATE TABLE items (
   id INTEGER PRIMARY KEY,
   owner_id INTEGER NOT NULL REFERENCES users(id),
   group_id INTEGER NOT NULL REFERENCES groups(id),
-  item_key TEXT NOT NULL,             -- key from catalog.js, e.g. 'futon_dryer'
+  item_key TEXT NOT NULL,             -- key from catalog.ts, e.g. 'futon_dryer'
   max_days INTEGER NOT NULL DEFAULT 3,
   spot TEXT NOT NULL,                 -- key from SPOTS, e.g. 'entrance'
   trusted_only INTEGER NOT NULL DEFAULT 0,  -- 1 = only for people with an on-time return
@@ -321,18 +328,18 @@ and `left_at` is set: the token no longer works, and they are no longer counted 
 Every message the server creates for a loan uses the same params object, so any phrase can use any
 placeholder: `{ item: item.item_key, spot: item.spot, start: loan.start_at, end: loan.end_at,
 name: <nickname of the OTHER person from the recipient's point of view> }`.
-Write one helper `createMessage(loan, fromUserId, toUserId, phraseKey)` in `server/db.js` that builds this.
+Write one helper `createMessage(loan, fromUserId, toUserId, phraseKey)` in `server/db.ts` that builds this.
 
 ### Server rules
 - Every route checks the user belongs to the same group as the item/loan, and the right role
   (lender vs borrower). Return `403` otherwise.
 - Items with `removed_at` set are hidden from the shelf and My items, and `POST /api/loans` must refuse them.
 - Validate `phrase_key` against a whitelist; validate `item_key`/`spot` against the catalog
-  (keep a copy of allowed keys in `server/allowedKeys.js` — just arrays of strings).
+  (keep a copy of allowed keys in `server/allowedKeys.ts` — just arrays of strings).
 - Photo upload: images only, max 5 MB, random filename.
 - Demo routes are mounted only when `process.env.DEMO_MODE === 'true'`. "Continue as" works only for the seeded
   users (`is_demo`), never for people who joined with a code.
-- Reminder job (`reminders.js`): every 30 s, for `active` loans without a return photo:
+- Reminder job (`reminders.ts`): every 30 s, for `active` loans without a return photo:
   - `end_at > now`, `end_at - now <= 24h` and `reminded_soon_at IS NULL` → `sys.dueSoon` to borrower,
     set timestamp.
   - `end_at < now` and `reminded_overdue_at IS NULL` → `sys.overdue` to borrower **and**
@@ -341,10 +348,10 @@ Write one helper `createMessage(loan, fromUserId, toUserId, phraseKey)` in `serv
 
 ---
 
-## 7. i18n — how rendering works (`client/src/i18n/index.js`)
+## 7. i18n — how rendering works (`client/src/i18n/index.ts`)
 
-**Already written — use it, don't rewrite it:** `client/src/i18n/index.js`, the four language JSON
-files and `client/src/data/catalog.js`. Exported functions: `t`, `renderPhrase`, `itemName`,
+**Already written — use it, don't rewrite it:** `client/src/i18n/index.ts`, the four language JSON
+files and `client/src/data/catalog.ts`. Exported functions: `t`, `renderPhrase`, `itemName`,
 `spotName`, `categoryName`, `tip`, `formatDate`, `displayName`, `meta`.
 
 Language files have sections: `meta`, `ui`, `items`, `categories`, `spots`, `phrases`, `tips`.
@@ -429,7 +436,8 @@ Two browser windows side by side. Left = Rahim (phone-sized), right = Sato (elde
 
 - Keep code **simple and readable** for a 5-person student team who must explain it to judges:
   short functions, clear names, brief comments explaining *why*. No clever abstractions,
-  no state-management libraries, no TypeScript, no CSS frameworks.
+  no state-management libraries, no CSS frameworks. Simple TypeScript: plain interfaces and unions, no
+  enums (Node can't run them), no clever types. `npm run typecheck` must pass.
 - Build in small vertical slices; after each slice the app must still run (`npm run dev`).
 - After finishing a step, tell the user exactly how to test it and suggest a commit message.
 - Ask before adding any new dependency not listed in section 3.
