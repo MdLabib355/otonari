@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Group, GroupMemberSummary, JoinPolicy, Lang, Role, User } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
+import Modal from '../../components/Modal.tsx';
 import { CheckIcon } from '../../components/Icons.tsx';
 import SpeakButton from '../../components/SpeakButton.tsx';
 import TrustLine from '../../components/TrustLine.tsx';
@@ -290,39 +291,46 @@ export default function NeighborsTab({
                     {isMuted ? t(lang, 'groupAdmin.unmuteBorrow') : t(lang, 'groupAdmin.muteBorrow')}
                   </button>
                 )}
-
-                {canEditRole && (
-                  <button
-                    type="button"
-                    className="ga-btn"
-                    disabled={busyId === member.id}
-                    onClick={() =>
-                      runAction(
-                        member.id,
-                        async () => {
-                          await api.patch(`/group-admin/members/${member.id}/role`, {
-                            role: isGroupAdmin ? 'user' : 'group_admin',
-                          });
-                        },
-                        `${member.nickname}: ${isGroupAdmin ? t(lang, 'groupAdmin.roleMember') : t(lang, 'groupAdmin.roleGroupAdmin')}`
-                      )
-                    }
-                  >
-                    {isGroupAdmin ? t(lang, 'groupAdmin.removeGroupAdmin') : t(lang, 'groupAdmin.makeGroupAdmin')}
-                  </button>
-                )}
-
-                {canRestrict && (
-                  <button
-                    type="button"
-                    className="ga-btn ga-btn-danger"
-                    disabled={busyId === member.id || hasActiveLoan}
-                    onClick={() => setRemoveTarget(member)}
-                  >
-                    {t(lang, 'groupAdmin.safeRemove')}
-                  </button>
-                )}
               </div>
+
+              {canRestrict && (
+                <details className="ga-more">
+                  <summary>{t(lang, 'groupAdmin.moreActions')}</summary>
+                  <div className="ga-actions ga-actions-more">
+                    {canEditRole && (
+                      <button
+                        type="button"
+                        className="ga-btn"
+                        disabled={busyId === member.id}
+                        onClick={() =>
+                          runAction(
+                            member.id,
+                            async () => {
+                              await api.patch(`/group-admin/members/${member.id}/role`, {
+                                role: isGroupAdmin ? 'user' : 'group_admin',
+                              });
+                            },
+                            `${member.nickname}: ${isGroupAdmin ? t(lang, 'groupAdmin.roleMember') : t(lang, 'groupAdmin.roleGroupAdmin')}`
+                          )
+                        }
+                      >
+                        {isGroupAdmin ? t(lang, 'groupAdmin.removeGroupAdmin') : t(lang, 'groupAdmin.makeGroupAdmin')}
+                      </button>
+                    )}
+    
+                    {canRestrict && (
+                      <button
+                        type="button"
+                        className="ga-btn ga-btn-danger"
+                        disabled={busyId === member.id || hasActiveLoan}
+                        onClick={() => setRemoveTarget(member)}
+                      >
+                        {t(lang, 'groupAdmin.safeRemove')}
+                      </button>
+                    )}
+                  </div>
+                </details>
+              )}
 
               {hasActiveLoan && (
                 <div className="ga-note">
@@ -336,43 +344,38 @@ export default function NeighborsTab({
 
       {/* Safe Remove Confirmation Modal */}
       {removeTarget && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-dialog">
-            <div className="modal-header">
-              <h2>{t(lang, 'groupAdmin.safeRemoveTitle', { name: displayName(lang, removeTarget.nickname) })}</h2>
-            </div>
-            <div className="modal-body">
-              <p>
-                {t(lang, 'groupAdmin.safeRemoveDesc', {
-                  name: displayName(lang, removeTarget.nickname),
-                })}
-              </p>
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="button-secondary" onClick={() => setRemoveTarget(null)}>
-                {t(lang, 'common.cancel')}
-              </button>
-              <button
-                type="button"
-                className="ga-btn ga-btn-danger"
-                disabled={busyId === removeTarget.id}
-                onClick={() => {
-                  const target = removeTarget;
-                  setRemoveTarget(null);
-                  runAction(
-                    target.id,
-                    async () => {
-                      await api.delete(`/group-admin/members/${target.id}`);
-                    },
-                    `${t(lang, 'groupAdmin.safeRemove')}: ${target.nickname}`
-                  );
-                }}
-              >
-                {t(lang, 'groupAdmin.safeRemoveConfirm')}
-              </button>
-            </div>
+        <Modal title={t(lang, 'groupAdmin.safeRemoveTitle', { name: displayName(lang, removeTarget.nickname) })} onClose={() => setRemoveTarget(null)}>
+          <div className="modal-body">
+            <p>
+              {t(lang, 'groupAdmin.safeRemoveDesc', {
+                name: displayName(lang, removeTarget.nickname),
+              })}
+            </p>
           </div>
-        </div>
+          <div className="modal-footer">
+            <button type="button" className="button-secondary" onClick={() => setRemoveTarget(null)}>
+              {t(lang, 'common.cancel')}
+            </button>
+            <button
+              type="button"
+              className="ga-btn ga-btn-danger"
+              disabled={busyId === removeTarget.id}
+              onClick={() => {
+                const target = removeTarget;
+                setRemoveTarget(null);
+                runAction(
+                  target.id,
+                  async () => {
+                    await api.delete(`/group-admin/members/${target.id}`);
+                  },
+                  `${t(lang, 'groupAdmin.safeRemove')}: ${target.nickname}`
+                );
+              }}
+            >
+              {t(lang, 'groupAdmin.safeRemoveConfirm')}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

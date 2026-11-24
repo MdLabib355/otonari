@@ -132,6 +132,7 @@
     "notifications.empty": "未読のお知らせはありません。",
     "notifications.markAllRead": "すべて既読にする",
     "common.cancel": "キャンセル",
+    "groupAdmin.moreActions": "その他の操作",
     "itemRequest.button": "新しい物を申請する",
     "itemRequest.hint": "一覧にない物ですか。グループ管理人が確認した後、共有棚に表示されます。",
     "itemRequest.title": "物の名前",

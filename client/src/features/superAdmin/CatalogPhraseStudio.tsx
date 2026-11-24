@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { CatalogCategoryRecord, CatalogItemRecord, Lang, SuperAdminCustomItemSummary } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
+import Modal from '../../components/Modal.tsx';
 import ItemVisual from '../../components/ItemVisual.tsx';
 import { api, ApiError } from '../../core/api.ts';
 import { LANGUAGES } from '../../data/catalog.ts';
@@ -149,16 +150,16 @@ export default function CatalogPhraseStudio({ catalog, categories, customItems, 
             <tbody>
               {filtered.map((item) => (
                 <tr key={item.item_key}>
-                  <td style={{ whiteSpace: 'nowrap' }}>
+                  <td data-label="Item Key">
                     <span className="inline-icon-text">
                       <ItemVisual itemKey={item.item_key} categoryKey={item.category} alt="" size="sm" />
                       <span className="ga-code-chip">{item.item_key}</span>
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Category">
                     <span className="ga-badge ga-badge-muted">{item.category}</span>
                   </td>
-                  <td>
+                  <td data-label="4-Language Human Translations">
                     <div className="sa-trans-grid">
                       <div className="sa-trans-cell">
                         <span className="sa-trans-code">en</span>
@@ -178,12 +179,12 @@ export default function CatalogPhraseStudio({ catalog, categories, customItems, 
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <span className={`ga-badge ${item.is_active ? 'ga-badge-green' : 'ga-badge-muted'}`}>
                       {item.is_active ? 'Active' : 'Disabled'}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Control">
                     <button
                       type="button"
                       className="ga-btn"
@@ -271,62 +272,57 @@ export default function CatalogPhraseStudio({ catalog, categories, customItems, 
 
       {/* Add Catalog Item Modal */}
       {addOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-dialog">
-            <div className="modal-header">
-              <h2>Add Fixed Catalog Item</h2>
-            </div>
-            <form className="modal-form" onSubmit={submitAdd}>
-              <div className="modal-body">
-                <p className="ga-meta" style={{ marginBottom: 12 }}>
-                  All 4 language labels are required to guarantee zero untranslated keys.
-                </p>
-                  <div className="field">
-                    <label className="label" htmlFor="ci-cat">
-                      Category
-                    </label>
-                    <select
-                      id="ci-cat"
-                      className="select-input"
-                      value={form.category}
-                      onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    >
-                      {categories
-                        .filter((c) => c.is_active)
-                        .map((c) => (
-                          <option key={c.category_key} value={c.category_key}>
-                            {c.label_en}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
+        <Modal title="Add Fixed Catalog Item" onClose={() => setAddOpen(false)}>
+          <form className="modal-form" onSubmit={submitAdd}>
+            <div className="modal-body">
+              <p className="ga-meta" style={{ marginBottom: 12 }}>
+                All 4 language labels are required to guarantee zero untranslated keys.
+              </p>
                 <div className="field">
-                  <label className="label" htmlFor="ci-key">
-                    item_key (snake_case)
+                  <label className="label" htmlFor="ci-cat">
+                    Category
                   </label>
-                  <input
-                    id="ci-key"
-                    className="text-input"
-                    required
-                    pattern="[a-z0-9_]{2,40}"
-                    value={form.item_key}
-                    onChange={(e) => setForm({ ...form, item_key: e.target.value.toLowerCase() })}
-                    placeholder="e.g., hand_mixer"
-                  />
+                  <select
+                    id="ci-cat"
+                    className="select-input"
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  >
+                    {categories
+                      .filter((c) => c.is_active)
+                      .map((c) => (
+                        <option key={c.category_key} value={c.category_key}>
+                          {c.label_en}
+                        </option>
+                      ))}
+                  </select>
                 </div>
-                <LabelFields idPrefix="ci" labels={form} onChange={(labels) => setForm({ ...form, ...labels })} />
+              <div className="field">
+                <label className="label" htmlFor="ci-key">
+                  item_key (snake_case)
+                </label>
+                <input
+                  id="ci-key"
+                  className="text-input"
+                  required
+                  pattern="[a-z0-9_]{2,40}"
+                  value={form.item_key}
+                  onChange={(e) => setForm({ ...form, item_key: e.target.value.toLowerCase() })}
+                  placeholder="e.g., hand_mixer"
+                />
               </div>
-              <div className="modal-footer">
-                <button type="button" className="button-secondary" onClick={() => setAddOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="button-primary" disabled={busy}>
-                  Save to Global Catalog
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+              <LabelFields idPrefix="ci" labels={form} onChange={(labels) => setForm({ ...form, ...labels })} />
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="button-secondary" onClick={() => setAddOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="button-primary" disabled={busy}>
+                Save to Global Catalog
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { CatalogCategoryRecord } from '../../../../shared/types.ts';
 import { CATEGORY_ICON_KEYS, CategoryIcon } from '../../components/ItemIcons.tsx';
+import Modal from '../../components/Modal.tsx';
 import { api, ApiError } from '../../core/api.ts';
 import LabelFields, { EMPTY_LABELS } from './LabelFields.tsx';
 
@@ -102,60 +103,55 @@ export default function CategoryManager({ categories, onRefresh, onNotify }: Pro
       </div>
 
       {open && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-dialog">
-            <div className="modal-header">
-              <h2>{open === 'add' ? 'Add Category' : `Edit Category: ${form.category_key}`}</h2>
-            </div>
-            <form className="modal-form" onSubmit={submit}>
-              <div className="modal-body">
-                {open === 'add' && (
-                  <div className="field">
-                    <label className="label" htmlFor="cc-key">
-                      category_key (snake_case)
-                    </label>
-                    <input
-                      id="cc-key"
-                      className="text-input"
-                      required
-                      pattern="[a-z0-9_]{2,32}"
-                      value={form.category_key}
-                      onChange={(e) => setForm({ ...form, category_key: e.target.value.toLowerCase() })}
-                      placeholder="e.g., musical_instruments"
-                    />
-                  </div>
-                )}
+        <Modal title={open === 'add' ? 'Add Category' : `Edit Category: ${form.category_key}`} onClose={() => setOpen(null)}>
+          <form className="modal-form" onSubmit={submit}>
+            <div className="modal-body">
+              {open === 'add' && (
                 <div className="field">
-                  <p className="label">Icon</p>
-                  <div className="sa-icon-picker" role="group" aria-label="Icon">
-                    {CATEGORY_ICON_KEYS.map((key) => (
-                      <button
-                        key={key}
-                        type="button"
-                        className={form.icon_key === key ? 'sa-icon-option selected' : 'sa-icon-option'}
-                        aria-pressed={form.icon_key === key}
-                        aria-label={key}
-                        title={key}
-                        onClick={() => setForm({ ...form, icon_key: key })}
-                      >
-                        <CategoryIcon iconKey={key} />
-                      </button>
-                    ))}
-                  </div>
+                  <label className="label" htmlFor="cc-key">
+                    category_key (snake_case)
+                  </label>
+                  <input
+                    id="cc-key"
+                    className="text-input"
+                    required
+                    pattern="[a-z0-9_]{2,32}"
+                    value={form.category_key}
+                    onChange={(e) => setForm({ ...form, category_key: e.target.value.toLowerCase() })}
+                    placeholder="e.g., musical_instruments"
+                  />
                 </div>
-                <LabelFields idPrefix="cc" labels={form} onChange={(labels) => setForm({ ...form, ...labels })} />
+              )}
+              <div className="field">
+                <p className="label">Icon</p>
+                <div className="sa-icon-picker" role="group" aria-label="Icon">
+                  {CATEGORY_ICON_KEYS.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={form.icon_key === key ? 'sa-icon-option selected' : 'sa-icon-option'}
+                      aria-pressed={form.icon_key === key}
+                      aria-label={key}
+                      title={key}
+                      onClick={() => setForm({ ...form, icon_key: key })}
+                    >
+                      <CategoryIcon iconKey={key} />
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="button-secondary" onClick={() => setOpen(null)}>
-                  Cancel
-                </button>
-                <button type="submit" className="button-primary" disabled={busy}>
-                  Save Category
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+              <LabelFields idPrefix="cc" labels={form} onChange={(labels) => setForm({ ...form, ...labels })} />
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="button-secondary" onClick={() => setOpen(null)}>
+                Cancel
+              </button>
+              <button type="submit" className="button-primary" disabled={busy}>
+                Save Category
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

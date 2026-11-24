@@ -132,6 +132,7 @@
     "notifications.empty": "You're all caught up.",
     "notifications.markAllRead": "Mark all read",
     "common.cancel": "Cancel",
+    "groupAdmin.moreActions": "More actions",
     "itemRequest.button": "Request a new item",
     "itemRequest.hint": "Is it not in the list? Your group admin will check it before it appears on the shelf.",
     "itemRequest.title": "What is it called?",

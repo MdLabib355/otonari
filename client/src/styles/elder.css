@@ -82,20 +82,17 @@ body.elder .app-header-inner {
   padding-bottom: 8px;
 }
 
-body.elder .bottom-nav {
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-body.elder .bottom-nav::-webkit-scrollbar {
-  display: none;
-}
-
+/* All tabs are always visible: the labels are smaller than the other text, and may have two lines. */
 body.elder .bottom-nav a {
-  height: 76px;
-  min-width: 82px;
-  flex-shrink: 0;
-  padding: 6px 8px;
+  height: auto;
+  min-height: 80px;
+  padding: 8px 2px;
+  font-size: 0.62em;
+}
+
+body.elder .bottom-nav .nav-icon {
+  width: 2em;
+  height: 2em;
 }
 
 body.elder .search-input,

@@ -83,20 +83,20 @@ export default function AuditLogViewer({ logs }: { logs: AuditLogEntry[] }) {
             <tbody>
               {visible.map((entry) => (
                 <tr key={entry.id}>
-                  <td className="sa-mono">{entry.created_at.slice(0, 19).replace('T', ' ')}</td>
-                  <td>
+                  <td data-label="Timestamp" className="sa-mono">{entry.created_at.slice(0, 19).replace('T', ' ')}</td>
+                  <td data-label="Category">
                     <span className="ga-badge ga-badge-indigo">{entry.category}</span>
                   </td>
-                  <td>
+                  <td data-label="Actor">
                     <strong>{entry.actor_label}</strong>
                   </td>
-                  <td>
+                  <td data-label="Action">
                     <span className="ga-code-chip">{entry.action}</span>
                   </td>
-                  <td>
+                  <td data-label="Target">
                     {entry.target_type} #{entry.target_id}
                   </td>
-                  <td>{entry.detail}</td>
+                  <td data-label="Detail">{entry.detail}</td>
                 </tr>
               ))}
             </tbody>

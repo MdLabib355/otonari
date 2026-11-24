@@ -105,3 +105,15 @@
   background: var(--warn-soft);
   color: var(--warn);
 }
+
+/* Phones: the buttons go below the text. */
+@media (max-width: 559.98px) {
+  .my-item-text {
+    flex-basis: calc(100% - 80px);
+    overflow-wrap: anywhere;
+  }
+
+  .my-item > .button-secondary {
+    flex: 1;
+  }
+}

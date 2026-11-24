@@ -36,9 +36,10 @@
 
 .ga-subtabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   padding: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
   border-radius: var(--radius);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -46,7 +47,8 @@
 }
 
 .ga-subtab {
-  flex: 1 1 130px;
+  flex: 1 0 auto;
+  white-space: nowrap;
   min-height: var(--tap);
   padding: 8px 14px;
   border: 1px solid transparent;
@@ -278,6 +280,23 @@
   border-color: var(--danger);
 }
 
+.ga-actions-more {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.ga-more > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  margin-top: 4px;
+  color: var(--accent);
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .ga-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -479,4 +498,37 @@ body.elder .ga-badge {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 767.98px) {
+  .ga-card {
+    padding: 14px;
+  }
+
+  .ga-actions > .ga-btn {
+    flex: 1 1 auto;
+  }
+
+  .ga-search {
+    max-width: none;
+  }
+
+  .ga-page .chip-group {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .ga-page .chip {
+    flex: none;
+    white-space: nowrap;
+  }
+}
+
+body.elder .ga-subtab {
+  padding: 8px 18px;
+}
+
+body.elder .ga-btn {
+  white-space: normal;
 }

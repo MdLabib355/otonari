@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { GroupLifecycleStatus, GroupType, SuperAdminGroupSummary } from '../../../../shared/types.ts';
+import Modal from '../../components/Modal.tsx';
 import { api, ApiError } from '../../core/api.ts';
 
 export interface GroupsDirectoryProps {
@@ -158,26 +159,26 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
             <tbody>
               {filtered.map((g) => (
                 <tr key={g.id}>
-                  <td>
+                  <td data-label="Group">
                     <strong>{g.name}</strong>
                   </td>
-                  <td>
+                  <td data-label="Join Code">
                     <span className="ga-code-chip">{g.code}</span>
                   </td>
-                  <td>
+                  <td data-label="Type">
                     <span className="ga-badge ga-badge-muted">{g.type}</span>
                   </td>
-                  <td>{g.city}</td>
-                  <td>
+                  <td data-label="City">{g.city}</td>
+                  <td data-label="Group Admin">
                     {g.admin_nickname ? (
                       <strong>{g.admin_nickname}</strong>
                     ) : (
                       <span className="ga-badge ga-badge-amber">NONE !</span>
                     )}
                   </td>
-                  <td>{g.member_count}</td>
-                  <td>{g.overdue_count}</td>
-                  <td>
+                  <td data-label="Members">{g.member_count}</td>
+                  <td data-label="Overdue">{g.overdue_count}</td>
+                  <td data-label="Status">
                     <span
                       className={`ga-badge ${
                         g.lifecycle_status === 'active'
@@ -190,7 +191,7 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
                       {g.lifecycle_status}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Actions">
                     <div className="ga-actions">
                       <button
                         type="button"
@@ -231,142 +232,132 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
 
       {/* Create Group Modal */}
       {createOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-dialog">
-            <div className="modal-header">
-              <h2>Create Neighborhood Group</h2>
-            </div>
-            <form onSubmit={(e) => submitCreate(e, false)}>
-              <div className="modal-body">
+        <Modal title="Create Neighborhood Group" onClose={() => setCreateOpen(false)}>
+          <form className="modal-form" onSubmit={(e) => submitCreate(e, false)}>
+            <div className="modal-body">
+              <div className="field">
+                <label className="label" htmlFor="sa-cg-name">
+                  Group Name
+                </label>
+                <input
+                  id="sa-cg-name"
+                  className="text-input"
+                  required
+                  maxLength={60}
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g., Midori Dorm B"
+                />
+              </div>
+              <div className="sa-form-row">
                 <div className="field">
-                  <label className="label" htmlFor="sa-cg-name">
-                    Group Name
+                  <label className="label" htmlFor="sa-cg-type">
+                    Type
+                  </label>
+                  <select
+                    id="sa-cg-type"
+                    className="select-input"
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value as GroupType)}
+                  >
+                    <option value="building">building</option>
+                    <option value="block">block</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label className="label" htmlFor="sa-cg-city">
+                    City
                   </label>
                   <input
-                    id="sa-cg-name"
+                    id="sa-cg-city"
                     className="text-input"
                     required
-                    maxLength={60}
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="e.g., Midori Dorm B"
+                    maxLength={40}
+                    value={newCity}
+                    onChange={(e) => setNewCity(e.target.value)}
                   />
                 </div>
-                <div className="sa-form-row">
-                  <div className="field">
-                    <label className="label" htmlFor="sa-cg-type">
-                      Type
-                    </label>
-                    <select
-                      id="sa-cg-type"
-                      className="select-input"
-                      value={newType}
-                      onChange={(e) => setNewType(e.target.value as GroupType)}
-                    >
-                      <option value="building">building</option>
-                      <option value="block">block</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label className="label" htmlFor="sa-cg-city">
-                      City
-                    </label>
-                    <input
-                      id="sa-cg-city"
-                      className="text-input"
-                      required
-                      maxLength={40}
-                      value={newCity}
-                      onChange={(e) => setNewCity(e.target.value)}
-                    />
-                  </div>
-                </div>
+              </div>
 
-                {duplicateNotice && (
-                  <div className="sa-alert sa-alert-amber">
-                    <span>{duplicateNotice}</span>
-                    <button
-                      type="button"
-                      className="ga-btn ga-btn-amber"
-                      disabled={busy}
-                      onClick={(e) => submitCreate(e, true)}
-                    >
-                      Create anyway
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="button-secondary" onClick={() => setCreateOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="button-primary" disabled={busy}>
-                  Create Group
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+              {duplicateNotice && (
+                <div className="sa-alert sa-alert-amber">
+                  <span>{duplicateNotice}</span>
+                  <button
+                    type="button"
+                    className="ga-btn ga-btn-amber"
+                    disabled={busy}
+                    onClick={(e) => submitCreate(e, true)}
+                  >
+                    Create anyway
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="button-secondary" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="button-primary" disabled={busy}>
+                Create Group
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {/* Admin Rescue Modal */}
       {rescueGroup && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-dialog">
-            <div className="modal-header">
-              <h2>Admin Rescue — {rescueGroup.name}</h2>
+        <Modal title={`Admin Rescue — ${rescueGroup.name}`} onClose={() => setRescueGroup(null)}>
+          <form className="modal-form" onSubmit={submitRescue}>
+            <div className="modal-body">
+              <p className="ga-meta" style={{ marginBottom: 12 }}>
+                Promote an active neighbor to Group Admin. Action is permanently audit-logged.
+              </p>
+              <div className="field">
+                <label className="label" htmlFor="sa-rescue-member">
+                  Select Neighbor
+                </label>
+                <select
+                  id="sa-rescue-member"
+                  className="select-input"
+                  value={rescueUserId}
+                  onChange={(e) => setRescueUserId(Number(e.target.value))}
+                >
+                  {rescueGroup.members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nickname} ({m.role} · {m.on_time_returns} on-time returns)
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label className="label" htmlFor="sa-rescue-reason">
+                  Verification Reason
+                </label>
+                <select
+                  id="sa-rescue-reason"
+                  className="select-input"
+                  value={rescueReason}
+                  onChange={(e) => setRescueReason(e.target.value)}
+                >
+                  {RESCUE_REASONS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <form onSubmit={submitRescue}>
-              <div className="modal-body">
-                <p className="ga-meta" style={{ marginBottom: 12 }}>
-                  Promote an active neighbor to Group Admin. Action is permanently audit-logged.
-                </p>
-                <div className="field">
-                  <label className="label" htmlFor="sa-rescue-member">
-                    Select Neighbor
-                  </label>
-                  <select
-                    id="sa-rescue-member"
-                    className="select-input"
-                    value={rescueUserId}
-                    onChange={(e) => setRescueUserId(Number(e.target.value))}
-                  >
-                    {rescueGroup.members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.nickname} ({m.role} · {m.on_time_returns} on-time returns)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label className="label" htmlFor="sa-rescue-reason">
-                    Verification Reason
-                  </label>
-                  <select
-                    id="sa-rescue-reason"
-                    className="select-input"
-                    value={rescueReason}
-                    onChange={(e) => setRescueReason(e.target.value)}
-                  >
-                    {RESCUE_REASONS.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="button-secondary" onClick={() => setRescueGroup(null)}>
-                  Cancel
-                </button>
-                <button type="submit" className="button-primary" disabled={busy}>
-                  Promote to Group Admin
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div className="modal-footer">
+              <button type="button" className="button-secondary" onClick={() => setRescueGroup(null)}>
+                Cancel
+              </button>
+              <button type="submit" className="button-primary" disabled={busy}>
+                Promote to Group Admin
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

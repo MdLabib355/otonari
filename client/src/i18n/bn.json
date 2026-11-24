@@ -132,6 +132,7 @@
     "notifications.empty": "কোনো অপঠিত নোটিফিকেশন নেই।",
     "notifications.markAllRead": "সব পঠিত করুন",
     "common.cancel": "বাতিল",
+    "groupAdmin.moreActions": "আরও কাজ",
     "itemRequest.button": "নতুন জিনিসের অনুরোধ",
     "itemRequest.hint": "তালিকায় নেই? শেলফে দেখানোর আগে গ্রুপ অ্যাডমিন এটি যাচাই করবেন।",
     "itemRequest.title": "জিনিসটির নাম কী?",
