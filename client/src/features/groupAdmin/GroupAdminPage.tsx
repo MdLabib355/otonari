@@ -31,7 +31,7 @@ export default function GroupAdminPage({ onAlertCountChange }: { onAlertCountCha
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ text: string; isError: boolean } | null>(null);
 
-  const isAdmin = user.group_role === 'group_admin' || user.group_role === 'co_admin';
+  const isAdmin = user.role !== 'user';
 
   const showToast = useCallback((text: string, isError = false) => {
     setToast({ text, isError });
@@ -77,7 +77,7 @@ export default function GroupAdminPage({ onAlertCountChange }: { onAlertCountCha
   const pendingCount = dashboard?.pending_count ?? 0;
   const attentionLoans = (dashboard?.overdue_loan_count ?? 0) + (dashboard?.flagged_loan_count ?? 0);
   const roleBadge =
-    user.group_role === 'group_admin' ? t(lang, 'groupAdmin.roleBadge') : t(lang, 'groupAdmin.coAdminBadge');
+    user.role === 'co_admin' ? t(lang, 'groupAdmin.coAdminBadge') : t(lang, 'groupAdmin.roleBadge');
 
   return (
     <section className="ga-page">

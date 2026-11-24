@@ -1,9 +1,9 @@
 // Super Admin API routes (/api/v1/super-admin/*) plus public active catalog route (/api/v1/catalog).
+// Authentication uses Otonari's unified accounts & sessions (/api/v1/auth/login) with role = 'super_admin'.
 
 import express from 'express';
 import { requireSuperAdmin } from '../../core/auth.ts';
 import { read, write } from '../../core/http.ts';
-import { loginSuperAdmin, logoutSuperAdmin, showSuperAdminMe } from './superAdminAuth.ts';
 import {
   createCatalogEntry,
   listCatalog,
@@ -29,11 +29,6 @@ const router = express.Router();
 
 // Public active catalog for resident client synchronization
 router.get('/catalog', read(showPublicCatalog));
-
-// Super Admin dedicated auth (never accessible via demoRoutes)
-router.post('/super-admin/auth/login', write(loginSuperAdmin));
-router.post('/super-admin/auth/logout', write(requireSuperAdmin, logoutSuperAdmin));
-router.get('/super-admin/auth/me', read(requireSuperAdmin, showSuperAdminMe));
 
 // Platform Overview & Operations
 router.get('/super-admin/overview', read(requireSuperAdmin, showOverview));

@@ -6,41 +6,13 @@ import { refuse, reply, toText } from '../../core/http.ts';
 import { findGroupByCode } from '../group/groupModel.ts';
 import { hasUnfinishedLoan } from '../loan/loanModel.ts';
 import { leaveGroup } from './leaveGroup.ts';
-import { countActiveGroupAdmins, createUser, getUser, setElderMode, setLang } from './userModel.ts';
-import { loginView, meView } from './userView.ts';
-
-// No account, no password, no email: a nickname and a language are enough.
-export async function join(req: Request) {
-  const { nickname, lang }: Record<string, unknown> = req.body ?? {};
-
-  const group = await findGroupByCode(req.params.code);
-  if (!group) return refuse(404, 'Group not found');
-  if (group.lifecycle_status !== 'active') {
-    return refuse(403, 'This neighborhood group is not accepting new members right now');
-  }
-  if (group.join_policy === 'locked') {
-    return refuse(403, 'New joins are currently paused for this building');
-  }
-
-  // The only free text a member ever types.
-  const cleanNickname = toText(nickname);
-  if (cleanNickname.length < 1 || cleanNickname.length > 20) {
-    return refuse(400, 'Nickname must be 1 to 20 characters');
-  }
-  if (!isOneOf(LANGUAGES, lang)) return refuse(400, 'Unknown language');
-
-  const needsApproval = group.join_policy === 'approval_required';
-  const user = await createUser(group.id, cleanNickname, lang, {
-    memberStatus: needsApproval ? 'pending' : 'active',
-  });
-  return reply(needsApproval ? 202 : 201, await loginView(user));
-}
+import { countActiveGroupAdmins, getUser, joinGroup, setElderMode, setLang } from './userModel.ts';
+import { meView } from './userView.ts';
 
 export async function showMe(req: Request) {
   return reply(200, await meView(req.user));
 }
 
-// Both fields are optional: send only what changed.
 export async function updateMe(req: Request) {
   const { lang, elder_mode }: Record<string, unknown> = req.body ?? {};
 
@@ -54,15 +26,36 @@ export async function updateMe(req: Request) {
   return reply(200, await meView(await getUser(req.user.id)));
 }
 
-// Leave the neighborhood. Not in the middle of a loan, and never if you are the sole Group Admin.
+// With the code from the poster. Respects building join_policy and lifecycle_status.
+export async function join(req: Request) {
+  const group = await findGroupByCode(req.params.code);
+  if (!group) return refuse(404, 'Group not found');
+  if (req.user.group_id !== null) return refuse(409, 'You are already in a neighborhood');
+  if (group.lifecycle_status !== 'active') {
+    return refuse(403, 'This neighborhood group is not accepting new members right now');
+  }
+  if (group.join_policy === 'locked') {
+    return refuse(403, 'New joins are currently paused for this building');
+  }
+
+  const nickname = toText(req.body?.nickname);
+  const lang: unknown = req.body?.lang;
+  if (nickname.length < 1 || nickname.length > 20) return refuse(400, 'Nickname must be 1 to 20 characters');
+  if (!isOneOf(LANGUAGES, lang)) return refuse(400, 'Unknown language');
+
+  const needsApproval = group.join_policy === 'approval_required';
+  await joinGroup(req.user.id, group.id, nickname, lang, needsApproval ? 'pending' : 'active');
+  return reply(needsApproval ? 202 : 201, await meView(await getUser(req.user.id)));
+}
+
+// Leave the neighborhood; the account stays. Enforces active-loan and Last-Admin guardrails.
 export async function leave(req: Request) {
-  // Anyone can "continue as" a demo neighbor, so leaving would remove them for everybody.
   if (req.user.is_demo) return refuse(403, "Demo neighbors can't leave");
   if (await hasUnfinishedLoan(req.user.id)) return refuse(409, 'Please finish your current loans first');
-  if (req.user.group_role === 'group_admin' && (await countActiveGroupAdmins(req.user.group_id)) <= 1) {
+  if (req.user.role === 'group_admin' && (await countActiveGroupAdmins(req.groupId)) <= 1) {
     return refuse(409, 'Transfer Group Admin ownership to another neighbor before leaving');
   }
 
-  await leaveGroup(req.user.id);
-  return reply(204);
+  await leaveGroup(req.user.id, req.groupId);
+  return reply(200, await meView(await getUser(req.user.id)));
 }

@@ -2,11 +2,12 @@
 // Types only (no code): both sides use "import type", so nothing of this file is left at run time.
 
 export type Lang = 'en' | 'ja' | 'ja-easy' | 'bn';
+export type Role = 'super_admin' | 'group_admin' | 'co_admin' | 'user';
+export type GroupRole = 'user' | 'co_admin' | 'group_admin';
 export type GroupType = 'building' | 'block';
 export type ItemStatus = 'available' | 'reserved' | 'lent';
 export type LoanStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'active' | 'returned';
 
-export type GroupRole = 'member' | 'co_admin' | 'group_admin';
 export type MemberStatus = 'pending' | 'active' | 'borrow_muted' | 'suspended';
 export type GroupLifecycleStatus = 'active' | 'read_only' | 'suspended' | 'archived';
 export type JoinPolicy = 'open' | 'approval_required' | 'locked';
@@ -33,11 +34,12 @@ export interface Trust {
 
 export interface User {
   id: number;
-  group_id: number;
+  group_id: number | null;
   nickname: string;
   lang: Lang;
   elder_mode: boolean;
-  group_role: GroupRole;
+  email: string;
+  role: Role;
   member_status: MemberStatus;
   muted_until: string | null;
   is_trusted: boolean;
@@ -59,10 +61,23 @@ export interface Group {
 // GET /api/v1/me
 export interface Me {
   user: User;
-  group: Group;
+  group: Group | null; // null before joining one
 }
 
-// POST /api/v1/groups/:code/members and POST /api/v1/demo/login
+// POST /api/v1/auth/email-codes/verify
+export interface RegistrationTicket {
+  ticket: string;
+}
+
+// GET /api/v1/auth/config
+export interface AuthConfig {
+  google_client_id: string | null; // null: no Google login
+  email_code: boolean;
+  demo_mode: boolean;
+  mailbox_url: string | null; // the test mailbox, if emails go there
+}
+
+// POST /api/v1/auth/register, /login, /login-with-code and /google
 export interface Login extends Me {
   token: string;
 }
@@ -77,13 +92,29 @@ export interface GroupPreview {
   lifecycle_status: GroupLifecycleStatus;
 }
 
-// POST /api/v1/groups
-export type NewGroupAnswer = Pick<Group, 'code' | 'name' | 'type' | 'city'>;
+// GET /api/v1/me/group/members
+export interface GroupMember {
+  id: number;
+  nickname: string;
+  lang: Lang;
+  role: Role;
+  joined_at: string | null;
+}
 
-// GET /api/v1/demo/users
-export interface DemoUser extends User {
-  group_name: string;
-  group_code: string;
+// GET /api/v1/admin/groups
+export interface AdminGroup extends Group {
+  member_count: number;
+}
+
+// GET /api/v1/admin/users
+export interface AdminUser {
+  id: number;
+  email: string;
+  nickname: string;
+  role: Role;
+  group_name: string | null;
+  created_at: string;
+  active: boolean;
 }
 
 // GET /api/v1/me/items
@@ -214,7 +245,7 @@ export interface GroupMemberSummary {
   nickname: string;
   lang: Lang;
   elder_mode: boolean;
-  group_role: GroupRole;
+  role: Role;
   member_status: MemberStatus;
   muted_until: string | null;
   is_trusted: boolean;
@@ -287,15 +318,6 @@ export interface CatalogItemRecord {
   updated_at: string;
 }
 
-export interface SuperAdminSessionInfo {
-  admin_label: string;
-  expires_at: string;
-}
-
-export interface SuperAdminLoginResponse extends SuperAdminSessionInfo {
-  token: string;
-}
-
 export interface ReminderHealth {
   interval_seconds: number;
   last_run_at: string | null;
@@ -304,6 +326,7 @@ export interface ReminderHealth {
 }
 
 export interface StorageHealth {
+  mode: 'local' | 's3';
   used_bytes: number;
   quota_bytes: number;
   total_files: number;
@@ -328,7 +351,7 @@ export interface SuperAdminOverview {
 export interface SuperAdminGroupMemberPreview {
   id: number;
   nickname: string;
-  group_role: GroupRole;
+  role: Role;
   member_status: MemberStatus;
   on_time_returns: number;
 }
@@ -397,6 +420,7 @@ export interface BreakGlassEvidence {
 
 export interface StorageCleanupResult {
   dry_run: boolean;
+  mode: 'local' | 's3';
   orphan_files: string[];
   deleted_count: number;
   reclaimed_bytes: number;

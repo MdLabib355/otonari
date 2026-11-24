@@ -43,7 +43,7 @@ export function groupDirectoryView(groups: SuperAdminGroupSummary[]): SuperAdmin
     members: group.members.map((m) => ({
       id: m.id,
       nickname: m.nickname,
-      group_role: m.group_role,
+      role: m.role,
       member_status: m.member_status,
       on_time_returns: m.on_time_returns,
     })),

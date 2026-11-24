@@ -1,4 +1,4 @@
-// DTO projections for Group Admin responses (never exposes auth tokens).
+// DTO projections for Group Admin responses (never exposes emails or password hashes).
 
 import type {
   ActiveLoanBadge,
@@ -42,7 +42,7 @@ export async function memberSummaryView(
     nickname: user.nickname,
     lang: user.lang,
     elder_mode: user.elder_mode,
-    group_role: user.group_role,
+    role: user.role,
     member_status: effectiveStatus,
     muted_until: effectiveStatus === 'borrow_muted' ? user.muted_until : null,
     is_trusted: trusted,

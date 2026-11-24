@@ -1,5 +1,5 @@
-// PostgreSQL: the connections, transactions, and the tables from CLAUDE.md section 5,
-// extended with Group Admin, Super Admin, global catalog, and append-only audit log tables.
+// PostgreSQL: the connections, transactions, and tables for accounts, groups, loans, S3 photos,
+// Group Admin, Super Admin, global catalog, and append-only audit logs.
 
 import './env.ts';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -12,21 +12,16 @@ const DATABASE_URL = process.env.DATABASE_URL || 'postgres://otonari:otonari@loc
 pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, (text) => new Date(text).toISOString());
 
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
-// E.g. the database restarts: the pool opens new connections by itself, so just write it down.
 pool.on('error', (error) => console.error('Database connection lost:', error.message));
 
-// The connection of the transaction we are in, if any. (AsyncLocalStorage keeps it for everything that is
-// called inside transaction(), so the models don't have to pass it around.)
 const currentTransaction = new AsyncLocalStorage<pg.PoolClient>();
 
-// Runs one SQL statement; $1, $2, ... are the params. Returns the rows.
 export async function query<T extends pg.QueryResultRow>(sql: string, params: unknown[] = []): Promise<T[]> {
   const connection = currentTransaction.getStore() ?? pool;
   const result = await connection.query<T>(sql, params);
   return result.rows;
 }
 
-// The same for at most one row.
 export async function queryOne<T extends pg.QueryResultRow>(
   sql: string,
   params: unknown[] = []
@@ -35,13 +30,10 @@ export async function queryOne<T extends pg.QueryResultRow>(
   return rows[0];
 }
 
-// All or nothing: if anything in `work` fails, nothing is saved.
-// All transactions wait for the same lock, so they run one after the other: what `work` has checked (e.g.
-// "the item is available") stays true until it is finished. That is fast enough for a neighborhood.
-const WRITE_LOCK = 2611; // any number, but always the same one
+const WRITE_LOCK = 2611;
 
 export async function transaction<T>(work: () => Promise<T>): Promise<T> {
-  if (currentTransaction.getStore()) return work(); // already inside one
+  if (currentTransaction.getStore()) return work();
 
   const connection = await pool.connect();
   let broken: Error | undefined;
@@ -59,19 +51,22 @@ export async function transaction<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
-// For values that must exist (e.g. the item of a loan): TypeScript can't know that a query finds a row.
 export function found<T>(value: T | undefined): T {
   if (value === undefined) throw new Error('Expected a value, but there is none');
   return value;
 }
 
-// Idempotent schema creation + additive migrations for pre-existing local databases.
 export async function createTables() {
+  // A database from before there were accounts can't be used anymore: nobody in it has an email.
+  const old = await query("SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'token'");
+  if (old.length > 0) {
+    throw new Error('This database is from an older version. Reset it: npm run seed (Docker: docker compose down -v)');
+  }
   await query(`
     CREATE TABLE IF NOT EXISTS groups (
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-      code TEXT UNIQUE NOT NULL,          -- join code, e.g. 'SAKURA-2611'
-      name TEXT NOT NULL,                 -- shown as-is (proper noun)
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
       type TEXT NOT NULL CHECK (type IN ('building','block')),
       city TEXT NOT NULL,
       join_policy TEXT NOT NULL DEFAULT 'open'
@@ -85,34 +80,58 @@ export async function createTables() {
 
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-      group_id INTEGER NOT NULL REFERENCES groups(id),
-      nickname TEXT NOT NULL,             -- max 20 chars
+      email TEXT UNIQUE NOT NULL,
+      email_verified BOOLEAN NOT NULL DEFAULT false,
+      password_hash TEXT,
+      google_sub TEXT UNIQUE,
+      google_only BOOLEAN NOT NULL DEFAULT false,
+      role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('super_admin','group_admin','co_admin','user')),
+      group_id INTEGER REFERENCES groups(id),
+      joined_at TIMESTAMPTZ,
+      nickname TEXT NOT NULL DEFAULT '',
       lang TEXT NOT NULL CHECK (lang IN ('en','ja','ja-easy','bn')),
       elder_mode BOOLEAN NOT NULL DEFAULT false,
-      token TEXT UNIQUE NOT NULL,         -- crypto.randomUUID()
-      is_demo BOOLEAN NOT NULL DEFAULT false, -- seeded demo neighbor: anyone may "continue as" them in demo mode
-      group_role TEXT NOT NULL DEFAULT 'member'
-        CHECK (group_role IN ('member','co_admin','group_admin')),
+      is_demo BOOLEAN NOT NULL DEFAULT false,
+      deactivated_at TIMESTAMPTZ,
       member_status TEXT NOT NULL DEFAULT 'active'
         CHECK (member_status IN ('pending','active','borrow_muted','suspended')),
       muted_until TIMESTAMPTZ,
       trust_override TEXT CHECK (trust_override IN ('granted','revoked')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-      left_at TIMESTAMPTZ                 -- set when they leave (their token stops working); NULL = member
+      CHECK (role NOT IN ('group_admin','co_admin') OR group_id IS NOT NULL)
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      token_hash TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      expires_at TIMESTAMPTZ NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS email_codes (
+      email TEXT PRIMARY KEY,
+      code_hash TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      expires_at TIMESTAMPTZ NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS registrations (
+      ticket_hash TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS items (
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       owner_id INTEGER NOT NULL REFERENCES users(id),
       group_id INTEGER NOT NULL REFERENCES groups(id),
-      item_key TEXT NOT NULL,             -- key from catalog_items, e.g. 'futon_dryer'
+      item_key TEXT NOT NULL,
       max_days INTEGER NOT NULL DEFAULT 3,
-      spot TEXT NOT NULL,                 -- key from SPOTS, e.g. 'entrance'
-      trusted_only BOOLEAN NOT NULL DEFAULT false,  -- true = only for trusted neighbors
+      spot TEXT NOT NULL,
+      trusted_only BOOLEAN NOT NULL DEFAULT false,
       status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','lent')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-      removed_at TIMESTAMPTZ,             -- set when the owner removes it (soft delete); NULL = on the shelf
-      hidden_at TIMESTAMPTZ               -- set when Group Admin temporarily hides it; NULL = visible
+      removed_at TIMESTAMPTZ,
+      hidden_at TIMESTAMPTZ
     );
 
     CREATE TABLE IF NOT EXISTS loans (
@@ -124,9 +143,9 @@ export async function createTables() {
       end_at TIMESTAMPTZ NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending','accepted','declined','cancelled','active','returned')),
-      handover_photo TEXT,                -- '/uploads/xxx.jpg'
+      handover_photo TEXT,
       return_photo TEXT,
-      returned_at TIMESTAMPTZ,            -- when the borrower sent the return photo
+      returned_at TIMESTAMPTZ,
       reminded_soon_at TIMESTAMPTZ,
       reminded_overdue_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
@@ -135,10 +154,10 @@ export async function createTables() {
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       loan_id INTEGER NOT NULL REFERENCES loans(id),
-      from_user_id INTEGER REFERENCES users(id),   -- NULL = system message (reminders / admin notices)
+      from_user_id INTEGER REFERENCES users(id),
       to_user_id INTEGER NOT NULL REFERENCES users(id),
-      phrase_key TEXT NOT NULL,           -- e.g. 'request', 'accept', 'sys.dueSoon'
-      params JSONB NOT NULL DEFAULT '{}', -- { item, start, end, spot, name }
+      phrase_key TEXT NOT NULL,
+      params JSONB NOT NULL DEFAULT '{}',
       read_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
     );
@@ -182,14 +201,6 @@ export async function createTables() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
     );
 
-    CREATE TABLE IF NOT EXISTS super_admin_sessions (
-      token TEXT PRIMARY KEY,
-      admin_label TEXT NOT NULL,
-      expires_at TIMESTAMPTZ NOT NULL,
-      last_seen_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-      created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
-    );
-
     CREATE TABLE IF NOT EXISTS catalog_items (
       item_key TEXT PRIMARY KEY,
       emoji TEXT NOT NULL,
@@ -201,20 +212,28 @@ export async function createTables() {
       label_bn TEXT NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
     );
+  `);
+}
 
-    -- Additive migrations for existing databases created prior to admin panels
+// Zero-downtime additive migrations for already-deployed production databases.
+export async function addNewColumns() {
+  await query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS google_only BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS member_status TEXT NOT NULL DEFAULT 'active';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS muted_until TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS trust_override TEXT;
+
     ALTER TABLE groups ADD COLUMN IF NOT EXISTS join_policy TEXT NOT NULL DEFAULT 'open';
     ALTER TABLE groups ADD COLUMN IF NOT EXISTS lifecycle_status TEXT NOT NULL DEFAULT 'active';
     ALTER TABLE groups ADD COLUMN IF NOT EXISTS invite_code_version INTEGER NOT NULL DEFAULT 1;
     ALTER TABLE groups ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ;
     ALTER TABLE groups ADD COLUMN IF NOT EXISTS suspension_reason TEXT;
 
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS group_role TEXT NOT NULL DEFAULT 'member';
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS member_status TEXT NOT NULL DEFAULT 'active';
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS muted_until TIMESTAMPTZ;
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS trust_override TEXT;
-
     ALTER TABLE items ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ;
+
+    -- Safely widen users.role CHECK constraint on existing DBs to include co_admin.
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('super_admin','group_admin','co_admin','user'));
 
     CREATE INDEX IF NOT EXISTS idx_audit_logs_scope_created ON audit_logs (scope_group_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_loan_disputes_group_status ON loan_disputes (group_id, status);
@@ -222,15 +241,13 @@ export async function createTables() {
   `);
 }
 
-// Start from empty tables: drop them all and create them again (used by seedData.ts).
 export async function resetDatabase() {
   await query(
-    'DROP TABLE IF EXISTS audit_logs, loan_disputes, group_announcements, super_admin_sessions, catalog_items, messages, loans, items, users, groups'
+    'DROP TABLE IF EXISTS audit_logs, loan_disputes, group_announcements, catalog_items, messages, loans, items, sessions, email_codes, registrations, users, groups'
   );
   await createTables();
 }
 
-// On start the database may need a moment longer than this server. Try for half a minute.
 export async function waitForDatabase() {
   for (let attemptsLeft = 30; ; attemptsLeft -= 1) {
     try {
@@ -244,7 +261,6 @@ export async function waitForDatabase() {
   }
 }
 
-// For scripts (seed.ts): without this they would not end.
 export async function closeDatabase() {
   await pool.end();
 }

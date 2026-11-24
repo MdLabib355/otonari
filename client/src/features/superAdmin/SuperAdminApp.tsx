@@ -1,44 +1,27 @@
-// Lazy-loaded root for /super-admin/* — completely isolated from resident PWA shell and CSS.
+// Lazy-loaded root for /admin and /super-admin/* — isolated from resident PWA shell & Elder Mode.
+// Uses Otonari's unified session auth (UserContext, role === 'super_admin').
 
-import { useEffect, useState } from 'react';
-import type { SuperAdminSessionInfo } from '../../../../shared/types.ts';
+import { useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useUser } from '../../core/UserContext.ts';
 import '../../styles/super-admin.css';
-import SuperAdminLogin from './SuperAdminLogin.tsx';
 import SuperAdminShell from './SuperAdminShell.tsx';
-import { clearSuperAdminToken, getSuperAdminToken, saApi } from './superAdminApi.ts';
 
 export default function SuperAdminApp() {
-  const [session, setSession] = useState<SuperAdminSessionInfo | null>(null);
-  const [checking, setChecking] = useState(Boolean(getSuperAdminToken()));
+  const { user, logout } = useUser();
 
   // Ensure resident Elder Mode class never distorts the desktop ops console.
   useEffect(() => {
     document.body.classList.remove('elder');
   }, []);
 
-  useEffect(() => {
-    if (!getSuperAdminToken()) return;
-    saApi
-      .get<SuperAdminSessionInfo>('/auth/me')
-      .then(setSession)
-      .catch(() => {
-        clearSuperAdminToken();
-        setSession(null);
-      })
-      .finally(() => setChecking(false));
-  }, []);
-
-  if (checking) {
-    return (
-      <div className="sa-login-wrap">
-        <p>Checking Super Admin session…</p>
-      </div>
-    );
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
-  if (!session) {
-    return <SuperAdminLogin onAuthenticated={setSession} />;
+  if (user.role !== 'super_admin') {
+    return <Navigate to="/" replace />;
   }
 
-  return <SuperAdminShell session={session} onSignedOut={() => setSession(null)} />;
+  return <SuperAdminShell user={user} onSignOut={logout} />;
 }

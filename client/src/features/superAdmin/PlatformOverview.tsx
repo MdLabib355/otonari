@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import type { StorageCleanupResult, SuperAdminOverview } from '../../../../shared/types.ts';
-import { ApiError } from '../../core/api.ts';
-import { saApi } from './superAdminApi.ts';
+import { api, ApiError } from '../../core/api.ts';
+import type { SuperTab } from './SuperAdminShell.tsx';
 
 export interface PlatformOverviewProps {
   overview: SuperAdminOverview;
-  onNavigate: (tab: 'overview' | 'groups' | 'catalog' | 'disputes' | 'audit') => void;
+  onNavigate: (tab: SuperTab) => void;
   onRefresh: () => Promise<void>;
   onNotify: (text: string, isError?: boolean) => void;
 }
@@ -24,15 +24,18 @@ export default function PlatformOverview({
 }: PlatformOverviewProps) {
   const [busyOp, setBusyOp] = useState<string | null>(null);
 
-  const storagePct = Math.min(
-    100,
-    Math.round((overview.storage_health.used_bytes / Math.max(1, overview.storage_health.quota_bytes)) * 100)
-  );
+  const isS3 = overview.storage_health.mode === 's3';
+  const storagePct = isS3
+    ? 0
+    : Math.min(
+        100,
+        Math.round((overview.storage_health.used_bytes / Math.max(1, overview.storage_health.quota_bytes)) * 100)
+      );
 
   async function triggerReminderSweep() {
     setBusyOp('reminders');
     try {
-      const res = await saApi.post<{ checkedLoans: number }>('/operations/run-reminders');
+      const res = await api.post<{ checkedLoans: number }>('/super-admin/operations/run-reminders');
       await onRefresh();
       onNotify(`Reminder sweep completed (${res.checkedLoans} active loans checked).`);
     } catch (err) {
@@ -45,13 +48,17 @@ export default function PlatformOverview({
   async function runStorageCleanup(dryRun: boolean) {
     setBusyOp('storage');
     try {
-      const res = await saApi.post<StorageCleanupResult>('/operations/cleanup-uploads', { dry_run: dryRun });
+      const res = await api.post<StorageCleanupResult>('/super-admin/operations/cleanup-uploads', { dry_run: dryRun });
       await onRefresh();
-      onNotify(
-        dryRun
-          ? `Dry-run: ${res.orphan_files.length} orphan file(s) (${formatBytes(res.reclaimed_bytes)}).`
-          : `Deleted ${res.deleted_count} orphan file(s), reclaimed ${formatBytes(res.reclaimed_bytes)}.`
-      );
+      if (res.mode === 's3') {
+        onNotify('Photo storage is managed in AWS S3; automatic local purge is disabled.');
+      } else {
+        onNotify(
+          dryRun
+            ? `Dry-run: ${res.orphan_files.length} orphan file(s) (${formatBytes(res.reclaimed_bytes)}).`
+            : `Deleted ${res.deleted_count} orphan file(s), reclaimed ${formatBytes(res.reclaimed_bytes)}.`
+        );
+      }
     } catch (err) {
       onNotify(err instanceof ApiError ? err.message : 'Storage cleanup failed', true);
     } finally {
@@ -158,36 +165,53 @@ export default function PlatformOverview({
 
         <div className="sa-health-tile">
           <div className="ga-card-top" style={{ marginBottom: 0 }}>
-            <strong>Photo Storage (server/uploads/)</strong>
-            <span className="ga-badge ga-badge-indigo">{storagePct}% used</span>
+            <strong>{isS3 ? 'Photo Storage (AWS S3)' : 'Photo Storage (server/uploads/)'}</strong>
+            <span className={`ga-badge ${isS3 ? 'ga-badge-green' : 'ga-badge-indigo'}`}>
+              {isS3 ? 'S3 Signed URLs' : `${storagePct}% used`}
+            </span>
           </div>
-          <div className="sa-progress" role="progressbar" aria-valuenow={storagePct} aria-valuemin={0} aria-valuemax={100}>
-            <div className="sa-progress-fill" style={{ width: `${storagePct}%` }} />
-          </div>
-          <div className="ga-meta">
-            {formatBytes(overview.storage_health.used_bytes)} / {formatBytes(overview.storage_health.quota_bytes)} ·{' '}
-            {overview.storage_health.total_files} file(s), {overview.storage_health.orphan_files} orphan(s)
-          </div>
-          <div className="ga-actions">
-            <button
-              type="button"
-              className="ga-btn"
-              disabled={busyOp === 'storage'}
-              onClick={() => runStorageCleanup(true)}
-            >
-              Dry-Run Scan
-            </button>
-            {overview.storage_health.orphan_files > 0 && (
-              <button
-                type="button"
-                className="ga-btn ga-btn-danger"
-                disabled={busyOp === 'storage'}
-                onClick={() => runStorageCleanup(false)}
+          {isS3 ? (
+            <div className="ga-meta">
+              Private S3 bucket active · {overview.storage_health.total_files} referenced loan photo(s). Lifecycle
+              rules managed in AWS.
+            </div>
+          ) : (
+            <>
+              <div
+                className="sa-progress"
+                role="progressbar"
+                aria-valuenow={storagePct}
+                aria-valuemin={0}
+                aria-valuemax={100}
               >
-                Purge Orphans
-              </button>
-            )}
-          </div>
+                <div className="sa-progress-fill" style={{ width: `${storagePct}%` }} />
+              </div>
+              <div className="ga-meta">
+                {formatBytes(overview.storage_health.used_bytes)} / {formatBytes(overview.storage_health.quota_bytes)}{' '}
+                · {overview.storage_health.total_files} file(s), {overview.storage_health.orphan_files} orphan(s)
+              </div>
+              <div className="ga-actions">
+                <button
+                  type="button"
+                  className="ga-btn"
+                  disabled={busyOp === 'storage'}
+                  onClick={() => runStorageCleanup(true)}
+                >
+                  Dry-Run Scan
+                </button>
+                {overview.storage_health.orphan_files > 0 && (
+                  <button
+                    type="button"
+                    className="ga-btn ga-btn-danger"
+                    disabled={busyOp === 'storage'}
+                    onClick={() => runStorageCleanup(false)}
+                  >
+                    Purge Orphans
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

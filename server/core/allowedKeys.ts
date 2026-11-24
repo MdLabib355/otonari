@@ -9,6 +9,7 @@ import type {
   JoinPolicy,
   Lang,
   MemberStatus,
+  Role,
 } from '../../shared/types.ts';
 import { queryOne } from './database.ts';
 
@@ -86,7 +87,8 @@ export const LANGUAGES: Lang[] = ['en', 'ja', 'ja-easy', 'bn'];
 export const GROUP_TYPES: GroupType[] = ['building', 'block'];
 export const JOIN_POLICIES: JoinPolicy[] = ['open', 'approval_required', 'locked'];
 export const GROUP_LIFECYCLE_STATUSES: GroupLifecycleStatus[] = ['active', 'read_only', 'suspended', 'archived'];
-export const GROUP_ROLES: GroupRole[] = ['member', 'co_admin', 'group_admin'];
+export const GROUP_ROLES: GroupRole[] = ['user', 'co_admin', 'group_admin'];
+export const ALL_ROLES: Role[] = ['user', 'co_admin', 'group_admin', 'super_admin'];
 export const MEMBER_STATUSES: MemberStatus[] = ['pending', 'active', 'borrow_muted', 'suspended'];
 
 // Loan lengths in days (an item's max_days must be one of these).

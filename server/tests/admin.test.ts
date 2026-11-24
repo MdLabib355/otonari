@@ -1,18 +1,25 @@
-// Comprehensive deterministic integration & guardrail tests for Group Admin & Super Admin.
-// Run with: node --test server/tests/*.test.ts
+// Comprehensive deterministic integration & guardrail tests for Group Admin & Super Admin
+// unified with Otonari's account/session auth, S3/local storage, and Break-Glass governance.
+// Run with: DEMO_MODE=true node --test server/tests/*.test.ts
 
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { after, before, describe, it } from 'node:test';
 import express from 'express';
 import { createV1 } from '../api/v1.ts';
-import { closeDatabase, createTables, query } from '../core/database.ts';
+import { addNewColumns, closeDatabase, query } from '../core/database.ts';
+import { hashSecret, matchesHash } from '../modules/auth/password.ts';
+import { createSession } from '../modules/auth/sessionModel.ts';
 import { issueBreakGlassToken, verifyBreakGlassToken } from '../modules/superAdmin/breakGlass.ts';
-import { hashPasswordScrypt, verifyPasswordScrypt } from '../modules/superAdmin/superAdminAuth.ts';
-import { seed } from '../seedData.ts';
+import { createUser, setPassword, setRole } from '../modules/user/userModel.ts';
+import { DEMO_PASSWORD, seed } from '../seedData.ts';
 
 let server: http.Server;
 let baseUrl = '';
+const tokenCache = new Map<string, { id: number; email: string; token: string; group_id: number }>();
+
+const TEST_SUPER_ADMIN_EMAIL = 'superadmin@otonari.test';
+const TEST_SUPER_ADMIN_PASSWORD = 'test-super-secret-password';
 
 async function apiReq(
   method: string,
@@ -33,23 +40,42 @@ async function apiReq(
   return { status: res.status, data };
 }
 
-async function tokenForNickname(nickname: string): Promise<{ id: number; token: string; group_id: number }> {
-  const rows = await query<{ id: number; token: string; group_id: number }>(
-    'SELECT id, token, group_id FROM users WHERE nickname = $1 AND left_at IS NULL',
+async function loginNickname(nickname: string): Promise<{ id: number; email: string; token: string; group_id: number }> {
+  const cached = tokenCache.get(nickname);
+  if (cached) return cached;
+
+  const rows = await query<{ id: number; email: string; group_id: number }>(
+    'SELECT id, email, group_id FROM users WHERE nickname = $1 AND deactivated_at IS NULL',
     [nickname]
   );
-  assert.equal(rows.length, 1, `Expected unique user ${nickname}`);
-  return rows[0];
+  assert.equal(rows.length, 1, `Expected unique active user ${nickname}`);
+  const row = rows[0];
+
+  const loginRes = await apiReq('POST', '/auth/login', {
+    body: { email: row.email, password: DEMO_PASSWORD },
+  });
+  assert.equal(loginRes.status, 200, `Login failed for ${nickname} (${row.email})`);
+  const session = { id: row.id, email: row.email, token: loginRes.data.token as string, group_id: row.group_id };
+  tokenCache.set(nickname, session);
+  return session;
 }
 
-describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass & Catalog', () => {
-  before(async () => {
-    process.env.DEMO_MODE = 'true';
-    process.env.SUPER_ADMIN_USERNAME = 'admin';
-    process.env.SUPER_ADMIN_PASSWORD = 'test-super-secret-password';
+async function createVerifiedAccount(email: string, nickname = '') {
+  const user = await createUser({ email, lang: 'en', nickname });
+  await setPassword(user.id, await hashSecret('test-user-password-123'));
+  const token = await createSession(user.id);
+  return { id: user.id, email, token };
+}
 
-    await createTables();
+describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass, Catalog & Unified Auth', () => {
+  before(async () => {
     await seed(false);
+    await addNewColumns();
+
+    // Ensure deterministic super_admin test account
+    const sa = await createUser({ email: TEST_SUPER_ADMIN_EMAIL, lang: 'en', nickname: 'Platform Admin' });
+    await setPassword(sa.id, await hashSecret(TEST_SUPER_ADMIN_PASSWORD));
+    await setRole(sa.id, 'super_admin');
 
     const app = express();
     app.use(express.json());
@@ -72,15 +98,15 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass & Catalog', () 
     await closeDatabase();
   });
 
-  it('verifies scrypt password hashing deterministically', () => {
-    const hash = hashPasswordScrypt('otonari-secret');
-    assert.equal(verifyPasswordScrypt('otonari-secret', hash), true);
-    assert.equal(verifyPasswordScrypt('wrong-secret', hash), false);
+  it('verifies scrypt password hashing deterministically', async () => {
+    const hash = await hashSecret('otonari-secret');
+    assert.equal(await matchesHash('otonari-secret', hash), true);
+    assert.equal(await matchesHash('wrong-secret', hash), false);
   });
 
   it('enforces strict cross-group isolation (404 on foreign user/item/loan)', async () => {
-    const sato = await tokenForNickname('Sato'); // Sakura Heights group_admin
-    const kobayashi = await tokenForNickname('Kobayashi'); // Hamaguchi-machi member
+    const sato = await loginNickname('Sato'); // Sakura Heights group_admin
+    const kobayashi = await loginNickname('Kobayashi'); // Hamaguchi-machi member
 
     const foreignItems = await query<{ id: number }>('SELECT id FROM items WHERE group_id = $1 LIMIT 1', [
       kobayashi.group_id,
@@ -100,38 +126,44 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass & Catalog', () 
     assert.equal(itemRes.status, 404);
 
     // Regular member (Maria) cannot access /group-admin/*
-    const maria = await tokenForNickname('Maria');
+    const maria = await loginNickname('Maria');
     const forbidden = await apiReq('GET', '/group-admin/dashboard', { token: maria.token });
     assert.equal(forbidden.status, 403);
   });
 
   it('enforces Last-Admin protection (409 on self-leave, demote, or removal of sole group_admin)', async () => {
-    const sato = await tokenForNickname('Sato');
-    const inoue = await tokenForNickname('Inoue');
+    const sato = await loginNickname('Sato');
+    const inoue = await loginNickname('Inoue');
 
-    // Create a non-demo sole group_admin in a fresh group to test self-leave guardrail
+    // Create a non-demo sole group_admin + another active member in a fresh group to test self-leave guardrail
+    const leader = await createVerifiedAccount('sole-leader@otonari.test', 'SoleLeader');
+    const neighbor = await createVerifiedAccount('sole-neighbor@otonari.test', 'SoleNeighbor');
+
     const grp = await apiReq('POST', '/groups', {
-      body: { name: 'Sole Admin Test Building', type: 'building', city: 'Nagasaki' },
+      token: leader.token,
+      body: { name: 'Sole Admin Test Building', type: 'building', city: 'Nagasaki', nickname: 'SoleLeader', lang: 'en' },
     });
     assert.equal(grp.status, 201);
-    const joined = await apiReq('POST', `/groups/${grp.data.code}/members`, {
-      body: { nickname: 'SoleLeader', lang: 'en' },
+
+    const joined = await apiReq('POST', `/groups/${grp.data.group.code}/members`, {
+      token: neighbor.token,
+      body: { nickname: 'SoleNeighbor', lang: 'en' },
     });
     assert.equal(joined.status, 201);
-    await query("UPDATE users SET group_role = 'group_admin' WHERE id = $1", [joined.data.user.id]);
 
-    const leaveSelf = await apiReq('DELETE', '/me', { token: joined.data.token });
+    // Sole group_admin cannot leave while other active members remain
+    const leaveSelf = await apiReq('DELETE', '/me/group', { token: leader.token });
     assert.equal(leaveSelf.status, 409);
 
     // Sole group_admin cannot demote themselves
     const demoteSelf = await apiReq('PATCH', `/group-admin/members/${sato.id}/role`, {
       token: sato.token,
-      body: { role: 'member' },
+      body: { role: 'user' },
     });
     assert.equal(demoteSelf.status, 409);
 
     // Co-Admin (Tanaka) cannot suspend or remove Primary Group Admin (Sato)
-    const tanaka = await tokenForNickname('Tanaka');
+    const tanaka = await loginNickname('Tanaka');
     const coSuspend = await apiReq('PATCH', `/group-admin/members/${sato.id}/status`, {
       token: tanaka.token,
       body: { status: 'suspended' },
@@ -144,7 +176,7 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass & Catalog', () 
   });
 
   it('enforces lent-item hide lock (409) and allows hiding/restoring available items', async () => {
-    const sato = await tokenForNickname('Sato');
+    const sato = await loginNickname('Sato');
     const itemsRes = await apiReq('GET', '/group-admin/items', { token: sato.token });
     assert.equal(itemsRes.status, 200);
 
@@ -167,7 +199,7 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass & Catalog', () 
     assert.ok(hideOk.data.hidden_at);
 
     // Hidden item must disappear from resident shelf
-    const maria = await tokenForNickname('Maria');
+    const maria = await loginNickname('Maria');
     const shelfRes = await apiReq('GET', '/items', { token: maria.token });
     assert.equal(shelfRes.status, 200);
     assert.equal(
@@ -184,8 +216,8 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass & Catalog', () 
   });
 
   it('enforces 24h nudge rate limit (429), Safe Remove active-loan lock (409 -> 204 after force-return)', async () => {
-    const sato = await tokenForNickname('Sato');
-    const yamamoto = await tokenForNickname('Yamamoto');
+    const sato = await loginNickname('Sato');
+    const yamamoto = await loginNickname('Yamamoto');
 
     const loansRes = await apiReq('GET', '/group-admin/loans', { token: sato.token });
     assert.equal(loansRes.status, 200);
@@ -224,8 +256,8 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass & Catalog', () 
   });
 
   it('enforces borrow-mute (403 on new borrow) and approval-required join workflow', async () => {
-    const sato = await tokenForNickname('Sato');
-    const ayesha = await tokenForNickname('Ayesha');
+    const sato = await loginNickname('Sato');
+    const ayesha = await loginNickname('Ayesha');
 
     // Mute Ayesha
     const muted = await apiReq('PATCH', `/group-admin/members/${ayesha.id}/status`, {
@@ -262,18 +294,20 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass & Catalog', () 
     });
     assert.equal(policyRes.status, 200);
 
+    const rahimAccount = await createVerifiedAccount('rahim@otonari.test');
     const pendingJoin = await apiReq('POST', '/groups/SAKURA-2611/members', {
+      token: rahimAccount.token,
       body: { nickname: 'Rahim', lang: 'bn' },
     });
     assert.equal(pendingJoin.status, 202);
     assert.equal(pendingJoin.data.user.member_status, 'pending');
 
     // Pending resident cannot browse /items
-    const blockedShelf = await apiReq('GET', '/items', { token: pendingJoin.data.token });
+    const blockedShelf = await apiReq('GET', '/items', { token: rahimAccount.token });
     assert.equal(blockedShelf.status, 403);
 
     // Sato approves Rahim
-    const approved = await apiReq('POST', `/group-admin/members/${pendingJoin.data.user.id}/approve`, {
+    const approved = await apiReq('POST', `/group-admin/members/${rahimAccount.id}/approve`, {
       token: sato.token,
       body: { grant_trust: true },
     });
@@ -282,35 +316,37 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass & Catalog', () 
     assert.equal(approved.data.is_trusted, true);
 
     // Approved resident can now browse /items
-    const unlockedShelf = await apiReq('GET', '/items', { token: pendingJoin.data.token });
+    const unlockedShelf = await apiReq('GET', '/items', { token: rahimAccount.token });
     assert.equal(unlockedShelf.status, 200);
   });
 
-  it('enforces Super Admin auth isolation, Break-Glass token verification/expiry, and 4-locale catalog validation', async () => {
-    const sato = await tokenForNickname('Sato');
+  it('enforces Super Admin RBAC, Break-Glass token verification/expiry, 4-locale catalog, and account deactivation', async () => {
+    const sato = await loginNickname('Sato');
 
-    // Resident/GroupAdmin token must NEVER work on Super Admin endpoints
+    // Non-super-admin token must NEVER work on Super Admin endpoints
     const rejectedResident = await apiReq('GET', '/super-admin/overview', { token: sato.token });
-    assert.equal(rejectedResident.status, 401);
+    assert.equal(rejectedResident.status, 403);
 
-    // Wrong password rejected
-    const badLogin = await apiReq('POST', '/super-admin/auth/login', {
-      body: { username: 'admin', password: 'wrong' },
+    // Wrong password rejected via unified /auth/login
+    const badLogin = await apiReq('POST', '/auth/login', {
+      body: { email: TEST_SUPER_ADMIN_EMAIL, password: 'wrong-password' },
     });
     assert.equal(badLogin.status, 401);
 
-    // Valid Super Admin login
-    const loginRes = await apiReq('POST', '/super-admin/auth/login', {
-      body: { username: 'admin', password: 'test-super-secret-password' },
+    // Valid Super Admin login via unified /auth/login
+    const loginRes = await apiReq('POST', '/auth/login', {
+      body: { email: TEST_SUPER_ADMIN_EMAIL, password: TEST_SUPER_ADMIN_PASSWORD },
     });
     assert.equal(loginRes.status, 200);
     const saToken: string = loginRes.data.token;
     assert.ok(saToken);
+    assert.equal(loginRes.data.user.role, 'super_admin');
 
     // Overview works
     const overview = await apiReq('GET', '/super-admin/overview', { token: saToken });
     assert.equal(overview.status, 200);
     assert.ok(overview.data.open_disputes >= 1);
+    assert.ok(overview.data.storage_health.mode === 'local' || overview.data.storage_health.mode === 's3');
 
     // Break-Glass evidence must be rejected without a valid scoped token
     const disputes = await apiReq('GET', '/super-admin/disputes', { token: saToken });
@@ -394,5 +430,19 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass & Catalog', () 
     const publicCatalog = await apiReq('GET', '/catalog');
     assert.equal(publicCatalog.status, 200);
     assert.ok(publicCatalog.data.some((c: { item_key: string }) => c.item_key === 'hand_mixer'));
+
+    // Unified /admin/users account management & session revocation on deactivation
+    const tempAccount = await createVerifiedAccount('deactivate-me@otonari.test', 'TempUser');
+    const beforeDeactivate = await apiReq('GET', '/me', { token: tempAccount.token });
+    assert.equal(beforeDeactivate.status, 200);
+
+    const deactivated = await apiReq('PATCH', `/admin/users/${tempAccount.id}`, {
+      token: saToken,
+      body: { active: false },
+    });
+    assert.equal(deactivated.status, 204);
+
+    const afterDeactivate = await apiReq('GET', '/me', { token: tempAccount.token });
+    assert.equal(afterDeactivate.status, 401);
   });
 });

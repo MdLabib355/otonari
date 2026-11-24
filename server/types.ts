@@ -2,13 +2,13 @@
 
 import type {
   GroupLifecycleStatus,
-  GroupRole,
   GroupType,
   ItemStatus,
   JoinPolicy,
   Lang,
   Loan,
   MemberStatus,
+  Role,
   TrustOverride,
 } from '../shared/types.ts';
 
@@ -27,18 +27,23 @@ export interface GroupRow {
 
 export interface UserRow {
   id: number;
-  group_id: number;
+  email: string;
+  email_verified: boolean;
+  password_hash: string | null;
+  google_sub: string | null;
+  google_only: boolean;
+  role: Role;
+  group_id: number | null;
+  joined_at: string | null;
   nickname: string;
   lang: Lang;
   elder_mode: boolean;
-  token: string;
   is_demo: boolean;
-  group_role: GroupRole;
+  deactivated_at: string | null;
   member_status: MemberStatus;
   muted_until: string | null;
   trust_override: TrustOverride;
   created_at: string;
-  left_at: string | null;
 }
 
 export interface ItemRow {
@@ -62,19 +67,14 @@ export interface CountRow {
   count: number;
 }
 
-export interface SuperAdminSession {
-  label: string;
-  token: string;
-  expiresAt: string;
-}
-
-// What the steps add to requests: requireUser / requireSuperAdmin (core/auth.ts) and loanRole (modules/loan).
+// What the steps add to requests: requireUser / requireMember (core/auth.ts) and loanRole (modules/loan).
 declare global {
   namespace Express {
     interface Request {
       user: UserRow;
+      groupId: number; // only after requireMember
       loan: LoanRow;
-      superAdmin?: SuperAdminSession;
+      photo: string; // only after storePhoto
     }
   }
 }

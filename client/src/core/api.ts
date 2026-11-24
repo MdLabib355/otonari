@@ -1,25 +1,26 @@
 // Small fetch wrapper for our own API (/api/v1/...).
-//  - adds "Authorization: Bearer <token>" when we have one. The token comes from /api/v1/groups/:code/members and is
-//    kept in localStorage: it is the user's whole identity (no accounts, no passwords).
+//  - adds "Authorization: Bearer <token>" when we have one. It comes from logging in and is
+//    kept in localStorage.
 //  - sends JSON (or FormData, for photos) and returns the JSON answer.
 //  - throws an ApiError with .status (e.g. 400, 403, 404) and .data (the JSON answer) when the server says no.
 //
 // The type of the answer (see shared/types.ts) goes in the angle brackets:
 //
 //    const me = await api.get<Me>('/me');
-//    const result = await api.post<Login>(`/groups/${code}/members`, { nickname, lang });
+//    const result = await api.post<Login>('/auth/login', { email, password });
 
 // The version of the API that this app uses. Paths are written without it: api.get('/me').
 const API_BASE = '/api/v1';
 
-// Pages that also work without being a member.
-const VISITOR_PAGES = ['/join', '/register', '/login', '/poster'];
+// Pages that also work without being logged in.
+const VISITOR_PAGES = ['/register', '/login', '/poster'];
 
 const TOKEN_KEY = 'otonari-token';
 
 // The JSON answer when the server says no.
 interface ErrorData {
   error?: string;
+  use_google?: boolean; // only /api/v1/auth: this account logs in with Google
   existing_name?: string; // only POST /api/v1/groups
 }
 
@@ -51,8 +52,13 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-async function request<T>(method: string, path: string, body?: object): Promise<T> {
-  const headers: Record<string, string> = {};
+async function request<T>(
+  method: string,
+  path: string,
+  body?: object,
+  extraHeaders?: Record<string, string>
+): Promise<T> {
+  const headers: Record<string, string> = { ...extraHeaders };
   const token = getToken();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -70,7 +76,7 @@ async function request<T>(method: string, path: string, body?: object): Promise<
   const response = await fetch(API_BASE + path, { method, headers, body: payload });
 
   if (response.status === 401) {
-    // The server doesn't know our token (e.g. after `npm run seed`): forget it and start again at the landing page.
+    // Our token has expired or is unknown (e.g. after `npm run seed`): forget it, and start at the landing page.
     clearToken();
     if (!VISITOR_PAGES.includes(window.location.pathname)) {
       window.location.assign('/');
@@ -85,8 +91,8 @@ async function request<T>(method: string, path: string, body?: object): Promise<
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>('GET', path),
+  get: <T>(path: string, extraHeaders?: Record<string, string>) => request<T>('GET', path, undefined, extraHeaders),
   post: <T>(path: string, body?: object) => request<T>('POST', path, body),
   patch: <T>(path: string, body: object) => request<T>('PATCH', path, body),
-  delete: (path: string) => request<null>('DELETE', path),
+  delete: <T = null>(path: string) => request<T>('DELETE', path),
 };

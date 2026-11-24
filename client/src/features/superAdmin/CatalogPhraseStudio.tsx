@@ -1,10 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import type { CatalogItemRecord, Lang } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
-import { ApiError } from '../../core/api.ts';
+import { api, ApiError } from '../../core/api.ts';
 import { CATEGORIES, LANGUAGES } from '../../data/catalog.ts';
 import { meta, renderPhrase } from '../../i18n/index.ts';
-import { saApi } from './superAdminApi.ts';
 
 const INSPECTABLE_PHRASES = [
   'request',
@@ -45,7 +44,7 @@ export default function CatalogPhraseStudio({ catalog, onRefresh, onNotify }: Ca
   async function toggleActive(item: CatalogItemRecord) {
     setBusy(true);
     try {
-      await saApi.patch(`/catalog/${encodeURIComponent(item.item_key)}`, { is_active: !item.is_active });
+      await api.patch(`/super-admin/catalog/${encodeURIComponent(item.item_key)}`, { is_active: !item.is_active });
       await onRefresh();
       onNotify(`Catalog item "${item.item_key}" ${!item.is_active ? 'enabled' : 'disabled'}`);
     } catch (err) {
@@ -59,7 +58,7 @@ export default function CatalogPhraseStudio({ catalog, onRefresh, onNotify }: Ca
     event.preventDefault();
     setBusy(true);
     try {
-      await saApi.post('/catalog', form);
+      await api.post('/super-admin/catalog', form);
       setAddOpen(false);
       setForm({
         item_key: '',

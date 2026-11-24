@@ -1,4 +1,4 @@
-// Group Admin SQL operations — strictly scoped to req.user.group_id on every single query.
+// Group Admin SQL operations — strictly scoped to req.groupId on every single query.
 
 import type {
   ActiveLoanBadge,
@@ -10,10 +10,11 @@ import type {
 } from '../../../shared/types.ts';
 import { found, query, queryOne, transaction } from '../../core/database.ts';
 import type { CountRow, ItemRow, UserRow } from '../../types.ts';
+import { clearGroup } from '../user/userModel.ts';
 
 export async function findGroupMember(groupId: number, userId: number): Promise<UserRow | undefined> {
   return queryOne<UserRow>(
-    'SELECT * FROM users WHERE id = $1 AND group_id = $2 AND left_at IS NULL',
+    'SELECT * FROM users WHERE id = $1 AND group_id = $2 AND deactivated_at IS NULL',
     [userId, groupId]
   );
 }
@@ -21,10 +22,10 @@ export async function findGroupMember(groupId: number, userId: number): Promise<
 export async function listGroupMembersRaw(groupId: number): Promise<UserRow[]> {
   return query<UserRow>(
     `SELECT * FROM users
-     WHERE group_id = $1 AND left_at IS NULL
+     WHERE group_id = $1 AND deactivated_at IS NULL
      ORDER BY
        CASE member_status WHEN 'pending' THEN 0 ELSE 1 END,
-       CASE group_role WHEN 'group_admin' THEN 0 WHEN 'co_admin' THEN 1 ELSE 2 END,
+       CASE role WHEN 'super_admin' THEN 0 WHEN 'group_admin' THEN 1 WHEN 'co_admin' THEN 2 ELSE 3 END,
        id ASC`,
     [groupId]
   );
@@ -91,11 +92,11 @@ export async function getActiveAnnouncement(groupId: number): Promise<GroupAnnou
 export async function getDashboardStats(groupId: number) {
   const [pending, activeMembers, overdue, flagged, announcement] = await Promise.all([
     queryOne<CountRow>(
-      "SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND left_at IS NULL AND member_status = 'pending'",
+      "SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND deactivated_at IS NULL AND member_status = 'pending'",
       [groupId]
     ),
     queryOne<CountRow>(
-      "SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND left_at IS NULL AND member_status IN ('active','borrow_muted')",
+      "SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND deactivated_at IS NULL AND member_status IN ('active','borrow_muted')",
       [groupId]
     ),
     queryOne<CountRow>(
@@ -125,19 +126,20 @@ export async function approvePendingMember(groupId: number, userId: number, gran
     `UPDATE users
      SET member_status = 'active',
          trust_override = CASE WHEN $3 THEN 'granted' ELSE trust_override END
-     WHERE id = $1 AND group_id = $2 AND left_at IS NULL AND member_status = 'pending'
+     WHERE id = $1 AND group_id = $2 AND deactivated_at IS NULL AND member_status = 'pending'
      RETURNING *`,
     [userId, groupId, grantTrust]
   );
   return found(row);
 }
 
+// Rejecting a pending join clears group_id while keeping their account intact so they can join another building.
 export async function rejectPendingMember(groupId: number, userId: number) {
-  await query(
-    `UPDATE users SET left_at = now()
-     WHERE id = $1 AND group_id = $2 AND left_at IS NULL AND member_status = 'pending'`,
+  const existing = await queryOne<{ id: number }>(
+    "SELECT id FROM users WHERE id = $1 AND group_id = $2 AND member_status = 'pending'",
     [userId, groupId]
   );
+  if (existing) await clearGroup(userId);
 }
 
 export async function updateMemberTrustOverride(
@@ -148,7 +150,7 @@ export async function updateMemberTrustOverride(
   const row = await queryOne<UserRow>(
     `UPDATE users
      SET trust_override = $3
-     WHERE id = $1 AND group_id = $2 AND left_at IS NULL
+     WHERE id = $1 AND group_id = $2 AND deactivated_at IS NULL
      RETURNING *`,
     [userId, groupId, trusted ? 'granted' : 'revoked']
   );
@@ -165,7 +167,7 @@ export async function updateMemberStatus(
     `UPDATE users
      SET member_status = $3,
          muted_until = $4
-     WHERE id = $1 AND group_id = $2 AND left_at IS NULL
+     WHERE id = $1 AND group_id = $2 AND deactivated_at IS NULL
      RETURNING *`,
     [userId, groupId, status, status === 'borrow_muted' ? mutedUntil : null]
   );
@@ -175,8 +177,8 @@ export async function updateMemberStatus(
 export async function updateMemberRole(groupId: number, userId: number, role: GroupRole): Promise<UserRow> {
   const row = await queryOne<UserRow>(
     `UPDATE users
-     SET group_role = $3
-     WHERE id = $1 AND group_id = $2 AND left_at IS NULL
+     SET role = $3
+     WHERE id = $1 AND group_id = $2 AND deactivated_at IS NULL
      RETURNING *`,
     [userId, groupId, role]
   );
@@ -190,11 +192,11 @@ export async function transferPrimaryAdmin(
 ): Promise<UserRow> {
   return transaction(async () => {
     await query(
-      "UPDATE users SET group_role = 'co_admin' WHERE id = $1 AND group_id = $2 AND left_at IS NULL",
+      "UPDATE users SET role = 'co_admin' WHERE id = $1 AND group_id = $2 AND role = 'group_admin'",
       [currentPrimaryId, groupId]
     );
     const promoted = await queryOne<UserRow>(
-      "UPDATE users SET group_role = 'group_admin' WHERE id = $1 AND group_id = $2 AND left_at IS NULL RETURNING *",
+      "UPDATE users SET role = 'group_admin' WHERE id = $1 AND group_id = $2 RETURNING *",
       [newPrimaryId, groupId]
     );
     return found(promoted);

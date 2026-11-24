@@ -5,11 +5,16 @@ import { getLoanItem } from '../item/itemModel.ts';
 import { listLoanMessages } from '../message/messageModel.ts';
 import { getPerson, trustOf } from '../user/userModel.ts';
 import { getLoan } from './loanModel.ts';
+import { photoUrl } from './photoFiles.ts';
 
 export async function loanDetailsView(loanId: number, viewerId: number): Promise<LoanDetails> {
   const loan = await getLoan(loanId);
   return {
-    loan,
+    loan: {
+      ...loan,
+      handover_photo: await photoUrl(loan.handover_photo),
+      return_photo: await photoUrl(loan.return_photo),
+    },
     item: await getLoanItem(loan.item_id),
     borrower: await getPerson(loan.borrower_id),
     lender: await getPerson(loan.lender_id),

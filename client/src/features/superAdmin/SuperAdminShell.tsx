@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type {
+  AdminUser,
   AuditLogEntry,
   CatalogItemRecord,
   DisputeSummary,
   SuperAdminGroupSummary,
   SuperAdminOverview,
-  SuperAdminSessionInfo,
+  User,
 } from '../../../../shared/types.ts';
 import {
   BookOpenIcon,
@@ -14,27 +15,30 @@ import {
   DocumentTextIcon,
   ShieldIcon,
   SquaresIcon,
+  UsersIcon,
 } from '../../components/Icons.tsx';
+import { api } from '../../core/api.ts';
 import { syncDynamicCatalog } from '../../data/catalog.ts';
+import AccountsDirectory from './AccountsDirectory.tsx';
 import AuditLogViewer from './AuditLogViewer.tsx';
 import CatalogPhraseStudio from './CatalogPhraseStudio.tsx';
 import GroupsDirectory from './GroupsDirectory.tsx';
 import PlatformOverview from './PlatformOverview.tsx';
 import SafetyQueue from './SafetyQueue.tsx';
-import { clearSuperAdminToken, saApi } from './superAdminApi.ts';
 
-type SuperTab = 'overview' | 'groups' | 'catalog' | 'disputes' | 'audit';
+export type SuperTab = 'overview' | 'groups' | 'accounts' | 'catalog' | 'disputes' | 'audit';
 
 export default function SuperAdminShell({
-  session,
-  onSignedOut,
+  user,
+  onSignOut,
 }: {
-  session: SuperAdminSessionInfo;
-  onSignedOut: () => void;
+  user: User;
+  onSignOut: () => void;
 }) {
   const [tab, setTab] = useState<SuperTab>('overview');
   const [overview, setOverview] = useState<SuperAdminOverview | null>(null);
   const [groups, setGroups] = useState<SuperAdminGroupSummary[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [catalog, setCatalog] = useState<CatalogItemRecord[]>([]);
   const [disputes, setDisputes] = useState<DisputeSummary[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
@@ -49,15 +53,17 @@ export default function SuperAdminShell({
   }, []);
 
   const refreshAll = useCallback(async () => {
-    const [ov, grp, cat, disp, logs] = await Promise.all([
-      saApi.get<SuperAdminOverview>('/overview'),
-      saApi.get<SuperAdminGroupSummary[]>('/groups'),
-      saApi.get<CatalogItemRecord[]>('/catalog'),
-      saApi.get<DisputeSummary[]>('/disputes'),
-      saApi.get<AuditLogEntry[]>('/audit-logs'),
+    const [ov, grp, acc, cat, disp, logs] = await Promise.all([
+      api.get<SuperAdminOverview>('/super-admin/overview'),
+      api.get<SuperAdminGroupSummary[]>('/super-admin/groups'),
+      api.get<AdminUser[]>('/admin/users'),
+      api.get<CatalogItemRecord[]>('/super-admin/catalog'),
+      api.get<DisputeSummary[]>('/super-admin/disputes'),
+      api.get<AuditLogEntry[]>('/super-admin/audit-logs'),
     ]);
     setOverview(ov);
     setGroups(grp);
+    setUsers(acc);
     setCatalog(cat);
     setDisputes(disp);
     setAuditLogs(logs);
@@ -69,12 +75,6 @@ export default function SuperAdminShell({
       .catch(() => notify('Failed to load Super Admin data', true))
       .finally(() => setLoading(false));
   }, [refreshAll, notify]);
-
-  async function signOut() {
-    await saApi.post('/auth/logout').catch(() => {});
-    clearSuperAdminToken();
-    onSignedOut();
-  }
 
   const openDisputes = disputes.filter((d) => d.status === 'open').length;
 
@@ -108,11 +108,11 @@ export default function SuperAdminShell({
               </span>
             </>
           )}
-          <span className="ga-badge ga-badge-indigo">{session.admin_label}</span>
-          <Link to="/" className="ga-btn">
-            Neighbor App
+          <span className="ga-badge ga-badge-indigo">{user.nickname || user.email}</span>
+          <Link to={user.group_id ? '/' : '/join'} className="ga-btn">
+            {user.group_id ? 'Neighbor App' : 'Join a Group'}
           </Link>
-          <button type="button" className="ga-btn" onClick={signOut}>
+          <button type="button" className="ga-btn" onClick={onSignOut}>
             Sign out
           </button>
         </div>
@@ -144,6 +144,18 @@ export default function SuperAdminShell({
                   Groups &amp; Admin Rescue
                 </span>
                 <span className="ga-badge ga-badge-indigo">{groups.length}</span>
+              </button>
+
+              <button
+                type="button"
+                className={`sa-nav-btn ${tab === 'accounts' ? 'active' : ''}`}
+                onClick={() => setTab('accounts')}
+              >
+                <span className="sa-nav-left">
+                  <UsersIcon className="icon-sm" />
+                  Accounts &amp; Users
+                </span>
+                <span className="ga-badge ga-badge-muted">{users.length}</span>
               </button>
 
               <button
@@ -213,6 +225,9 @@ export default function SuperAdminShell({
               )}
               {tab === 'groups' && (
                 <GroupsDirectory groups={groups} onRefresh={refreshAll} onNotify={notify} />
+              )}
+              {tab === 'accounts' && (
+                <AccountsDirectory meId={user.id} users={users} onRefresh={refreshAll} onNotify={notify} />
               )}
               {tab === 'catalog' && (
                 <CatalogPhraseStudio catalog={catalog} onRefresh={refreshAll} onNotify={notify} />

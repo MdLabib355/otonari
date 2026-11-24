@@ -5,15 +5,15 @@ import type {
   BreakGlassEvidenceMessage,
   CatalogItemRecord,
   DisputeSummary,
-  GroupRole,
-  Lang,
   LoanStatus,
   MemberStatus,
+  Role,
   SuperAdminGroupMemberPreview,
   SuperAdminGroupSummary,
 } from '../../../shared/types.ts';
 import { found, query, queryOne, transaction } from '../../core/database.ts';
 import type { CountRow, GroupRow, LoanRow } from '../../types.ts';
+import { photoUrl } from '../loan/photoFiles.ts';
 import { createMessage } from '../message/messageModel.ts';
 
 export async function getPlatformCounters() {
@@ -26,7 +26,7 @@ export async function getPlatformCounters() {
       queryOne<CountRow>("SELECT COUNT(*)::int AS count FROM groups WHERE lifecycle_status = 'active'"),
       queryOne<CountRow>('SELECT COUNT(*)::int AS count FROM groups'),
       queryOne<CountRow>(
-        "SELECT COUNT(*)::int AS count FROM users WHERE left_at IS NULL AND member_status IN ('active','borrow_muted')"
+        "SELECT COUNT(*)::int AS count FROM users WHERE group_id IS NOT NULL AND deactivated_at IS NULL AND member_status IN ('active','borrow_muted')"
       ),
       queryOne<CountRow>("SELECT COUNT(*)::int AS count FROM loans WHERE status IN ('accepted','active')"),
       queryOne<CountRow>("SELECT COUNT(*)::int AS count FROM loans WHERE status = 'returned'"),
@@ -35,15 +35,15 @@ export async function getPlatformCounters() {
       ),
       query<{ id: number; name: string; code: string; member_count: number }>(
         `SELECT g.id, g.name, g.code,
-                (SELECT COUNT(*)::int FROM users u WHERE u.group_id = g.id AND u.left_at IS NULL AND u.member_status <> 'pending') AS member_count
+                (SELECT COUNT(*)::int FROM users u WHERE u.group_id = g.id AND u.deactivated_at IS NULL AND u.member_status <> 'pending') AS member_count
          FROM groups g
          WHERE g.lifecycle_status = 'active'
            AND NOT EXISTS (
              SELECT 1 FROM users u
              WHERE u.group_id = g.id
-               AND u.left_at IS NULL
+               AND u.deactivated_at IS NULL
                AND u.member_status = 'active'
-               AND u.group_role = 'group_admin'
+               AND u.role = 'group_admin'
            )
          ORDER BY g.id`
       ),
@@ -72,16 +72,16 @@ export async function listGroupsForSuperAdmin(): Promise<SuperAdminGroupSummary[
   );
 
   const memberRows = await query<
-    SuperAdminGroupMemberPreview & { group_id: number; group_role: GroupRole; member_status: MemberStatus }
+    SuperAdminGroupMemberPreview & { group_id: number; role: Role; member_status: MemberStatus }
   >(
-    `SELECT u.id, u.group_id, u.nickname, u.group_role, u.member_status,
+    `SELECT u.id, u.group_id, u.nickname, u.role, u.member_status,
             COUNT(l.id) FILTER (WHERE l.status = 'returned' AND l.returned_at <= l.end_at)::int AS on_time_returns
      FROM users u
      LEFT JOIN loans l ON l.borrower_id = u.id
-     WHERE u.left_at IS NULL AND u.member_status <> 'pending'
+     WHERE u.group_id IS NOT NULL AND u.deactivated_at IS NULL AND u.member_status <> 'pending'
      GROUP BY u.id
      ORDER BY
-       CASE u.group_role WHEN 'group_admin' THEN 0 WHEN 'co_admin' THEN 1 ELSE 2 END,
+       CASE u.role WHEN 'group_admin' THEN 0 WHEN 'co_admin' THEN 1 ELSE 2 END,
        u.id ASC`
   );
 
@@ -91,7 +91,7 @@ export async function listGroupsForSuperAdmin(): Promise<SuperAdminGroupSummary[
     list.push({
       id: row.id,
       nickname: row.nickname,
-      group_role: row.group_role,
+      role: row.role,
       member_status: row.member_status,
       on_time_returns: row.on_time_returns,
     });
@@ -100,7 +100,7 @@ export async function listGroupsForSuperAdmin(): Promise<SuperAdminGroupSummary[
 
   return groups.map((g) => {
     const members = byGroup.get(g.id) ?? [];
-    const primary = members.find((m) => m.group_role === 'group_admin');
+    const primary = members.find((m) => m.role === 'group_admin');
     return {
       id: g.id,
       name: g.name,
@@ -125,21 +125,21 @@ export async function rescuePrimaryAdmin(
   groupId: number,
   userId: number
 ): Promise<{ previousAdmin: string | null; newAdmin: string } | null> {
-  const target = await queryOne<{ id: number; nickname: string; member_status: MemberStatus }>(
-    'SELECT id, nickname, member_status FROM users WHERE id = $1 AND group_id = $2 AND left_at IS NULL',
+  const target = await queryOne<{ id: number; nickname: string; member_status: MemberStatus; role: Role }>(
+    'SELECT id, nickname, member_status, role FROM users WHERE id = $1 AND group_id = $2 AND deactivated_at IS NULL',
     [userId, groupId]
   );
-  if (!target || target.member_status !== 'active') return null;
+  if (!target || target.member_status !== 'active' || target.role === 'super_admin') return null;
 
   return transaction(async () => {
     const previous = await queryOne<{ id: number; nickname: string }>(
-      "SELECT id, nickname FROM users WHERE group_id = $1 AND left_at IS NULL AND group_role = 'group_admin' LIMIT 1",
+      "SELECT id, nickname FROM users WHERE group_id = $1 AND deactivated_at IS NULL AND role = 'group_admin' LIMIT 1",
       [groupId]
     );
     if (previous && previous.id !== target.id) {
-      await query("UPDATE users SET group_role = 'co_admin' WHERE id = $1", [previous.id]);
+      await query("UPDATE users SET role = 'co_admin' WHERE id = $1", [previous.id]);
     }
-    await query("UPDATE users SET group_role = 'group_admin' WHERE id = $1", [target.id]);
+    await query("UPDATE users SET role = 'group_admin' WHERE id = $1", [target.id]);
     return { previousAdmin: previous?.nickname ?? null, newAdmin: target.nickname };
   });
 }
@@ -258,24 +258,28 @@ export async function getDisputeEvidence(disputeId: number, loanId: number): Pro
     )
   );
 
-  const messages = await query<BreakGlassEvidenceMessage>(
-    `SELECT DISTINCT ON (m.phrase_key, date_trunc('second', m.created_at), COALESCE(m.from_user_id, 0))
-            m.id, sender.nickname AS sender_nickname, sender.lang AS sender_lang,
-            m.phrase_key, m.params, m.created_at
-     FROM messages m
-     LEFT JOIN users sender ON sender.id = m.from_user_id
-     WHERE m.loan_id = $1
-     ORDER BY m.phrase_key, date_trunc('second', m.created_at), COALESCE(m.from_user_id, 0), m.id ASC`,
-    [loanId]
-  );
+  const [messages, handoverPhoto, returnPhoto] = await Promise.all([
+    query<BreakGlassEvidenceMessage>(
+      `SELECT DISTINCT ON (m.phrase_key, date_trunc('second', m.created_at), COALESCE(m.from_user_id, 0))
+              m.id, sender.nickname AS sender_nickname, sender.lang AS sender_lang,
+              m.phrase_key, m.params, m.created_at
+       FROM messages m
+       LEFT JOIN users sender ON sender.id = m.from_user_id
+       WHERE m.loan_id = $1
+       ORDER BY m.phrase_key, date_trunc('second', m.created_at), COALESCE(m.from_user_id, 0), m.id ASC`,
+      [loanId]
+    ),
+    photoUrl(loan.handover_photo),
+    photoUrl(loan.return_photo),
+  ]);
   messages.sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at) || a.id - b.id);
 
   return {
     dispute_id: disputeId,
     loan_id: loan.id,
     item_key: loan.item_key,
-    handover_photo: loan.handover_photo,
-    return_photo: loan.return_photo,
+    handover_photo: handoverPhoto,
+    return_photo: returnPhoto,
     loan_status: loan.status as LoanStatus,
     start_at: loan.start_at,
     end_at: loan.end_at,

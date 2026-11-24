@@ -17,7 +17,7 @@ export const NAV_TABS: NavTab[] = [
 ];
 
 export function navTabsFor(user?: User): NavTab[] {
-  if (user && (user.group_role === 'group_admin' || user.group_role === 'co_admin')) {
+  if (user && user.role !== 'user') {
     return [
       NAV_TABS[0],
       NAV_TABS[1],

@@ -1,4 +1,4 @@
-// Group Admin loan oversight, gentle cross-lingual check-ins (rate-limited), force-return, and escalation.
+// Group Admin loan oversight, gentle cross-lingual check-ins (rate-limited), S3-signed photos, force-return, and escalation.
 
 import type { GroupAdminLoan, GroupAdminLoanTimelineItem, Lang } from '../../../shared/types.ts';
 import { ADMIN_MEDIATION_KEYS, DISPUTE_REASON_KEYS, isOneOf } from '../../core/allowedKeys.ts';
@@ -7,6 +7,7 @@ import { found, query, queryOne, transaction } from '../../core/database.ts';
 import { refuse, type Answer } from '../../core/http.ts';
 import type { LoanRow, UserRow } from '../../types.ts';
 import { setItemStatus } from '../item/itemModel.ts';
+import { photoUrl } from '../loan/photoFiles.ts';
 import { createMessage } from '../message/messageModel.ts';
 
 interface GroupLoanQueryRow extends LoanRow {
@@ -21,6 +22,16 @@ interface GroupLoanQueryRow extends LoanRow {
   last_nudge_at: string | null;
 }
 
+function actorRoleOf(admin: UserRow): 'super_admin' | 'group_admin' | 'co_admin' {
+  if (admin.role === 'super_admin') return 'super_admin';
+  return admin.role === 'group_admin' ? 'group_admin' : 'co_admin';
+}
+
+function actorLabelOf(admin: UserRow): string {
+  const prefix = admin.role === 'super_admin' ? 'SuperAdmin' : admin.role === 'group_admin' ? 'GroupAdmin' : 'CoAdmin';
+  return `${prefix} · ${admin.nickname || admin.email}`;
+}
+
 export async function findGroupLoan(groupId: number, loanId: number): Promise<LoanRow | undefined> {
   return queryOne<LoanRow>(
     `SELECT loans.*
@@ -32,7 +43,6 @@ export async function findGroupLoan(groupId: number, loanId: number): Promise<Lo
 }
 
 async function listTimelineForLoan(loanId: number): Promise<GroupAdminLoanTimelineItem[]> {
-  // Collapse dual-recipient system/admin messages with identical phrase_key and second-level timestamp.
   const rows = await query<GroupAdminLoanTimelineItem>(
     `SELECT DISTINCT ON (messages.phrase_key, date_trunc('second', messages.created_at), COALESCE(messages.from_user_id, 0))
             messages.id, messages.phrase_key, messages.params,
@@ -89,7 +99,11 @@ export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdmi
   return Promise.all(
     rows.map(async (row) => {
       const isOverdue = row.status === 'active' && !row.return_photo && Date.parse(row.end_at) < now;
-      const timeline = await listTimelineForLoan(row.id);
+      const [timeline, signedHandover, signedReturn] = await Promise.all([
+        listTimelineForLoan(row.id),
+        photoUrl(row.handover_photo),
+        photoUrl(row.return_photo),
+      ]);
       return {
         id: row.id,
         item_id: row.item_id,
@@ -100,8 +114,8 @@ export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdmi
         start_at: row.start_at,
         end_at: row.end_at,
         returned_at: row.returned_at,
-        handover_photo: row.handover_photo,
-        return_photo: row.return_photo,
+        handover_photo: signedHandover,
+        return_photo: signedReturn,
         borrower: { id: row.borrower_id, nickname: row.borrower_nickname, lang: row.borrower_lang },
         lender: { id: row.lender_id, nickname: row.lender_nickname, lang: row.lender_lang },
         flagged_reason: row.flagged_reason,
@@ -115,6 +129,7 @@ export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdmi
 
 export async function sendGentleCheckIn(
   admin: UserRow,
+  groupId: number,
   loan: LoanRow,
   phraseKey: unknown,
   ipAddress: string | null
@@ -126,7 +141,6 @@ export async function sendGentleCheckIn(
     return refuse(409, 'Gentle check-ins can only be sent on active or accepted loans');
   }
 
-  // Anti-harassment rate limit: at most 1 admin nudge per 24 hours per loan.
   const recentNudge = await queryOne<{ id: number }>(
     `SELECT id FROM audit_logs
      WHERE scope_group_id = $1
@@ -134,7 +148,7 @@ export async function sendGentleCheckIn(
        AND target_id = $2
        AND created_at > now() - INTERVAL '24 hours'
      LIMIT 1`,
-    [admin.group_id, String(loan.id)]
+    [groupId, String(loan.id)]
   );
   if (recentNudge) {
     return refuse(429, 'A gentle check-in was already sent for this loan in the last 24 hours');
@@ -145,9 +159,9 @@ export async function sendGentleCheckIn(
     await createMessage(loan, null, loan.lender_id, phraseKey);
     await writeAuditLog({
       actorId: admin.id,
-      actorLabel: `${admin.group_role === 'group_admin' ? 'GroupAdmin' : 'CoAdmin'} · ${admin.nickname}`,
-      actorRole: admin.group_role === 'group_admin' ? 'group_admin' : 'co_admin',
-      scopeGroupId: admin.group_id,
+      actorLabel: actorLabelOf(admin),
+      actorRole: actorRoleOf(admin),
+      scopeGroupId: groupId,
       category: 'Loan',
       action: 'loan.nudge',
       targetType: 'loan',
@@ -163,6 +177,7 @@ export async function sendGentleCheckIn(
 
 export async function resolveGroupLoan(
   admin: UserRow,
+  groupId: number,
   loan: LoanRow,
   resolution: unknown,
   reasonKey: unknown,
@@ -172,8 +187,8 @@ export async function resolveGroupLoan(
     return refuse(400, "resolution must be 'force_return' or 'escalate'");
   }
 
-  const actorLabel = `${admin.group_role === 'group_admin' ? 'GroupAdmin' : 'CoAdmin'} · ${admin.nickname}`;
-  const actorRole: 'group_admin' | 'co_admin' = admin.group_role === 'group_admin' ? 'group_admin' : 'co_admin';
+  const label = actorLabelOf(admin);
+  const role = actorRoleOf(admin);
 
   if (resolution === 'force_return') {
     if (loan.status !== 'active' && loan.status !== 'accepted') {
@@ -196,9 +211,9 @@ export async function resolveGroupLoan(
       await createMessage(loan, null, loan.lender_id, 'admin.resolvedReturn');
       await writeAuditLog({
         actorId: admin.id,
-        actorLabel,
-        actorRole,
-        scopeGroupId: admin.group_id,
+        actorLabel: label,
+        actorRole: role,
+        scopeGroupId: groupId,
         category: 'Loan',
         action: 'loan.force_return',
         targetType: 'loan',
@@ -211,7 +226,6 @@ export async function resolveGroupLoan(
     return null;
   }
 
-  // resolution === 'escalate' -> forward to Super Admin Safety Queue
   const validReason = isOneOf(DISPUTE_REASON_KEYS, reasonKey) ? reasonKey : 'item_damaged';
   const existing = await queryOne<{ id: number; escalated_to_super_admin: boolean }>(
     "SELECT id, escalated_to_super_admin FROM loan_disputes WHERE loan_id = $1 AND status = 'open' ORDER BY id DESC LIMIT 1",
@@ -232,15 +246,15 @@ export async function resolveGroupLoan(
       await query(
         `INSERT INTO loan_disputes (group_id, loan_id, raised_by_user_id, reason_key, status, escalated_to_super_admin)
          VALUES ($1, $2, $3, $4, 'open', true)`,
-        [admin.group_id, loan.id, admin.id, validReason]
+        [groupId, loan.id, admin.id, validReason]
       );
     }
 
     await writeAuditLog({
       actorId: admin.id,
-      actorLabel,
-      actorRole,
-      scopeGroupId: admin.group_id,
+      actorLabel: label,
+      actorRole: role,
+      scopeGroupId: groupId,
       category: 'Break-Glass',
       action: 'dispute.escalated',
       targetType: 'loan',

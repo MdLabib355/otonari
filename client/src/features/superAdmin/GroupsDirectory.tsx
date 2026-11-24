@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { GroupLifecycleStatus, GroupType, SuperAdminGroupSummary } from '../../../../shared/types.ts';
-import { ApiError } from '../../core/api.ts';
-import { saApi } from './superAdminApi.ts';
+import { api, ApiError } from '../../core/api.ts';
 
 export interface GroupsDirectoryProps {
   groups: SuperAdminGroupSummary[];
@@ -42,7 +41,7 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
     setBusy(true);
     setDuplicateNotice(null);
     try {
-      await saApi.post('/groups', {
+      await api.post('/super-admin/groups', {
         name: newName.trim(),
         type: newType,
         city: newCity.trim(),
@@ -66,7 +65,7 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
   async function rotateCode(group: SuperAdminGroupSummary) {
     setBusy(true);
     try {
-      const updated = await saApi.post<{ code: string }>(`/groups/${group.id}/rotate-code`);
+      const updated = await api.post<{ code: string }>(`/super-admin/groups/${group.id}/rotate-code`);
       await onRefresh();
       onNotify(`Rotated code for ${group.name}: ${updated.code}`);
     } catch (err) {
@@ -79,7 +78,7 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
   async function setStatus(group: SuperAdminGroupSummary, next: GroupLifecycleStatus) {
     setBusy(true);
     try {
-      await saApi.patch(`/groups/${group.id}/status`, { lifecycle_status: next });
+      await api.patch(`/super-admin/groups/${group.id}/status`, { lifecycle_status: next });
       await onRefresh();
       onNotify(`${group.name} -> ${next}`);
     } catch (err) {
@@ -94,7 +93,7 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
     if (!rescueGroup || !rescueUserId) return;
     setBusy(true);
     try {
-      await saApi.post(`/groups/${rescueGroup.id}/rescue-admin`, {
+      await api.post(`/super-admin/groups/${rescueGroup.id}/rescue-admin`, {
         user_id: rescueUserId,
         reason: rescueReason,
       });
@@ -334,7 +333,7 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
                   >
                     {rescueGroup.members.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.nickname} ({m.group_role} · {m.on_time_returns} on-time returns)
+                        {m.nickname} ({m.role} · {m.on_time_returns} on-time returns)
                       </option>
                     ))}
                   </select>

@@ -1,16 +1,20 @@
-// The demo data (CLAUDE.md section 9), extended with Group Admin roles, 28 canonical catalog items,
-// 1 active overdue sample loan, 1 escalated dispute sample, and baseline audit logs.
+// The demo data (CLAUDE.md section 9), unified with real email accounts, roles (Sato group_admin,
+// Tanaka co_admin, Inoue group_admin), 28 canonical catalog items, 1 overdue loan, and 1 escalated dispute.
 
-import crypto from 'node:crypto';
-import type { GroupRole, GroupType, Lang } from '../shared/types.ts';
+import type { GroupType, Lang, Role } from '../shared/types.ts';
 import { CANONICAL_CATALOG } from './core/allowedKeys.ts';
 import { writeAuditLog } from './core/audit.ts';
 import { found, query, queryOne, resetDatabase, transaction } from './core/database.ts';
+import { hashSecret } from './modules/auth/password.ts';
+import { ensureSuperAdmin } from './modules/auth/superAdmin.ts';
 import { listGroups } from './modules/group/groupModel.ts';
 import { createItem, setItemStatus } from './modules/item/itemModel.ts';
 import { deletePhotos } from './modules/loan/photoFiles.ts';
 import { createMessage } from './modules/message/messageModel.ts';
 import type { ItemRow, LoanRow, UserRow } from './types.ts';
+
+// Shared password for the seeded demo accounts (only works when DEMO_MODE=true).
+export const DEMO_PASSWORD = 'demo-password';
 
 type SeedItem = [itemKey: string, maxDays: number, spot: string, trustedOnly?: boolean];
 
@@ -18,7 +22,7 @@ interface SeedUser {
   nickname: string;
   lang: Lang;
   elder: boolean;
-  role?: GroupRole;
+  role?: Role;
   items: SeedItem[];
 }
 
@@ -30,8 +34,6 @@ interface SeedGroup {
   users: SeedUser[];
 }
 
-// Rahim is NOT here on purpose: he joins live during the demo.
-// Items are [item_key, max_days, spot], plus true for "trusted neighbors only".
 const GROUPS: SeedGroup[] = [
   {
     code: 'SAKURA-2611',
@@ -116,20 +118,19 @@ const GROUPS: SeedGroup[] = [
   },
 ];
 
-// ISO time (UTC) for "N days ago at hh:mm in Japan". Japan is always UTC+9 (no summer time).
 function japanTime(daysAgo: number, hour: number, minute = 0): string {
-  const japanNow = new Date(Date.now() + 9 * 60 * 60 * 1000); // its UTC fields show Japan's date
+  const japanNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const utc = Date.UTC(
     japanNow.getUTCFullYear(),
     japanNow.getUTCMonth(),
     japanNow.getUTCDate() - daysAgo,
-    hour - 9, // hh:mm in Japan is (hh - 9):mm in UTC (Date.UTC handles going below 0)
+    hour - 9,
     minute
   );
   return new Date(utc).toISOString();
 }
 
-type UserIds = Record<string, number>; // nickname → id, needed for the loans below
+type UserIds = Record<string, number>;
 
 export async function seedCatalogItems() {
   for (const item of CANONICAL_CATALOG) {
@@ -152,13 +153,23 @@ async function insertGroup(group: SeedGroup): Promise<number> {
   return found(row).id;
 }
 
-// They joined a month ago (the returned loan below is from last week).
 async function insertUsersAndItems(group: SeedGroup, groupId: number, userIds: UserIds) {
+  const passwordHash = await hashSecret(DEMO_PASSWORD);
   for (const user of group.users) {
     const row = await queryOne<{ id: number }>(
-      `INSERT INTO users (group_id, nickname, lang, elder_mode, token, is_demo, group_role, created_at)
-       VALUES ($1, $2, $3, $4, $5, true, $6, now() - INTERVAL '30 days') RETURNING id`,
-      [groupId, user.nickname, user.lang, user.elder, crypto.randomUUID(), user.role ?? 'member']
+      `INSERT INTO users (email, password_hash, email_verified, role, group_id, joined_at, nickname, lang, elder_mode,
+                          is_demo, created_at)
+       VALUES ($1, $2, true, $3, $4, now() - INTERVAL '30 days', $5, $6, $7, true, now() - INTERVAL '30 days')
+       RETURNING id`,
+      [
+        `${user.nickname.toLowerCase()}@otonari.example`,
+        passwordHash,
+        user.role ?? 'user',
+        groupId,
+        user.nickname,
+        user.lang,
+        user.elder,
+      ]
     );
     const userId = found(row).id;
     userIds[user.nickname] = userId;
@@ -169,14 +180,12 @@ async function insertUsersAndItems(group: SeedGroup, groupId: number, userIds: U
   }
 }
 
-// One finished loan (Maria borrowed Tanaka's projector last week), plus an escalated condition-check
-// dispute so Super Admin's Break-Glass queue can be tested right away.
 async function insertReturnedLoanAndDispute(groupId: number, mariaId: number, tanakaId: number, satoId: number) {
   const projector = found(
     await queryOne<ItemRow>("SELECT * FROM items WHERE owner_id = $1 AND item_key = 'projector'", [tanakaId])
   );
   const requestedAt = japanTime(9, 19, 30);
-  const returnedAt = japanTime(6, 17, 55); // five minutes before it was due: on time
+  const returnedAt = japanTime(6, 17, 55);
 
   const loan = found(
     await queryOne<LoanRow>(
@@ -186,7 +195,6 @@ async function insertReturnedLoanAndDispute(groupId: number, mariaId: number, ta
     )
   );
 
-  // [from, to, phrase_key, when]
   const conversation: [number, number, string, string][] = [
     [mariaId, tanakaId, 'request', requestedAt],
     [tanakaId, mariaId, 'accept', japanTime(9, 20, 5)],
@@ -222,8 +230,6 @@ async function insertReturnedLoanAndDispute(groupId: number, mariaId: number, ta
   });
 }
 
-// One active overdue loan: Yamamoto borrowed Ayesha's bluetooth_speaker 3 days ago (due 1 day ago),
-// so Group Admin's Loans & Gentle Mediation tab and Safe Remove guardrails have live data on boot.
 async function insertOverdueLoan(groupId: number, yamamotoId: number, ayeshaId: number) {
   const speaker = found(
     await queryOne<ItemRow>("SELECT * FROM items WHERE owner_id = $1 AND item_key = 'bluetooth_speaker'", [ayeshaId])
@@ -268,12 +274,10 @@ async function insertOverdueLoan(groupId: number, yamamotoId: number, ayeshaId: 
   });
 }
 
-// Resets everything. All or nothing: if anything fails, the database is left as it was.
 export async function seed(empty: boolean) {
   await transaction(async () => {
     await resetDatabase();
     await seedCatalogItems();
-
     const userIds: UserIds = {};
     const groupIds: Record<string, number> = {};
     for (const group of GROUPS) {
@@ -302,19 +306,18 @@ export async function seed(empty: boolean) {
       await insertOverdueLoan(groupIds['SAKURA-2611'], userIds.Yamamoto, userIds.Ayesha);
     }
   });
-  deletePhotos(); // they belonged to the old loans
+  await deletePhotos();
+  await ensureSuperAdmin();
   await printSummary(empty);
 }
 
-// Short summary (the user ids are handy for POST /api/v1/demo/login).
 async function printSummary(empty: boolean) {
   console.log(empty ? 'Seeded two empty groups:' : 'Seeded the Nagasaki demo data:');
   for (const group of await listGroups()) {
     const members = await query<UserRow>('SELECT * FROM users WHERE group_id = $1 ORDER BY id', [group.id]);
     const items = await query<ItemRow>('SELECT * FROM items WHERE group_id = $1', [group.id]);
-    const names = members
-      .map((member) => `${member.nickname} #${member.id}${member.group_role !== 'member' ? ` [${member.group_role}]` : ''}`)
-      .join(', ');
+    const names = members.map((member) => `${member.nickname} (${member.role})`).join(', ');
     console.log(`  ${group.name} (${group.code}): ${names || 'nobody yet'} | ${items.length} items`);
   }
+  if (!empty) console.log(`  Log in with e.g. sato@otonari.example, password ${DEMO_PASSWORD}`);
 }

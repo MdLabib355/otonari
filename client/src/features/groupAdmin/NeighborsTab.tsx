@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Group, GroupMemberSummary, JoinPolicy, Lang, User } from '../../../../shared/types.ts';
+import type { Group, GroupMemberSummary, JoinPolicy, Lang, Role, User } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
 import SpeakButton from '../../components/SpeakButton.tsx';
 import TrustLine from '../../components/TrustLine.tsx';
@@ -39,12 +39,12 @@ export default function NeighborsTab({
 
   const pending = members.filter((m) => m.member_status === 'pending');
   const activeRoster = members.filter((m) => m.member_status !== 'pending');
-  const isPrimaryAdmin = me.group_role === 'group_admin';
+  const isPrimaryAdmin = me.role === 'group_admin' || me.role === 'super_admin';
 
   const q = search.trim().toLowerCase();
   const filtered = activeRoster.filter((m) => {
     if (q && !m.nickname.toLowerCase().includes(q) && !m.lang.toLowerCase().includes(q)) return false;
-    if (filter === 'admins' && m.group_role === 'member') return false;
+    if (filter === 'admins' && m.role === 'user') return false;
     if (filter === 'trusted' && !m.is_trusted) return false;
     if (filter === 'muted' && m.member_status !== 'borrow_muted' && m.member_status !== 'suspended') return false;
     if (filter === 'inLoan' && m.active_loans.length === 0) return false;
@@ -88,8 +88,8 @@ export default function NeighborsTab({
     { value: 'inLoan', label: t(lang, 'groupAdmin.filterInLoan') },
   ];
 
-  function roleLabel(role: GroupMemberSummary['group_role']): string {
-    if (role === 'group_admin') return t(lang, 'groupAdmin.roleGroupAdmin');
+  function roleLabel(role: Role): string {
+    if (role === 'group_admin' || role === 'super_admin') return t(lang, 'groupAdmin.roleGroupAdmin');
     if (role === 'co_admin') return t(lang, 'groupAdmin.roleCoAdmin');
     return t(lang, 'groupAdmin.roleMember');
   }
@@ -204,10 +204,14 @@ export default function NeighborsTab({
         {filtered.map((member) => {
           const isSelf = member.id === me.id;
           const isMuted = member.member_status === 'borrow_muted';
-          const isAnyAdmin = member.group_role !== 'member';
+          const isAnyAdmin = member.role !== 'user';
           const hasActiveLoan = member.active_loans.length > 0;
-          const canEditRole = isPrimaryAdmin && !isSelf && member.member_status === 'active';
-          const canRestrict = !isSelf && !(me.group_role === 'co_admin' && member.group_role === 'group_admin');
+          const canEditRole =
+            isPrimaryAdmin && !isSelf && member.member_status === 'active' && member.role !== 'super_admin';
+          const canRestrict =
+            !isSelf &&
+            member.role !== 'super_admin' &&
+            !(me.role === 'co_admin' && member.role === 'group_admin');
 
           return (
             <div key={member.id} className="ga-card">
@@ -221,7 +225,7 @@ export default function NeighborsTab({
                       <span>{displayName(lang, member.nickname)}</span>
                       <span className="ga-badge ga-badge-muted">{langTag(member.lang)}</span>
                       <span className={`ga-badge ${isAnyAdmin ? 'ga-badge-indigo' : 'ga-badge-muted'}`}>
-                        {roleLabel(member.group_role)}
+                        {roleLabel(member.role)}
                       </span>
                     </div>
                     <TrustLine lang={lang} trust={member.trust} />
@@ -229,7 +233,7 @@ export default function NeighborsTab({
                 </div>
                 <SpeakButton
                   lang={lang}
-                  text={`${displayName(lang, member.nickname)}. ${roleLabel(member.group_role)}.`}
+                  text={`${displayName(lang, member.nickname)}. ${roleLabel(member.role)}.`}
                 />
               </div>
 
@@ -300,14 +304,14 @@ export default function NeighborsTab({
                         member.id,
                         async () => {
                           await api.patch(`/group-admin/members/${member.id}/role`, {
-                            role: member.group_role === 'co_admin' ? 'member' : 'co_admin',
+                            role: member.role === 'co_admin' ? 'user' : 'co_admin',
                           });
                         },
-                        `${member.nickname}: ${member.group_role === 'co_admin' ? t(lang, 'groupAdmin.roleMember') : t(lang, 'groupAdmin.roleCoAdmin')}`
+                        `${member.nickname}: ${member.role === 'co_admin' ? t(lang, 'groupAdmin.roleMember') : t(lang, 'groupAdmin.roleCoAdmin')}`
                       )
                     }
                   >
-                    {member.group_role === 'co_admin'
+                    {member.role === 'co_admin'
                       ? t(lang, 'groupAdmin.removeCoAdmin')
                       : t(lang, 'groupAdmin.makeCoAdmin')}
                   </button>

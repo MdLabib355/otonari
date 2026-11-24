@@ -4,10 +4,9 @@ import type {
   BreakGlassUnlockResponse,
   DisputeSummary,
 } from '../../../../shared/types.ts';
-import { ApiError } from '../../core/api.ts';
+import { api, ApiError } from '../../core/api.ts';
 import { findItem } from '../../data/catalog.ts';
 import { formatDate, itemName, renderPhrase } from '../../i18n/index.ts';
-import { saApi } from './superAdminApi.ts';
 
 const BREAK_GLASS_REASONS = [
   'Damaged Item Claim',
@@ -58,10 +57,10 @@ export default function SafetyQueue({ disputes, onRefresh, onNotify }: SafetyQue
     if (!dispute) return;
     setBusy(true);
     try {
-      const grant = await saApi.post<BreakGlassUnlockResponse>(`/disputes/${dispute.id}/break-glass`, {
+      const grant = await api.post<BreakGlassUnlockResponse>(`/super-admin/disputes/${dispute.id}/break-glass`, {
         reason,
       });
-      const data = await saApi.get<BreakGlassEvidence>(`/disputes/${dispute.id}/evidence`, {
+      const data = await api.get<BreakGlassEvidence>(`/super-admin/disputes/${dispute.id}/evidence`, {
         'X-Break-Glass-Token': grant.break_glass_token,
       });
       setEvidence(data);
@@ -86,7 +85,7 @@ export default function SafetyQueue({ disputes, onRefresh, onNotify }: SafetyQue
     if (!dispute) return;
     setBusy(true);
     try {
-      await saApi.post(`/disputes/${dispute.id}/notice`);
+      await api.post(`/super-admin/disputes/${dispute.id}/notice`);
       await onRefresh();
       onNotify('Structured platform escalation notice dispatched in each resident’s language.');
     } catch (err) {
@@ -100,7 +99,7 @@ export default function SafetyQueue({ disputes, onRefresh, onNotify }: SafetyQue
     if (!dispute) return;
     setBusy(true);
     try {
-      await saApi.patch(`/disputes/${dispute.id}/resolve`, {
+      await api.patch(`/super-admin/disputes/${dispute.id}/resolve`, {
         resolution_note: `Resolved after Break-Glass inspection (${unlockedReason || reason})`,
       });
       await onRefresh();

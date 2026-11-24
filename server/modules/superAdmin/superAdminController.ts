@@ -10,7 +10,9 @@ import {
   isOneOf,
 } from '../../core/allowedKeys.ts';
 import { listAuditLogs, writeAuditLog } from '../../core/audit.ts';
+import { tokenOf } from '../../core/auth.ts';
 import { refuse, reply, toId, toText } from '../../core/http.ts';
+import { DEMO_MODE } from '../../core/settings.ts';
 import {
   createGroupReturning,
   findSimilarGroup,
@@ -50,6 +52,11 @@ const AUDIT_CATEGORIES: AuditCategory[] = [
 
 const ITEM_KEY_PATTERN = /^[a-z0-9_]{2,40}$/;
 
+function superAdminLabel(req: Request): string {
+  const label = req.user!.nickname || req.user!.email;
+  return `Super Admin · ${label}`;
+}
+
 // Public active catalog endpoint for resident app sync.
 export async function showPublicCatalog() {
   return reply(200, await listCatalogItems(true));
@@ -64,7 +71,7 @@ export async function showOverview() {
 
   const overview: SuperAdminOverview = overviewView(
     counters,
-    process.env.DEMO_MODE === 'true',
+    DEMO_MODE,
     getReminderHealth(),
     storage,
     recentAudits
@@ -75,7 +82,8 @@ export async function showOverview() {
 export async function runRemindersNow(req: Request) {
   const result = await checkReminders();
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     category: 'System',
     action: 'system.reminder_manual_run',
@@ -92,15 +100,19 @@ export async function runCleanupUploads(req: Request) {
   const result = await cleanupOrphanUploads(dryRun);
 
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     category: 'System',
     action: dryRun ? 'storage.cleanup_dry_run' : 'storage.cleanup_executed',
     targetType: 'uploads',
-    targetId: 'server/uploads',
-    detail: dryRun
-      ? `Dry-run storage scan found ${result.orphan_files.length} orphan file(s).`
-      : `Deleted ${result.deleted_count} orphan file(s), reclaiming ${result.reclaimed_bytes} bytes.`,
+    targetId: result.mode === 's3' ? 's3' : 'server/uploads',
+    detail:
+      result.mode === 's3'
+        ? 'Storage is managed in AWS S3; automatic local cleanup skipped.'
+        : dryRun
+          ? `Dry-run storage scan found ${result.orphan_files.length} orphan file(s).`
+          : `Deleted ${result.deleted_count} orphan file(s), reclaiming ${result.reclaimed_bytes} bytes.`,
     ipAddress: req.ip ?? null,
   });
 
@@ -145,7 +157,8 @@ export async function provisionGroup(req: Request) {
 
   const created = await createGroupReturning(name, type, city, join_policy);
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     scopeGroupId: created.id,
     category: 'Group',
@@ -165,7 +178,8 @@ export async function rotateAnyGroupCode(req: Request) {
 
   const updated = await rotateGroupCode(group.id);
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     scopeGroupId: group.id,
     category: 'Group',
@@ -194,7 +208,8 @@ export async function rescueGroupAdmin(req: Request) {
   if (!result) return refuse(404, 'Active member not found in this group');
 
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     scopeGroupId: group.id,
     category: 'Group',
@@ -221,7 +236,8 @@ export async function updateGroupStatus(req: Request) {
 
   const updated = await updateGroupLifecycle(group.id, status, reason);
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     scopeGroupId: group.id,
     category: 'Group',
@@ -276,7 +292,8 @@ export async function createCatalogEntry(req: Request) {
   });
 
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     category: 'Catalog',
     action: 'catalog.item_added',
@@ -325,7 +342,8 @@ export async function updateCatalogEntry(req: Request) {
   });
 
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     category: 'Catalog',
     action: isActive !== undefined ? 'catalog.status_changed' : 'catalog.updated',
@@ -351,9 +369,13 @@ export async function unlockDisputeBreakGlass(req: Request) {
     return refuse(400, 'A mandatory audit reason (3-200 characters) is required for Break-Glass access');
   }
 
-  const issued = issueBreakGlassToken(req.superAdmin!.token, dispute.id, dispute.loan_id);
+  const sessionToken = tokenOf(req);
+  if (!sessionToken) return refuse(401, 'Session token required');
+
+  const issued = issueBreakGlassToken(sessionToken, dispute.id, dispute.loan_id);
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     scopeGroupId: dispute.group_id,
     category: 'Break-Glass',
@@ -377,8 +399,9 @@ export async function showDisputeEvidence(req: Request) {
   const dispute = await findDisputeById(toId(req.params.disputeId));
   if (!dispute) return refuse(404, 'Escalated dispute not found');
 
+  const sessionToken = tokenOf(req);
   const bgToken = toText(req.get('X-Break-Glass-Token'));
-  if (!bgToken || !verifyBreakGlassToken(bgToken, req.superAdmin!.token, dispute.id, dispute.loan_id)) {
+  if (!sessionToken || !bgToken || !verifyBreakGlassToken(bgToken, sessionToken, dispute.id, dispute.loan_id)) {
     return refuse(403, 'Valid Break-Glass inspection token required to view dispute evidence');
   }
 
@@ -394,7 +417,8 @@ export async function sendDisputeNotice(req: Request) {
 
   await dispatchEscalationNotice(dispute.id, dispute.loan_id);
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     scopeGroupId: dispute.group_id,
     category: 'Break-Glass',
@@ -416,7 +440,8 @@ export async function resolveDispute(req: Request) {
   const note = toText(req.body?.resolution_note) || 'Resolved by Super Admin after evidence review';
   await resolveDisputeRecord(dispute.id, note);
   await writeAuditLog({
-    actorLabel: req.superAdmin!.label,
+    actorId: req.user!.id,
+    actorLabel: superAdminLabel(req),
     actorRole: 'super_admin',
     scopeGroupId: dispute.group_id,
     category: 'Break-Glass',
