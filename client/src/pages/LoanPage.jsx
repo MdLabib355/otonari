@@ -117,7 +117,7 @@ function Loan({ loanId }) {
       {errorText}
       {loan.status === 'pending' && (
         <PendingActions
-          loanId={loan.id}
+          loan={loan}
           iAmLender={iAmLender}
           trust={borrower_trust}
           lang={lang}
@@ -154,7 +154,7 @@ function LoanHeader({ loan, item, other, lang }) {
 }
 
 // While a request waits for an answer: the lender answers, the borrower can still cancel.
-function PendingActions({ loanId, iAmLender, trust, lang, busy, act }) {
+function PendingActions({ loan, iAmLender, trust, lang, busy, act }) {
   if (!iAmLender) {
     return (
       <div className="actions">
@@ -165,14 +165,19 @@ function PendingActions({ loanId, iAmLender, trust, lang, busy, act }) {
     );
   }
 
+  const datesOver = Date.parse(loan.end_at) <= Date.now(); // too late for a yes
   const decline = (reason) => act('decline', { reason });
   return (
     <div className="actions">
-      <FirstRequestTip loanId={loanId} lang={lang} />
+      <FirstRequestTip loanId={loan.id} lang={lang} />
       <TrustLine lang={lang} trust={trust} />
-      <button type="button" className="button-primary" disabled={busy} onClick={() => act('accept')}>
-        {t(lang, 'loan.accept')}
-      </button>
+      {datesOver ? (
+        <p className="notice">{t(lang, 'loan.datesOver')}</p>
+      ) : (
+        <button type="button" className="button-primary" disabled={busy} onClick={() => act('accept')}>
+          {t(lang, 'loan.accept')}
+        </button>
+      )}
       <button type="button" className="button-secondary" disabled={busy} onClick={() => decline('default')}>
         {t(lang, 'loan.decline')}
       </button>

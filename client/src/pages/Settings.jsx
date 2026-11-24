@@ -44,8 +44,9 @@ export default function Settings() {
       await api.post('/api/leave');
       logout();
     } catch (error) {
-      // 409: there is still an accepted or active loan.
-      setLeaveProblem(error.status === 409 ? 'settings.leaveBlocked' : 'common.error');
+      // 409: there is still an accepted or active loan. 403: demo neighbors can't leave.
+      const problems = { 403: 'settings.leaveDemo', 409: 'settings.leaveBlocked' };
+      setLeaveProblem(problems[error.status] ?? 'common.error');
       setLeaveTappedAt(null);
       setLeaving(false);
     }

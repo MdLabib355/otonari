@@ -139,6 +139,11 @@ router.patch('/me', requireUser, (req, res) => {
 
 // Leave the neighborhood. Not in the middle of a loan: a neighbor is counting on it.
 router.post('/leave', requireUser, (req, res) => {
+  // Anyone can "continue as" a demo neighbor, so leaving would remove them for everybody.
+  if (req.user.is_demo === 1) {
+    return res.status(403).json({ error: "Demo neighbors can't leave" });
+  }
+
   const myId = req.user.id;
   const openLoan = db
     .prepare("SELECT id FROM loans WHERE (borrower_id = ? OR lender_id = ?) AND status IN ('accepted', 'active')")

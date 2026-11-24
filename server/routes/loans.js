@@ -20,6 +20,8 @@ import { receivePhoto, savePhoto } from '../photos.js';
 
 const router = express.Router();
 const DAY = 24 * 60 * 60 * 1000;
+// Once the lender has said yes (the client shows the quick replies at the same moments).
+const QUICK_REPLY_STATUSES = ['accepted', 'active', 'returned'];
 
 // Everything the loan page needs. The viewer sees what they sent, what was sent to them, and their
 // own reminders; a reminder meant for the other person stays hidden.
@@ -143,6 +145,10 @@ router.post('/loans', requireUser, (req, res) => {
   if (start < Date.now() - 60 * 60 * 1000) {
     return res.status(400).json({ error: 'start_at is in the past' });
   }
+  // The picker ends with the evening of the day after tomorrow, which is always less than 3 days away.
+  if (start > Date.now() + 3 * DAY) {
+    return res.status(400).json({ error: 'start_at is too far in the future' });
+  }
 
   const createLoan = db.transaction(() => {
     const loanId = db
@@ -166,6 +172,9 @@ router.post('/loans/:id/accept', requireUser, loanRole('lender'), (req, res) => 
   const loan = req.loan;
   if (loan.status !== 'pending') {
     return res.status(409).json({ error: 'Only a waiting request can be accepted' });
+  }
+  if (Date.parse(loan.end_at) <= Date.now()) {
+    return res.status(409).json({ error: 'The dates of this request are over' });
   }
   const item = db.prepare('SELECT status, removed_at FROM items WHERE id = ?').get(loan.item_id);
   if (item.status !== 'available' || item.removed_at) {
@@ -292,6 +301,9 @@ router.post('/loans/:id/quick-reply', requireUser, loanRole('participant'), (req
   const phraseKey = req.body?.phrase_key;
   if (!QUICK_REPLY_KEYS.includes(phraseKey)) {
     return res.status(400).json({ error: 'Unknown quick reply' });
+  }
+  if (!QUICK_REPLY_STATUSES.includes(loan.status)) {
+    return res.status(409).json({ error: 'Quick replies are possible once the request is accepted' });
   }
   const otherId = loan.borrower_id === req.user.id ? loan.lender_id : loan.borrower_id;
   createMessage(loan, req.user.id, otherId, phraseKey);

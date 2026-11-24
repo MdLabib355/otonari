@@ -1,12 +1,13 @@
 // Demo-only routes. server/index.js mounts them ONLY when DEMO_MODE=true.
 // "Continue as" hands out tokens, so it works only for the seeded demo neighbors (is_demo), never for
-// people who joined with a code.
+// people who joined with a code. Fast-forward needs a login: only the two people in the loan.
 //   GET  /api/demo/users   the demo neighbors you can "continue as", with their group
 //   POST /api/demo/login   { user_id } → { token, user, group }  (same shape as /api/join)
 //   POST /api/demo/fast-forward/:loanId   { to: 'dueSoon' | 'overdue' } → moves the dates of an
 //                          active loan, so nobody has to wait days to see the reminders
 
 import express from 'express';
+import { requireUser } from '../auth.js';
 import { db, getMe, publicUser } from '../db.js';
 import { checkReminders } from '../reminders.js';
 
@@ -47,14 +48,17 @@ router.post('/demo/login', (req, res) => {
   res.json({ token: user.token, ...getMe(user.id) });
 });
 
-router.post('/demo/fast-forward/:loanId', (req, res) => {
+router.post('/demo/fast-forward/:loanId', requireUser, (req, res) => {
   const to = req.body?.to;
   if (to !== 'dueSoon' && to !== 'overdue') {
     return res.status(400).json({ error: "to must be 'dueSoon' or 'overdue'" });
   }
-  const loan = db.prepare('SELECT id, status, start_at, end_at FROM loans WHERE id = ?').get(req.params.loanId);
+  const loan = db.prepare('SELECT * FROM loans WHERE id = ?').get(req.params.loanId);
   if (!loan) {
     return res.status(404).json({ error: 'Loan not found' });
+  }
+  if (loan.borrower_id !== req.user.id && loan.lender_id !== req.user.id) {
+    return res.status(403).json({ error: 'Not your loan' });
   }
   if (loan.status !== 'active') {
     return res.status(409).json({ error: 'Only an active loan can be fast-forwarded' });

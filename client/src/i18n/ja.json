@@ -103,6 +103,7 @@
     "loan.accept": "はい",
     "loan.decline": "いいえ",
     "loan.declineBusy": "いいえ(その日は使います)",
+    "loan.datesOver": "このご依頼の期間は過ぎています。",
     "loan.cancel": "お願いを取り消す",
     "loan.handoverStep": "お渡しする前に、物の写真を撮ってください",
     "loan.takePhoto": "写真を撮る",
@@ -136,6 +137,7 @@
     "settings.leave": "このグループを退会する",
     "settings.leaveConfirm": "もう一度押すと退会します",
     "settings.leaveBlocked": "先に、現在の貸し借りを終えてください。",
+    "settings.leaveDemo": "デモ用のご近所さんは退会できません。",
 
     "speak.button": "読み上げる",
 

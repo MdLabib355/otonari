@@ -103,6 +103,7 @@
     "loan.accept": "হ্যাঁ",
     "loan.decline": "না",
     "loan.declineBusy": "না — ওই দিনগুলোতে আমার দরকার",
+    "loan.datesOver": "এই অনুরোধের সময় পেরিয়ে গেছে।",
     "loan.cancel": "অনুরোধ বাতিল করুন",
     "loan.handoverStep": "দেওয়ার আগে জিনিসটির একটি ছবি তুলুন",
     "loan.takePhoto": "ছবি তুলুন",
@@ -136,6 +137,7 @@
     "settings.leave": "এই গ্রুপ ছেড়ে দিন",
     "settings.leaveConfirm": "ছেড়ে দিতে আবার চাপুন",
     "settings.leaveBlocked": "আগে আপনার চলমান ধারগুলো শেষ করুন",
+    "settings.leaveDemo": "ডেমো প্রতিবেশীরা গ্রুপ ছাড়তে পারেন না।",
 
     "speak.button": "পড়ে শোনান",
 
