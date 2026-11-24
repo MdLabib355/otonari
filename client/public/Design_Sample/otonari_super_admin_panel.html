@@ -1,0 +1,2582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Otonari (お隣) — Super Admin Panel</title>
+  <style>
+    /* =========================================================================
+       OTONARI DESIGN SYSTEM — CALM WARM JAPANESE INDIGO
+       Zero external dependencies, system UI fonts only.
+       ========================================================================= */
+    :root {
+      --bg-page: #f6f2ea;
+      --surface: #ffffff;
+      --surface-soft: #faf7f2;
+      --indigo: #1f4b6e;
+      --indigo-dark: #163752;
+      --indigo-tint: #e8f0f6;
+      --indigo-border: #c5d9ea;
+      --border: #e2dcd2;
+      --border-strong: #cfc6b8;
+      --text-primary: #1f2428;
+      --text-muted: #5c5852;
+      --green: #246c44;
+      --green-bg: #e7f4ec;
+      --green-border: #bfe0cb;
+      --amber: #9e5b0e;
+      --amber-bg: #fdf3e3;
+      --amber-border: #ebd0a3;
+      --red: #ad3026;
+      --red-bg: #fcebeb;
+      --red-border: #e9bfbc;
+      --radius-card: 14px;
+      --radius-btn: 9px;
+      --radius-pill: 999px;
+      --shadow-card: 0 2px 8px rgba(31, 36, 40, 0.045);
+      --shadow-modal: 0 20px 50px rgba(22, 55, 82, 0.22);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN",
+                   "Hiragino Sans", "Yu Gothic", "Noto Sans Bengali", Meiryo, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14.5px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    button, input, select {
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid var(--indigo);
+      outline-offset: 2px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* =========================================================================
+       TOP PLATFORM HEADER
+       ========================================================================= */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 22px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--indigo);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 16px;
+      color: var(--indigo-dark);
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .topbar-status {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .dot-green { background: var(--green); }
+    .dot-amber { background: var(--amber); }
+    .dot-indigo { background: var(--indigo); }
+
+    .profile-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 4px 12px 4px 5px;
+      border-radius: var(--radius-pill);
+      background: var(--indigo-tint);
+      border: 1px solid var(--indigo-border);
+      color: var(--indigo-dark);
+      font-weight: 700;
+      font-size: 12.5px;
+    }
+
+    .profile-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--indigo);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    /* =========================================================================
+       DESKTOP-FIRST SIDEBAR + MAIN SHELL
+       ========================================================================= */
+    .shell {
+      display: grid;
+      grid-template-columns: 262px minmax(0, 1fr);
+      min-height: calc(100vh - 59px);
+    }
+
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .sidebar-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      padding: 4px 12px 6px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-align: left;
+      transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg-page);
+    }
+
+    .nav-btn.active {
+      background: var(--indigo-tint);
+      border-color: var(--indigo-border);
+      color: var(--indigo-dark);
+    }
+
+    .nav-btn-left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sidebar-footnote {
+      padding: 12px;
+      border-radius: 11px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .sidebar-footnote strong {
+      display: block;
+      color: var(--indigo-dark);
+      margin-bottom: 3px;
+    }
+
+    .main {
+      padding: 24px 28px 52px;
+      max-width: 1260px;
+      width: 100%;
+    }
+
+    /* =========================================================================
+       SHARED COMPONENTS (Headers, Cards, Buttons, Badges, Tables, Forms)
+       ========================================================================= */
+    .page-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .page-head h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--indigo-dark);
+      letter-spacing: -0.01em;
+    }
+
+    .page-head p {
+      margin: 4px 0 0;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 18px;
+    }
+
+    .card-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 16.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .card-sub {
+      margin: 3px 0 0;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      min-height: 40px;
+      padding: 7px 14px;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 13.5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: background 0.14s ease, border-color 0.14s ease, transform 0.06s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--surface-soft);
+      border-color: var(--indigo);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--indigo-dark);
+      border-color: var(--indigo-dark);
+    }
+
+    .btn-soft {
+      background: var(--indigo-tint);
+      border-color: var(--indigo-border);
+      color: var(--indigo-dark);
+    }
+
+    .btn-soft:hover:not(:disabled) {
+      background: #dce8f2;
+    }
+
+    .btn-green {
+      background: var(--green);
+      border-color: var(--green);
+      color: #ffffff;
+    }
+
+    .btn-green:hover:not(:disabled) {
+      background: #1d5736;
+    }
+
+    .btn-amber-outline {
+      background: var(--surface);
+      border-color: var(--amber-border);
+      color: var(--amber);
+    }
+
+    .btn-amber-outline:hover:not(:disabled) {
+      background: var(--amber-bg);
+      border-color: var(--amber);
+    }
+
+    .btn-red-outline {
+      background: var(--surface);
+      border-color: var(--red-border);
+      color: var(--red);
+    }
+
+    .btn-red-outline:hover:not(:disabled) {
+      background: var(--red-bg);
+      border-color: var(--red);
+    }
+
+    .btn-sm {
+      min-height: 34px;
+      padding: 5px 10px;
+      font-size: 12.5px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .badge-green  { background: var(--green-bg);  color: var(--green); }
+    .badge-amber  { background: var(--amber-bg);  color: var(--amber); }
+    .badge-red    { background: var(--red-bg);    color: var(--red); }
+    .badge-indigo { background: var(--indigo-tint); color: var(--indigo); }
+    .badge-muted  { background: #ede8df;          color: var(--text-muted); }
+
+    .code-tag {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12.5px;
+      letter-spacing: 0.05em;
+      background: var(--indigo-tint);
+      color: var(--indigo-dark);
+      border: 1px solid var(--indigo-border);
+      padding: 3px 8px;
+      border-radius: 7px;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .key-tag {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--indigo-dark);
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      padding: 2px 7px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      background: var(--surface-soft);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .input, .select {
+      min-height: 40px;
+      padding: 8px 12px;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-primary);
+      width: 100%;
+    }
+
+    .search-box {
+      position: relative;
+      max-width: 340px;
+      width: 100%;
+    }
+
+    .search-box input {
+      padding-left: 34px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+      font-size: 14px;
+    }
+
+    .chips-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .chip {
+      min-height: 36px;
+      padding: 6px 13px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.14s ease;
+    }
+
+    .chip:hover {
+      border-color: var(--indigo);
+      color: var(--indigo-dark);
+    }
+
+    .chip.active {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #ffffff;
+    }
+
+    .alert-box {
+      padding: 12px 15px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      border: 1px solid transparent;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .alert-indigo {
+      background: var(--indigo-tint);
+      border-color: var(--indigo-border);
+      color: var(--indigo-dark);
+    }
+
+    .alert-amber {
+      background: var(--amber-bg);
+      border-color: var(--amber-border);
+      color: #7c4608;
+    }
+
+    .alert-green {
+      background: var(--green-bg);
+      border-color: var(--green-border);
+      color: var(--green);
+    }
+
+    /* =========================================================================
+       OVERVIEW KPI CARDS & HEALTH STRIP
+       ========================================================================= */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 15px;
+      margin-bottom: 18px;
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 17px 18px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .kpi-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--indigo-dark);
+      margin-top: 6px;
+      line-height: 1.15;
+    }
+
+    .kpi-note {
+      margin-top: 6px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .health-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .health-tile {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 15px 17px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .health-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .health-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .health-detail {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 9px;
+      background: #ece6dc;
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--indigo);
+      border-radius: var(--radius-pill);
+      transition: width 0.3s ease;
+    }
+
+    /* =========================================================================
+       CATALOG & PHRASE INSPECTOR
+       ========================================================================= */
+    .rule-banner {
+      background: var(--indigo-tint);
+      border: 1px solid var(--indigo-border);
+      border-left: 5px solid var(--indigo);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      color: var(--indigo-dark);
+      font-size: 13.5px;
+    }
+
+    .rule-banner strong {
+      display: block;
+      font-size: 14.5px;
+      margin-bottom: 3px;
+    }
+
+    .trans-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .trans-cell {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 4px 8px;
+      font-size: 12.5px;
+    }
+
+    .trans-code {
+      display: inline-block;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--indigo);
+      background: var(--indigo-tint);
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-right: 5px;
+    }
+
+    .phrase-inspector-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .phrase-box {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 13px 15px;
+    }
+
+    .phrase-box-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--indigo);
+    }
+
+    .phrase-box-body {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* =========================================================================
+       BREAK-GLASS DISPUTE INSPECTION
+       ========================================================================= */
+    .evidence-stage {
+      position: relative;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      overflow: hidden;
+      margin-top: 14px;
+    }
+
+    .evidence-inner {
+      padding: 18px;
+      transition: filter 0.25s ease;
+    }
+
+    .evidence-inner.blurred {
+      filter: blur(8px);
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .privacy-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(246, 242, 234, 0.78);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 5;
+    }
+
+    .privacy-card {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-card);
+      padding: 22px 24px;
+      max-width: 460px;
+      width: 100%;
+      box-shadow: var(--shadow-modal);
+      text-align: center;
+    }
+
+    .privacy-card h3 {
+      margin: 6px 0;
+      font-size: 17px;
+      color: var(--indigo-dark);
+    }
+
+    .privacy-card p {
+      margin: 0 0 14px;
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .photo-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .photo-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 9px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .timeline-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .timeline-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .countdown-pill {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: 1px solid var(--amber-border);
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+    }
+
+    .toggle-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--indigo-dark);
+      cursor: pointer;
+    }
+
+    .toggle-inline input {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--indigo);
+      cursor: pointer;
+    }
+
+    /* =========================================================================
+       MODAL & TOASTS (No alert() / confirm())
+       ========================================================================= */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(22, 55, 82, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 200;
+    }
+
+    .modal-dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 24px;
+      max-width: 520px;
+      width: 100%;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-modal);
+    }
+
+    .modal-title {
+      margin: 0 0 6px;
+      font-size: 18px;
+      color: var(--indigo-dark);
+    }
+
+    .modal-desc {
+      margin: 0 0 16px;
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .form-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 18px;
+    }
+
+    .toast-region {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      max-width: calc(100vw - 32px);
+    }
+
+    .toast {
+      background: var(--indigo-dark);
+      color: #ffffff;
+      padding: 11px 16px;
+      border-radius: 11px;
+      font-size: 13.5px;
+      font-weight: 600;
+      box-shadow: 0 10px 26px rgba(22, 55, 82, 0.25);
+      animation: toastSlide 0.2s ease;
+    }
+
+    .toast-green { background: var(--green); }
+    .toast-amber { background: var(--amber); }
+    .toast-red   { background: var(--red); }
+
+    @keyframes toastSlide {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* =========================================================================
+       RESPONSIVE ADAPTATION
+       ========================================================================= */
+    @media (max-width: 1024px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .health-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 12px;
+      }
+      .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      .sidebar-section-label,
+      .sidebar-footnote {
+        display: none;
+      }
+      .nav-btn {
+        width: auto;
+        flex: 1 1 auto;
+      }
+      .main {
+        padding: 18px 14px 44px;
+      }
+      .photo-grid,
+      .phrase-inspector-grid,
+      .trans-grid,
+      .form-row-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+      .topbar {
+        padding: 10px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =======================================================================
+       PLATFORM HEADER BAR
+       ======================================================================= -->
+  <header class="topbar" role="banner">
+    <div class="topbar-left">
+      <div class="brand-mark" aria-hidden="true">隣</div>
+      <div>
+        <div class="brand-title">Otonari (お隣) · Super Admin</div>
+        <div class="brand-sub">Platform-Wide Neighborhood Governance</div>
+      </div>
+    </div>
+
+    <div class="topbar-status" aria-label="Platform Health and Admin Profile">
+      <span class="status-chip"><span class="status-dot dot-green"></span> PostgreSQL 17 · Healthy</span>
+      <span class="status-chip"><span class="status-dot dot-indigo"></span> Reminder Job: 30s</span>
+      <span class="status-chip"><span class="status-dot dot-amber"></span> DEMO_MODE: ON</span>
+      <span class="profile-badge" title="Platform Super Administrator">
+        <span class="profile-avatar">SA</span>
+        <span>Super Admin (A. Nakamura)</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- =======================================================================
+       DESKTOP-FIRST SIDEBAR + MAIN CONTENT SHELL
+       ======================================================================= -->
+  <div class="shell">
+    <aside class="sidebar" aria-label="Super Admin Navigation">
+      <div>
+        <div class="sidebar-section-label">Platform Controls</div>
+        <nav class="sidebar-nav">
+          <button class="nav-btn active" data-tab="overview" onclick="setTab('overview')">
+            <span class="nav-btn-left">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              Overview
+            </span>
+          </button>
+
+          <button class="nav-btn" data-tab="groups" onclick="setTab('groups')">
+            <span class="nav-btn-left">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+              Groups &amp; Admin Rescue
+            </span>
+            <span class="badge badge-indigo" id="nav-groups-count">2</span>
+          </button>
+
+          <button class="nav-btn" data-tab="catalog" onclick="setTab('catalog')">
+            <span class="nav-btn-left">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              Fixed Catalog &amp; i18n
+            </span>
+            <span class="badge badge-muted" id="nav-catalog-count">13</span>
+          </button>
+
+          <button class="nav-btn" data-tab="disputes" onclick="setTab('disputes')">
+            <span class="nav-btn-left">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Break-Glass Dispute
+            </span>
+            <span class="badge badge-amber" id="nav-disputes-count">1</span>
+          </button>
+
+          <button class="nav-btn" data-tab="audit" onclick="setTab('audit')">
+            <span class="nav-btn-left">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Audit Log
+            </span>
+            <span class="badge badge-muted" id="nav-audit-count">4</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="sidebar-footnote">
+        <strong>Privacy-First Governance</strong>
+        Condition photos and neighbor messages stay blurred unless unlocked via an audited Break-Glass session.
+      </div>
+    </aside>
+
+    <main class="main" id="main-content"></main>
+  </div>
+
+  <!-- Modal & Toast Containers -->
+  <div id="modal-root" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-dialog" id="modal-dialog"></div>
+  </div>
+
+  <div id="toast-region" class="toast-region" aria-live="polite"></div>
+
+  <!-- =======================================================================
+       VANILLA JAVASCRIPT STATE, RENDERERS & INTERACTIONS
+       ======================================================================= -->
+  <script>
+    /* -----------------------------------------------------------------------
+       1. UTILITIES (Safe Code Generator, Timestamp Formatter, Escaping)
+       ----------------------------------------------------------------------- */
+    // Excludes visually ambiguous characters: I, L, O, 0, 1
+    const SAFE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+    function generateJoinCode() {
+      const segment = () => {
+        let out = "";
+        for (let i = 0; i < 4; i++) {
+          out += SAFE_ALPHABET[Math.floor(Math.random() * SAFE_ALPHABET.length)];
+        }
+        return out;
+      };
+      return `${segment()}-${segment()}`;
+    }
+
+    function nowStamp() {
+      const d = new Date();
+      const p = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    }
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function normalizeText(str) {
+      return String(str).toLowerCase().replace(/[\s\-_]+/g, "");
+    }
+
+    function formatCountdown(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+
+    /* -----------------------------------------------------------------------
+       2. APPLICATION STATE (Mock Data Matching Otonari Domain)
+       ----------------------------------------------------------------------- */
+    const state = {
+      activeTab: "overview",
+      groupSearch: "",
+      catalogCategory: "All",
+      selectedPhraseKey: "request",
+      auditFilter: "All",
+
+      // System health telemetry
+      health: {
+        dbStatus: "PostgreSQL 17 · Connected (2.4 ms)",
+        reminderLastRun: "2026-11-24 17:30:30",
+        reminderCheckedLoans: 3,
+        storageUsedMb: 1.84,
+        storageLimitMb: 5.0
+      },
+
+      // Neighborhood Groups
+      groups: [
+        {
+          id: "grp-sakura",
+          name: "Sakura Heights",
+          code: "SAKURA-2611",
+          type: "building",
+          city: "Nagasaki",
+          admin: "Sato",
+          members: ["Sato", "Tanaka", "Yamamoto", "Maria", "Ayesha"],
+          status: "Active"
+        },
+        {
+          id: "grp-hama",
+          name: "Hamaguchi-machi 3-chome",
+          code: "HAMA-3CHOME",
+          type: "block",
+          city: "Nagasaki",
+          admin: "Inoue",
+          members: ["Inoue", "Kobayashi"],
+          status: "Active"
+        }
+      ],
+
+      // Loan counters for Overview KPI
+      loansStats: {
+        active: 3,
+        completed: 19
+      },
+
+      // Fixed Global Catalog (13 items across 5 categories & 4 languages)
+      catalog: [
+        {
+          key: "futon_dryer",
+          emoji: "🛏️",
+          category: "cleaning",
+          active: true,
+          en: "Futon dryer",
+          ja: "布団乾燥機",
+          "ja-easy": "ふとんを かわかす きかい",
+          bn: "লেপ-তোষক শুকানোর যন্ত্র"
+        },
+        {
+          key: "takoyaki_maker",
+          emoji: "🐙",
+          category: "kitchen",
+          active: true,
+          en: "Takoyaki maker",
+          ja: "たこ焼き器",
+          "ja-easy": "たこやきを やく きかい",
+          bn: "তাকোয়াকি মেকার"
+        },
+        {
+          key: "ladder",
+          emoji: "🪜",
+          category: "tools",
+          active: true,
+          en: "Stepladder",
+          ja: "脚立",
+          "ja-easy": "きゃたつ（ちいさい はしご）",
+          bn: "মই / স্টেপল্যাডার"
+        },
+        {
+          key: "projector",
+          emoji: "📽️",
+          category: "living",
+          active: true,
+          en: "Projector",
+          ja: "プロジェクター",
+          "ja-easy": "えいがを うつす きかい",
+          bn: "প্রজেক্টর"
+        },
+        {
+          key: "power_drill",
+          emoji: "🔩",
+          category: "tools",
+          active: true,
+          en: "Power drill",
+          ja: "電動ドリル",
+          "ja-easy": "でんどう ドリル",
+          bn: "ইলেকট্রিক ড্রিল"
+        },
+        {
+          key: "dehumidifier",
+          emoji: "💨",
+          category: "cleaning",
+          active: true,
+          en: "Dehumidifier",
+          ja: "除湿機",
+          "ja-easy": "へやの しっけを とる きかい",
+          bn: "ডিহিউমিডিফায়ার"
+        },
+        {
+          key: "hot_plate",
+          emoji: "🍳",
+          category: "kitchen",
+          active: true,
+          en: "Electric hot plate",
+          ja: "ホットプレート",
+          "ja-easy": "テーブルで やく フライパン",
+          bn: "ইলেকট্রিক হট প্লেট"
+        },
+        {
+          key: "donabe",
+          emoji: "🍲",
+          category: "kitchen",
+          active: true,
+          en: "Clay hot pot (Donabe)",
+          ja: "土鍋",
+          "ja-easy": "どなべ（なべの どうぐ）",
+          bn: "মাটির হাঁড়ি (দোনাবে)"
+        },
+        {
+          key: "suitcase",
+          emoji: "🧳",
+          category: "living",
+          active: true,
+          en: "Travel suitcase",
+          ja: "スーツケース",
+          "ja-easy": "りょこうの おおきい かばん",
+          bn: "ভ্রমণের স্যুটকেস"
+        },
+        {
+          key: "camping_tent",
+          emoji: "⛺",
+          category: "outdoor",
+          active: true,
+          en: "Camping tent",
+          ja: "キャンプ用テント",
+          "ja-easy": "キャンプの テント",
+          bn: "ক্যাম্পিং তাঁবু"
+        },
+        {
+          key: "bluetooth_speaker",
+          emoji: "🔊",
+          category: "living",
+          active: true,
+          en: "Bluetooth speaker",
+          ja: "Bluetoothスピーカー",
+          "ja-easy": "おんがくを きく スピーカー",
+          bn: "ব্লুটুথ স্পিকার"
+        },
+        {
+          key: "rice_cooker_large",
+          emoji: "🍚",
+          category: "kitchen",
+          active: true,
+          en: "Large rice cooker",
+          ja: "大型炊飯器",
+          "ja-easy": "おおきい すいはんき",
+          bn: "বড় রাইস কুকার"
+        },
+        {
+          key: "lawn_mower",
+          emoji: "🌿",
+          category: "outdoor",
+          active: true,
+          en: "Lawn mower",
+          ja: "芝刈り機",
+          "ja-easy": "くさを かる きかい",
+          bn: "ঘাস কাটার যন্ত্র"
+        }
+      ],
+
+      // Phrase Templates for Inspector (Sample params: item=futon_dryer, spot=entrance, name=Sato)
+      phraseTemplates: {
+        request: {
+          label: "request — Borrow Request",
+          en: "Hello {name}! Could I borrow your {item} and pick it up at the {spot}?",
+          ja: "{name}様、こんにちは。よろしければ{item}をお借りして、{spot}にて受け取らせていただけますでしょうか？",
+          "ja-easy": "{name}さん、こんにちは。{item}を かして くれますか？{spot}で うけとりたいです。",
+          bn: "নমস্কার {name}! আমি কি আপনার {item} ধার নিতে পারি এবং {spot}-এ এসে নিয়ে যেতে পারি?"
+        },
+        accept: {
+          label: "accept — Approve Request",
+          en: "Of course, {name}! Let's meet at the {spot} to hand over the {item}.",
+          ja: "承知いたしました、{name}様。{item}を{spot}にてお渡しいたしますね。",
+          "ja-easy": "いいですよ、{name}さん。{spot}で {item}を わたしますね。",
+          bn: "নিশ্চয়ই {name}! {item} দেওয়ার জন্য আমরা {spot}-এ দেখা করতে পারি।"
+        },
+        declineBusy: {
+          label: "declineBusy — Polite Decline (Busy)",
+          en: "Sorry {name}, I'm using the {item} right now. Please ask again next time!",
+          ja: "{name}様、申し訳ございません。ただいま{item}を使用中のため、またの機会にお願いいたします。",
+          "ja-easy": "{name}さん、ごめんなさい。いま {item}を つかっています。また こんど おねがいします。",
+          bn: "দুঃখিত {name}, আমি এখন {item} ব্যবহার করছি। অনুগ্রহ করে পরে আবার জিজ্ঞাসা করবেন!"
+        },
+        "sys.dueSoon": {
+          label: "sys.dueSoon — Automated Due-Soon Reminder",
+          en: "Friendly reminder for {name}: Your borrowed {item} is due back soon at the {spot}.",
+          ja: "お知らせ（{name}様）：お借りしている{item}の返却時刻が近づいております。{spot}でのご返却をお願いいたします。",
+          "ja-easy": "{name}さんへ おしらせ：かりている {item}を かえす じかんが ちかいです。{spot}で かえして ください。",
+          bn: "{name}-এর জন্য স্মরণিকা: আপনার ধার নেওয়া {item} শীঘ্রই {spot}-এ ফেরত দেওয়ার সময় আসছে।"
+        },
+        "sys.overdue": {
+          label: "sys.overdue — Borrower Overdue Notice",
+          en: "Notice for {name}: The planned return time for {item} has passed. Please coordinate return at the {spot}.",
+          ja: "お知らせ（{name}様）：{item}の返却予定時刻を過ぎております。{spot}でのご返却についてご連絡ください。",
+          "ja-easy": "{name}さんへ おしらせ：{item}を かえす じかんを すぎました。{spot}で かえす じかんを おしえて ください。",
+          bn: "{name}-এর জন্য বিজ্ঞপ্তি: {item} ফেরত দেওয়ার নির্ধারিত সময় পার হয়েছে। অনুগ্রহ করে {spot}-এ ফেরত দেওয়ার ব্যবস্থা করুন।"
+        },
+        "sys.overdueLender": {
+          label: "sys.overdueLender — Lender Overdue Alert",
+          en: "Update: Your {item} lent to {name} is past the planned return time. You may send a gentle reminder.",
+          ja: "お知らせ：{name}様へ貸出中の{item}が返却予定時刻を過ぎています。やさしいリマインダーを送信できます。",
+          "ja-easy": "おしらせ：{name}さんに かしている {item}の かえす じかんを すぎました。やさしい おしらせを おくれます。",
+          bn: "আপডেট: {name}-কে ধার দেওয়া আপনার {item} ফেরত দেওয়ার নির্ধারিত সময় পার হয়েছে। আপনি একটি বিনয়ী স্মরণিকা পাঠাতে পারেন।"
+        }
+      },
+
+      // Sample params per locale for the Phrase Inspector
+      sampleParams: {
+        en:       { item: "Futon dryer", spot: "1F entrance", name: "Sato" },
+        ja:       { item: "布団乾燥機", spot: "1階玄関", name: "佐藤" },
+        "ja-easy":{ item: "ふとんを かわかす きかい", spot: "1かいの げんかん", name: "さとう" },
+        bn:       { item: "লেপ-তোষক শুকানোর যন্ত্র", spot: "১ম তলার প্রবেশদ্বার", name: "সাতো" }
+      },
+
+      // Break-Glass Escalated Dispute State
+      dispute: {
+        loanId: 104,
+        itemEmoji: "📽️",
+        itemName: "Projector",
+        groupName: "Sakura Heights",
+        borrower: "Maria",
+        lender: "Tanaka",
+        status: "Escalated Overdue / Condition Check",
+        resolved: false,
+        escalationNoticeSent: false,
+        unlocked: false,
+        reason: "",
+        remainingSeconds: 0,
+        showOriginalLang: false,
+        timeline: [
+          {
+            sender: "Maria",
+            senderLang: "en",
+            phraseKey: "request",
+            time: "Nov 20, 19:05",
+            en: "Hello Tanaka! Could I borrow your Projector and pick it up at the 1F entrance?",
+            original: "Hello Tanaka! Could I borrow your Projector and pick it up at the 1F entrance?"
+          },
+          {
+            sender: "Tanaka",
+            senderLang: "ja",
+            phraseKey: "accept",
+            time: "Nov 20, 19:14",
+            en: "Of course, Maria! Let's meet at the 1F entrance to hand over the Projector.",
+            original: "承知いたしました、マリア様。プロジェクターを1階玄関にてお渡しいたしますね。"
+          },
+          {
+            sender: "System",
+            senderLang: "sys",
+            phraseKey: "handover.confirmed",
+            time: "Nov 20, 19:30",
+            en: "Handover confirmed by both parties. Before condition photo saved (server/uploads/loan-104-before.jpg).",
+            original: "[SYSTEM] handover.confirmed · photo_sha256: 9f41...c82b"
+          },
+          {
+            sender: "System",
+            senderLang: "sys",
+            phraseKey: "sys.overdue",
+            time: "Nov 23, 18:01",
+            en: "Notice for Maria: The planned return time for Projector has passed.",
+            original: "[SYSTEM] sys.overdue dispatched to Maria (en) & sys.overdueLender to Tanaka (ja)"
+          },
+          {
+            sender: "Tanaka",
+            senderLang: "ja",
+            phraseKey: "dispute.conditionCheck",
+            time: "Nov 24, 11:20",
+            en: "Escalated return photo mismatch: lens cover latch appears loose after return.",
+            original: "返却時の状態確認を依頼：レンズカバーの留め具にゆるみが見られます。"
+          }
+        ]
+      },
+
+      // Immutable Append-Only Audit Log (newest first)
+      auditLog: [
+        {
+          time: "2026-11-24 17:30:30",
+          category: "System",
+          actor: "Worker · reminders.ts",
+          action: "system.reminder_tick",
+          target: "3 Active Loans",
+          detail: "Scheduled 30s check completed (0 new overdue dispatches)."
+        },
+        {
+          time: "2026-11-24 11:22:10",
+          category: "Break-Glass",
+          actor: "GroupAdmin · Sato",
+          action: "dispute.escalated",
+          target: "Loan #104 (Projector)",
+          detail: "Escalated condition check from Sakura Heights to Super Admin queue."
+        },
+        {
+          time: "2026-11-23 16:05:44",
+          category: "Catalog",
+          actor: "Super Admin (A. Nakamura)",
+          action: "catalog.verified",
+          target: "lawn_mower",
+          detail: "Verified 4-language translations (en, ja, ja-easy, bn) before publish."
+        },
+        {
+          time: "2026-11-22 10:15:00",
+          category: "Group",
+          actor: "Super Admin (A. Nakamura)",
+          action: "group.provisioned",
+          target: "Hamaguchi-machi 3-chome",
+          detail: "Created block group in Nagasaki with code HAMA-3CHOME (Admin: Inoue)."
+        }
+      ]
+    };
+
+    let breakGlassTimerId = null;
+
+    /* -----------------------------------------------------------------------
+       3. TOAST, MODAL & AUDIT LOG HELPERS
+       ----------------------------------------------------------------------- */
+    function showToast(msg, tone = "default") {
+      const region = document.getElementById("toast-region");
+      const el = document.createElement("div");
+      el.className = "toast" + (tone !== "default" ? ` toast-${tone}` : "");
+      el.textContent = msg;
+      region.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = "0";
+        el.style.transition = "opacity 0.25s ease";
+        setTimeout(() => el.remove(), 260);
+      }, 3200);
+    }
+
+    function openModal(html) {
+      document.getElementById("modal-dialog").innerHTML = html;
+      document.getElementById("modal-root").classList.remove("hidden");
+    }
+
+    function closeModal() {
+      document.getElementById("modal-root").classList.add("hidden");
+    }
+
+    document.getElementById("modal-root").addEventListener("click", (e) => {
+      if (e.target.id === "modal-root") closeModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeModal();
+    });
+
+    function appendAudit(category, action, target, detail) {
+      state.auditLog.unshift({
+        time: nowStamp(),
+        category,
+        actor: "Super Admin (A. Nakamura)",
+        action,
+        target,
+        detail
+      });
+      syncSidebarBadges();
+    }
+
+    function syncSidebarBadges() {
+      document.getElementById("nav-groups-count").textContent = state.groups.length;
+      document.getElementById("nav-catalog-count").textContent = state.catalog.length;
+      const openDisputes = state.dispute.resolved ? 0 : 1;
+      const dispBadge = document.getElementById("nav-disputes-count");
+      dispBadge.textContent = openDisputes;
+      dispBadge.className = `badge ${openDisputes > 0 ? "badge-amber" : "badge-green"}`;
+      document.getElementById("nav-audit-count").textContent = state.auditLog.length;
+    }
+
+    /* -----------------------------------------------------------------------
+       4. NAVIGATION & MASTER RENDER
+       ----------------------------------------------------------------------- */
+    function setTab(tab) {
+      state.activeTab = tab;
+      document.querySelectorAll(".nav-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tab === tab);
+      });
+      render();
+    }
+
+    function render() {
+      syncSidebarBadges();
+      const main = document.getElementById("main-content");
+      if (state.activeTab === "overview") renderOverview(main);
+      else if (state.activeTab === "groups") renderGroups(main);
+      else if (state.activeTab === "catalog") renderCatalog(main);
+      else if (state.activeTab === "disputes") renderDisputes(main);
+      else if (state.activeTab === "audit") renderAudit(main);
+    }
+
+    /* -----------------------------------------------------------------------
+       5. SECTION 1: OVERVIEW
+       ----------------------------------------------------------------------- */
+    function renderOverview(container) {
+      const activeNeighborhoods = state.groups.filter((g) => g.status === "Active").length;
+      const totalNeighbors = state.groups.reduce((acc, g) => acc + g.members.length, 0);
+      const flaggedDisputes = state.dispute.resolved ? 0 : 1;
+      const storagePct = Math.min(100, Math.round((state.health.storageUsedMb / state.health.storageLimitMb) * 100));
+
+      const recentRows = state.auditLog.slice(0, 6).map((entry) => `
+        <tr>
+          <td style="white-space:nowrap;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">${esc(entry.time)}</td>
+          <td><span class="badge ${badgeForCategory(entry.category)}">${esc(entry.category)}</span></td>
+          <td><span class="key-tag">${esc(entry.action)}</span></td>
+          <td><strong>${esc(entry.target)}</strong></td>
+          <td>${esc(entry.detail)}</td>
+        </tr>
+      `).join("");
+
+      container.innerHTML = `
+        <div class="page-head">
+          <div>
+            <h1>Platform Overview</h1>
+            <p>Real-time health and governance summary across all Otonari neighborhoods.</p>
+          </div>
+          <div class="actions-row">
+            <button class="btn btn-soft" type="button" onclick="setTab('disputes')">Inspect Flagged Dispute</button>
+            <button class="btn btn-primary" type="button" onclick="setTab('groups'); openCreateGroupModal()">+ Create Group</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Active Neighborhoods</div>
+            <div class="kpi-value">${activeNeighborhoods}</div>
+            <div class="kpi-note">${state.groups.length} total registered groups</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Neighbors</div>
+            <div class="kpi-value">${totalNeighbors}</div>
+            <div class="kpi-note">Across building &amp; block circles</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Active &amp; Completed Loans</div>
+            <div class="kpi-value">${state.loansStats.active} <span style="font-size:16px;font-weight:600;color:var(--text-muted);">/ ${state.loansStats.completed}</span></div>
+            <div class="kpi-note">${state.loansStats.active} in progress · ${state.loansStats.completed} returned</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Flagged Disputes</div>
+            <div class="kpi-value" style="color:${flaggedDisputes > 0 ? "var(--amber)" : "var(--green)"};">${flaggedDisputes}</div>
+            <div class="kpi-note">${flaggedDisputes > 0 ? "1 awaiting Break-Glass review" : "All disputes resolved"}</div>
+          </div>
+        </div>
+
+        <div class="health-strip">
+          <div class="health-tile">
+            <div class="health-top">
+              <span class="health-title">Database Engine</span>
+              <span class="badge badge-green">● OK</span>
+            </div>
+            <div class="health-detail">${esc(state.health.dbStatus)}<br/>Schema migrations up to date · WAL archival clean</div>
+          </div>
+
+          <div class="health-tile">
+            <div class="health-top">
+              <span class="health-title">Auto-Reminder Worker (30s)</span>
+              <span class="badge badge-green">● Running</span>
+            </div>
+            <div class="health-detail">Last check: <span style="font-family:var(--font-mono);">${esc(state.health.reminderLastRun)}</span> (${state.health.reminderCheckedLoans} loans scanned)</div>
+            <div>
+              <button class="btn btn-sm btn-soft" type="button" onclick="triggerReminderCheck()">↻ Trigger Check Now</button>
+            </div>
+          </div>
+
+          <div class="health-tile">
+            <div class="health-top">
+              <span class="health-title">Photo Storage (<code>server/uploads/</code>)</span>
+              <span class="badge badge-indigo">${storagePct}% used</span>
+            </div>
+            <div class="progress-track" role="progressbar" aria-valuenow="${storagePct}" aria-valuemin="0" aria-valuemax="100">
+              <div class="progress-fill" style="width:${storagePct}%;"></div>
+            </div>
+            <div class="health-detail">${state.health.storageUsedMb.toFixed(2)} MB / ${state.health.storageLimitMb.toFixed(2)} MB soft quota · Condition photos only</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Recent Platform Activity</h2>
+              <p class="card-sub">Automatically synced from the immutable Audit Log.</p>
+            </div>
+            <button class="btn btn-sm" type="button" onclick="setTab('audit')">Open Full Audit Log →</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Category</th>
+                  <th>Action</th>
+                  <th>Target</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>${recentRows}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function triggerReminderCheck() {
+      const ts = nowStamp();
+      state.health.reminderLastRun = ts;
+      appendAudit(
+        "System",
+        "system.reminder_manual_run",
+        `${state.loansStats.active} Active Loans`,
+        `Manual overdue & due-soon reminder sweep executed at ${ts} (0 errors).`
+      );
+      render();
+      showToast("Auto-Reminder worker check completed (0 errors)", "green");
+    }
+
+    /* -----------------------------------------------------------------------
+       6. SECTION 2: GROUPS & ADMIN RESCUE
+       ----------------------------------------------------------------------- */
+    function renderGroups(container) {
+      const q = state.groupSearch.trim().toLowerCase();
+      const filtered = state.groups.filter((g) => {
+        if (!q) return true;
+        return (
+          g.name.toLowerCase().includes(q) ||
+          g.code.toLowerCase().includes(q) ||
+          g.city.toLowerCase().includes(q) ||
+          g.admin.toLowerCase().includes(q) ||
+          g.type.toLowerCase().includes(q)
+        );
+      });
+
+      const rows = filtered.length
+        ? filtered.map((g) => `
+          <tr>
+            <td><strong>${esc(g.name)}</strong></td>
+            <td><span class="code-tag">${esc(g.code)}</span></td>
+            <td><span class="badge badge-muted">${esc(g.type)}</span></td>
+            <td>${esc(g.city)}</td>
+            <td><strong>${esc(g.admin)}</strong></td>
+            <td>${g.members.length}</td>
+            <td>
+              <span class="badge ${g.status === "Active" ? "badge-green" : "badge-red"}">
+                ${g.status === "Active" ? "● Active" : "● Suspended"}
+              </span>
+            </td>
+            <td>
+              <div class="actions-row">
+                <button class="btn btn-sm btn-soft" type="button" onclick="rotateGroupCode('${g.id}')">Rotate Code</button>
+                <button class="btn btn-sm" type="button" onclick="openAdminRescueModal('${g.id}')">Admin Rescue</button>
+                <button class="btn btn-sm ${g.status === "Active" ? "btn-red-outline" : "btn-green"}" type="button" onclick="toggleGroupStatus('${g.id}')">
+                  ${g.status === "Active" ? "Suspend" : "Activate"}
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">No neighborhood groups match "${esc(state.groupSearch)}".</td></tr>`;
+
+      container.innerHTML = `
+        <div class="page-head">
+          <div>
+            <h1>Groups &amp; Admin Rescue</h1>
+            <p>Manage residential buildings and blocks, rotate leaked poster join codes, and recover lost Group Admin tokens.</p>
+          </div>
+          <button class="btn btn-primary" type="button" onclick="openCreateGroupModal()">+ Create Group</button>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="search-box">
+              <span class="search-icon" aria-hidden="true">🔍</span>
+              <input
+                id="group-search-input"
+                class="input"
+                type="search"
+                placeholder="Search by group name, code, city, or admin..."
+                value="${esc(state.groupSearch)}"
+                oninput="onGroupSearch(this.value)"
+              />
+            </div>
+            <span class="badge badge-muted">Showing ${filtered.length} of ${state.groups.length} groups</span>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Group Name</th>
+                  <th>Join Code</th>
+                  <th>Type</th>
+                  <th>City</th>
+                  <th>Group Admin</th>
+                  <th>Members</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function onGroupSearch(val) {
+      state.groupSearch = val;
+      renderGroups(document.getElementById("main-content"));
+      const inp = document.getElementById("group-search-input");
+      if (inp) {
+        inp.focus();
+        inp.setSelectionRange(val.length, val.length);
+      }
+    }
+
+    function findSimilarGroupInCity(name, city) {
+      const nName = normalizeText(name);
+      const nCity = normalizeText(city);
+      if (!nName || !nCity) return null;
+      return state.groups.find((g) => {
+        if (normalizeText(g.city) !== nCity) return false;
+        const existing = normalizeText(g.name);
+        return existing === nName || existing.includes(nName) || nName.includes(existing);
+      }) || null;
+    }
+
+    function openCreateGroupModal() {
+      const code = generateJoinCode();
+      openModal(`
+        <h3 class="modal-title" id="modal-title">Create Neighborhood Group</h3>
+        <p class="modal-desc">Generates a safe <code>XXXX-XXXX</code> code (omitting <code>I, L, O, 0, 1</code>) for printed lobby posters.</p>
+        <form id="create-group-form" onsubmit="handleCreateGroupSubmit(event, false)">
+          <div class="form-stack">
+            <div class="field">
+              <label for="cg-name"><span>Group Name</span><span id="cg-name-count">0 / 60</span></label>
+              <input id="cg-name" class="input" type="text" maxlength="60" required placeholder="e.g., Sakura Heights" oninput="checkSimilarGroupLive()" />
+            </div>
+            <div class="form-row-2">
+              <div class="field">
+                <label for="cg-type"><span>Type</span></label>
+                <select id="cg-type" class="select">
+                  <option value="building">building</option>
+                  <option value="block">block</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="cg-city"><span>City</span><span id="cg-city-count">8 / 40</span></label>
+                <input id="cg-city" class="input" type="text" maxlength="40" required value="Nagasaki" oninput="checkSimilarGroupLive()" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="cg-admin"><span>Initial Group Admin (optional)</span></label>
+              <input id="cg-admin" class="input" type="text" maxlength="40" placeholder="e.g., Takahashi (defaults to Unassigned)" />
+            </div>
+
+            <div id="cg-duplicate-warning" class="alert-box alert-amber hidden"></div>
+
+            <div class="alert-box alert-indigo">
+              <span>Auto-generated safe join code:</span>
+              <span class="code-tag" id="cg-code">${code}</span>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn" type="button" onclick="closeModal()">Cancel</button>
+            <button id="cg-submit-btn" class="btn btn-primary" type="submit">Create Group</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function checkSimilarGroupLive() {
+      const nameInput = document.getElementById("cg-name");
+      const cityInput = document.getElementById("cg-city");
+      const nameCount = document.getElementById("cg-name-count");
+      const cityCount = document.getElementById("cg-city-count");
+      const warnBox = document.getElementById("cg-duplicate-warning");
+      const submitBtn = document.getElementById("cg-submit-btn");
+
+      if (!nameInput || !cityInput) return;
+      nameCount.textContent = `${nameInput.value.length} / 60`;
+      cityCount.textContent = `${cityInput.value.length} / 40`;
+
+      const match = findSimilarGroupInCity(nameInput.value, cityInput.value);
+      if (match) {
+        warnBox.classList.remove("hidden");
+        warnBox.innerHTML = `
+          <div>
+            <strong>⚠️ Possible duplicate group in ${esc(match.city)}</strong><br/>
+            Similar group already exists: <strong>${esc(match.name)}</strong> (<code>${esc(match.code)}</code>).
+          </div>
+          <button class="btn btn-sm btn-amber-outline" type="button" onclick="handleCreateGroupSubmit(event, true)">Create anyway</button>
+        `;
+        submitBtn.disabled = true;
+      } else {
+        warnBox.classList.add("hidden");
+        warnBox.innerHTML = "";
+        submitBtn.disabled = false;
+      }
+    }
+
+    function handleCreateGroupSubmit(event, forceCreate) {
+      if (event) event.preventDefault();
+      const name = document.getElementById("cg-name").value.trim();
+      const type = document.getElementById("cg-type").value;
+      const city = document.getElementById("cg-city").value.trim();
+      const adminName = document.getElementById("cg-admin").value.trim() || "Unassigned";
+      const code = document.getElementById("cg-code").textContent.trim();
+
+      if (!name || !city) {
+        showToast("Please enter both Group Name and City", "amber");
+        return;
+      }
+
+      const similar = findSimilarGroupInCity(name, city);
+      if (similar && !forceCreate) {
+        checkSimilarGroupLive();
+        return;
+      }
+
+      state.groups.push({
+        id: "grp-" + Date.now(),
+        name,
+        code,
+        type,
+        city,
+        admin: adminName,
+        members: adminName === "Unassigned" ? [] : [adminName],
+        status: "Active"
+      });
+
+      appendAudit(
+        "Group",
+        "group.created",
+        name,
+        `Provisioned ${type} in ${city} with code ${code} (Admin: ${adminName})${forceCreate ? " [Duplicate warning acknowledged]" : ""}.`
+      );
+      closeModal();
+      render();
+      showToast(`Created "${name}" (${code})`, "green");
+    }
+
+    function rotateGroupCode(groupId) {
+      const grp = state.groups.find((g) => g.id === groupId);
+      if (!grp) return;
+      const prev = grp.code;
+      grp.code = generateJoinCode();
+      appendAudit("Group", "group.code_rotated", grp.name, `Rotated join code ${prev} → ${grp.code} (old lobby poster invalidated).`);
+      render();
+      showToast(`Rotated join code for ${grp.name}: ${grp.code}`, "green");
+    }
+
+    function openAdminRescueModal(groupId) {
+      const grp = state.groups.find((g) => g.id === groupId);
+      if (!grp) return;
+
+      const memberOptions = grp.members.length
+        ? grp.members.map((m) => `<option value="${esc(m)}" ${m === grp.admin ? "selected" : ""}>${esc(m)}${m === grp.admin ? " (Current Admin)" : ""}</option>`).join("")
+        : `<option value="Interim Caretaker">Interim Caretaker (New Invite)</option>`;
+
+      openModal(`
+        <h3 class="modal-title" id="modal-title">Admin Rescue — ${esc(grp.name)}</h3>
+        <p class="modal-desc">Promote an active neighbor to Group Admin if the current admin lost their device token or moved away.</p>
+        <form onsubmit="submitAdminRescue(event, '${grp.id}')">
+          <div class="form-stack">
+            <div class="field">
+              <label for="rescue-member"><span>Select Neighbor to Promote</span></label>
+              <select id="rescue-member" class="select">${memberOptions}</select>
+            </div>
+            <div class="field">
+              <label for="rescue-reason"><span>Verification Basis</span></label>
+              <select id="rescue-reason" class="select">
+                <option value="Device token lost — verified with building manager">Device token lost — verified with building manager</option>
+                <option value="Previous admin relocated — neighborhood handover">Previous admin relocated — neighborhood handover</option>
+                <option value="Emergency backup caretaker appointment">Emergency backup caretaker appointment</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn" type="button" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" type="submit">Promote to Group Admin</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function submitAdminRescue(event, groupId) {
+      event.preventDefault();
+      const grp = state.groups.find((g) => g.id === groupId);
+      if (!grp) return;
+      const chosen = document.getElementById("rescue-member").value;
+      const reason = document.getElementById("rescue-reason").value;
+      const oldAdmin = grp.admin;
+      grp.admin = chosen;
+      if (!grp.members.includes(chosen)) grp.members.push(chosen);
+
+      appendAudit("Group", "group.admin_rescue", grp.name, `Reassigned Group Admin ${oldAdmin} → ${chosen} (${reason}).`);
+      closeModal();
+      render();
+      showToast(`${chosen} is now Group Admin for ${grp.name}`, "green");
+    }
+
+    function toggleGroupStatus(groupId) {
+      const grp = state.groups.find((g) => g.id === groupId);
+      if (!grp) return;
+      grp.status = grp.status === "Active" ? "Suspended" : "Active";
+      appendAudit(
+        "Group",
+        grp.status === "Suspended" ? "group.suspended" : "group.activated",
+        grp.name,
+        `Neighborhood group transitioned to ${grp.status}.`
+      );
+      render();
+      showToast(`${grp.name} is now ${grp.status}`, grp.status === "Suspended" ? "amber" : "green");
+    }
+
+    /* -----------------------------------------------------------------------
+       7. SECTION 3: FIXED CATALOG & i18n PHRASES
+       ----------------------------------------------------------------------- */
+    function renderCatalog(container) {
+      const categories = ["All", "kitchen", "cleaning", "tools", "living", "outdoor"];
+      const chipsHtml = categories.map((cat) => `
+        <button class="chip ${state.catalogCategory === cat ? "active" : ""}" type="button" onclick="setCatalogCategory('${cat}')">
+          ${cat === "All" ? `All (${state.catalog.length})` : cat}
+        </button>
+      `).join("");
+
+      const filtered = state.catalogCategory === "All"
+        ? state.catalog
+        : state.catalog.filter((c) => c.category === state.catalogCategory);
+
+      const catalogRows = filtered.map((item) => `
+        <tr>
+          <td style="white-space:nowrap;">
+            <span style="font-size:21px;margin-right:8px;vertical-align:middle;">${esc(item.emoji)}</span>
+            <span class="key-tag">${esc(item.key)}</span>
+          </td>
+          <td><span class="badge badge-muted">${esc(item.category)}</span></td>
+          <td>
+            <div class="trans-grid">
+              <div class="trans-cell"><span class="trans-code">en</span>${esc(item.en)}</div>
+              <div class="trans-cell"><span class="trans-code">ja</span>${esc(item.ja)}</div>
+              <div class="trans-cell"><span class="trans-code">ja-easy</span>${esc(item["ja-easy"])}</div>
+              <div class="trans-cell"><span class="trans-code">bn</span>${esc(item.bn)}</div>
+            </div>
+          </td>
+          <td>
+            <span class="badge ${item.active ? "badge-green" : "badge-muted"}">${item.active ? "Active" : "Disabled"}</span>
+          </td>
+          <td>
+            <button class="btn btn-sm" type="button" onclick="toggleCatalogActive('${item.key}')">
+              ${item.active ? "Disable" : "Enable"}
+            </button>
+          </td>
+        </tr>
+      `).join("");
+
+      // Phrase Inspector Dropdown + 4-Locale Render
+      const phraseKeys = Object.keys(state.phraseTemplates);
+      const phraseOptions = phraseKeys.map((k) => `
+        <option value="${esc(k)}" ${k === state.selectedPhraseKey ? "selected" : ""}>${esc(state.phraseTemplates[k].label)}</option>
+      `).join("");
+
+      const selectedTpl = state.phraseTemplates[state.selectedPhraseKey];
+      const interpolate = (locale) => {
+        const p = state.sampleParams[locale];
+        return selectedTpl[locale]
+          .replace(/\{item\}/g, p.item)
+          .replace(/\{spot\}/g, p.spot)
+          .replace(/\{name\}/g, p.name);
+      };
+
+      container.innerHTML = `
+        <div class="page-head">
+          <div>
+            <h1>Fixed Catalog &amp; i18n Phrases</h1>
+            <p>Maintain Otonari's curated allowlist of shareable items and polite cross-lingual phrase keys.</p>
+          </div>
+          <button class="btn btn-primary" type="button" onclick="openAddCatalogModal()">+ Add Catalog Item</button>
+        </div>
+
+        <div class="rule-banner">
+          <strong>Zero Free-Text Messaging Policy (Core Architecture Rule)</strong>
+          All items and messages use fixed keys + vetted human translations across 4 languages (<code>en</code>, <code>ja</code> polite keigo, <code>ja-easy</code> やさしい日本語, <code>bn</code> Bengali). No third-party translation APIs, no mistranslations, and no spam.
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Global Fixed Item Catalog</h2>
+              <p class="card-sub">Every catalog entry requires complete 4-locale human translations before activation.</p>
+            </div>
+            <span class="badge badge-green">4 / 4 Locales Verified</span>
+          </div>
+
+          <div class="chips-bar" role="group" aria-label="Filter catalog by category">${chipsHtml}</div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item Key</th>
+                  <th>Category</th>
+                  <th>4-Language Human Translations</th>
+                  <th>Status</th>
+                  <th>Control</th>
+                </tr>
+              </thead>
+              <tbody>${catalogRows}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Phrase Template Inspector</h2>
+              <p class="card-sub">Preview how a single fixed key renders simultaneously across all 4 languages using sample params: <code>item: futon_dryer</code>, <code>spot: entrance</code>, <code>name: Sato</code>.</p>
+            </div>
+            <div style="min-width:260px;">
+              <select class="select" aria-label="Select phrase key to inspect" onchange="setPhraseKey(this.value)">
+                ${phraseOptions}
+              </select>
+            </div>
+          </div>
+
+          <div class="phrase-inspector-grid">
+            <div class="phrase-box">
+              <div class="phrase-box-head"><span>English (en)</span><span class="key-tag">${esc(state.selectedPhraseKey)}</span></div>
+              <div class="phrase-box-body">${esc(interpolate("en"))}</div>
+            </div>
+            <div class="phrase-box">
+              <div class="phrase-box-head"><span>Japanese Polite Keigo (ja)</span><span class="key-tag">${esc(state.selectedPhraseKey)}</span></div>
+              <div class="phrase-box-body">${esc(interpolate("ja"))}</div>
+            </div>
+            <div class="phrase-box">
+              <div class="phrase-box-head"><span>Easy Japanese · やさしい日本語 (ja-easy)</span><span class="key-tag">${esc(state.selectedPhraseKey)}</span></div>
+              <div class="phrase-box-body">${esc(interpolate("ja-easy"))}</div>
+            </div>
+            <div class="phrase-box">
+              <div class="phrase-box-head"><span>Bengali · বাংলা (bn)</span><span class="key-tag">${esc(state.selectedPhraseKey)}</span></div>
+              <div class="phrase-box-body">${esc(interpolate("bn"))}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function setCatalogCategory(cat) {
+      state.catalogCategory = cat;
+      render();
+    }
+
+    function setPhraseKey(key) {
+      state.selectedPhraseKey = key;
+      render();
+    }
+
+    function toggleCatalogActive(key) {
+      const item = state.catalog.find((c) => c.key === key);
+      if (!item) return;
+      item.active = !item.active;
+      appendAudit("Catalog", "catalog.status_changed", item.key, `Set catalog item "${item.key}" to ${item.active ? "Active" : "Disabled"}.`);
+      render();
+      showToast(`Catalog item "${item.key}" ${item.active ? "enabled" : "disabled"}`);
+    }
+
+    function openAddCatalogModal() {
+      openModal(`
+        <h3 class="modal-title" id="modal-title">Add Fixed Catalog Item</h3>
+        <p class="modal-desc">All 4 language translations are mandatory to guarantee zero untranslated keys for neighbors.</p>
+        <form onsubmit="submitAddCatalogItem(event)">
+          <div class="form-stack">
+            <div class="form-row-2">
+              <div class="field">
+                <label for="ci-emoji"><span>Emoji Icon</span></label>
+                <input id="ci-emoji" class="input" type="text" required maxlength="4" placeholder="e.g., 🧰" />
+              </div>
+              <div class="field">
+                <label for="ci-category"><span>Category</span></label>
+                <select id="ci-category" class="select">
+                  <option value="kitchen">kitchen</option>
+                  <option value="cleaning">cleaning</option>
+                  <option value="tools">tools</option>
+                  <option value="living">living</option>
+                  <option value="outdoor">outdoor</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="ci-key"><span>item_key (snake_case)</span></label>
+              <input id="ci-key" class="input" type="text" required pattern="[a-z0-9_]+" placeholder="e.g., hand_mixer" />
+            </div>
+            <div class="form-row-2">
+              <div class="field">
+                <label for="ci-en"><span>English (en)</span></label>
+                <input id="ci-en" class="input" type="text" required placeholder="Hand mixer" />
+              </div>
+              <div class="field">
+                <label for="ci-ja"><span>Japanese (ja)</span></label>
+                <input id="ci-ja" class="input" type="text" required placeholder="ハンドミキサー" />
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="field">
+                <label for="ci-ja-easy"><span>Easy Japanese (ja-easy)</span></label>
+                <input id="ci-ja-easy" class="input" type="text" required placeholder="まぜる きかい" />
+              </div>
+              <div class="field">
+                <label for="ci-bn"><span>Bengali (bn)</span></label>
+                <input id="ci-bn" class="input" type="text" required placeholder="হ্যান্ড মিক্সার" />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn" type="button" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" type="submit">Save to Global Catalog</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function submitAddCatalogItem(event) {
+      event.preventDefault();
+      const emoji = document.getElementById("ci-emoji").value.trim();
+      const category = document.getElementById("ci-category").value;
+      const key = document.getElementById("ci-key").value.trim().toLowerCase();
+      const en = document.getElementById("ci-en").value.trim();
+      const ja = document.getElementById("ci-ja").value.trim();
+      const jaEasy = document.getElementById("ci-ja-easy").value.trim();
+      const bn = document.getElementById("ci-bn").value.trim();
+
+      if (state.catalog.some((c) => c.key === key)) {
+        showToast(`Catalog key "${key}" already exists`, "red");
+        return;
+      }
+
+      state.catalog.unshift({
+        key,
+        emoji,
+        category,
+        active: true,
+        en,
+        ja,
+        "ja-easy": jaEasy,
+        bn
+      });
+
+      appendAudit("Catalog", "catalog.item_added", key, `Added ${emoji} ${key} (${category}) with full 4-locale translations.`);
+      closeModal();
+      state.catalogCategory = "All";
+      render();
+      showToast(`Added "${key}" to Global Catalog`, "green");
+    }
+
+    /* -----------------------------------------------------------------------
+       8. SECTION 4: BREAK-GLASS DISPUTE INSPECTION
+       ----------------------------------------------------------------------- */
+    function renderDisputes(container) {
+      const d = state.dispute;
+
+      const timelineHtml = d.timeline.map((m) => `
+        <div class="timeline-row">
+          <div>
+            <strong>${esc(m.sender)}</strong>
+            ${m.senderLang !== "sys" ? `<span class="badge badge-muted" style="margin-left:5px;">${esc(m.senderLang)}</span>` : `<span class="badge badge-indigo" style="margin-left:5px;">system</span>`}
+            <span class="key-tag" style="margin:0 6px;">${esc(m.phraseKey)}</span>
+            <div style="margin-top:4px;font-size:13.5px;">
+              ${esc(d.showOriginalLang ? m.original : m.en)}
+            </div>
+          </div>
+          <span style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);">${esc(m.time)}</span>
+        </div>
+      `).join("");
+
+      container.innerHTML = `
+        <div class="page-head">
+          <div>
+            <h1>Break-Glass Dispute Inspection</h1>
+            <p>Zero-snoop privacy control: condition photos and structured logs stay locked until an audited reason is recorded.</p>
+          </div>
+          <span class="badge ${d.resolved ? "badge-green" : "badge-amber"}">
+            ${d.resolved ? "✓ Dispute Resolved" : "⚠️ 1 Active Escalation"}
+          </span>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Loan #${d.loanId} — ${d.itemEmoji} ${esc(d.itemName)} (${esc(d.groupName)})</h2>
+              <p class="card-sub">
+                Borrower: <strong>${esc(d.borrower)}</strong> · Lender: <strong>${esc(d.lender)}</strong> ·
+                Status: <strong>${esc(d.resolved ? "Resolved by Platform" : d.status)}</strong>
+              </p>
+            </div>
+
+            <div class="actions-row">
+              ${d.unlocked ? `<span class="countdown-pill" id="bg-countdown">⏱ ${formatCountdown(d.remainingSeconds)}</span>` : ""}
+              <span class="badge ${d.unlocked ? "badge-amber" : "badge-indigo"}">
+                ${d.unlocked ? "🔓 Break-Glass Active" : "🔒 Privacy Shield Locked"}
+              </span>
+            </div>
+          </div>
+
+          ${d.unlocked ? `
+            <div class="alert-box alert-amber" style="margin-bottom:14px;">
+              <div>
+                <strong>Audited Inspection Session:</strong> Reason recorded as <em>"${esc(d.reason)}"</em>. Session automatically locks when timer reaches 00:00.
+              </div>
+              <div class="actions-row">
+                <button class="btn btn-sm btn-soft" type="button" ${d.escalationNoticeSent ? "disabled" : ""} onclick="sendEscalationNotice()">
+                  ${d.escalationNoticeSent ? "✓ Escalation Notice Sent" : "Send Platform Escalation Notice"}
+                </button>
+                <button class="btn btn-sm btn-green" type="button" ${d.resolved ? "disabled" : ""} onclick="markDisputeResolved()">
+                  ${d.resolved ? "✓ Dispute Resolved" : "Mark Dispute Resolved"}
+                </button>
+                <button class="btn btn-sm" type="button" onclick="relockBreakGlass()">🔒 Re-Lock Session</button>
+              </div>
+            </div>
+          ` : ""}
+
+          <div class="evidence-stage">
+            ${!d.unlocked ? `
+              <div class="privacy-overlay">
+                <div class="privacy-card">
+                  <div style="font-size:30px;">🛡️</div>
+                  <h3>Privacy Shield Active</h3>
+                  <p>
+                    Handover/return condition photos and neighbor phrase logs are blurred by default. Select a mandatory audit reason to unlock a 15-minute read-only session.
+                  </p>
+                  <div class="field" style="text-align:left;margin-bottom:14px;">
+                    <label for="bg-reason-select"><span>Mandatory Audit Reason</span></label>
+                    <select id="bg-reason-select" class="select">
+                      <option value="Damaged Item Claim">Damaged Item Claim</option>
+                      <option value="Unresolved Overdue Escalation">Unresolved Overdue Escalation</option>
+                      <option value="Safety / Abuse Investigation">Safety / Abuse Investigation</option>
+                    </select>
+                  </div>
+                  <button class="btn btn-primary" style="width:100%;" type="button" onclick="unlockBreakGlass()">
+                    🔓 Unlock Break-Glass Access (15 min)
+                  </button>
+                </div>
+              </div>
+            ` : ""}
+
+            <div class="evidence-inner ${d.unlocked ? "" : "blurred"}">
+              <div class="photo-grid">
+                <!-- Handover Photo (Before) -->
+                <div class="photo-card">
+                  <div class="photo-card-top">
+                    <span>📸 Handover Condition Photo (Before)</span>
+                    <span class="badge badge-green">Nov 20 · 19:30</span>
+                  </div>
+                  <svg viewBox="0 0 340 165" width="100%" style="display:block;border-radius:8px;background:#eaf1f6;" aria-label="Before condition photo of projector">
+                    <rect width="340" height="165" fill="#eaf1f6"/>
+                    <rect x="22" y="116" width="296" height="30" rx="6" fill="#dcd3c5"/>
+                    <!-- Projector body -->
+                    <rect x="78" y="54" width="184" height="62" rx="12" fill="#ffffff" stroke="#1f4b6e" stroke-width="3"/>
+                    <!-- Ventilation grille -->
+                    <line x1="96" y1="72" x2="146" y2="72" stroke="#c5d9ea" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="96" y1="82" x2="146" y2="82" stroke="#c5d9ea" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="96" y1="92" x2="146" y2="92" stroke="#c5d9ea" stroke-width="3" stroke-linecap="round"/>
+                    <!-- Intact Lens + Closed Latch -->
+                    <circle cx="212" cy="85" r="22" fill="#1f4b6e"/>
+                    <circle cx="212" cy="85" r="13" fill="#4f83ad"/>
+                    <circle cx="207" cy="80" r="4" fill="#d9ebf8"/>
+                    <rect x="184" y="50" width="26" height="6" rx="3" fill="#246c44"/>
+                    <text x="170" y="28" text-anchor="middle" font-size="11.5" fill="#246c44" font-weight="700" font-family="sans-serif">BEFORE: Lens cover &amp; top latch intact</text>
+                  </svg>
+                </div>
+
+                <!-- Return Photo (After) -->
+                <div class="photo-card">
+                  <div class="photo-card-top">
+                    <span>📸 Return Condition Photo (After)</span>
+                    <span class="badge badge-amber">Nov 24 · 11:18</span>
+                  </div>
+                  <svg viewBox="0 0 340 165" width="100%" style="display:block;border-radius:8px;background:#fbf4ea;" aria-label="After condition photo of projector">
+                    <rect width="340" height="165" fill="#fbf4ea"/>
+                    <rect x="22" y="116" width="296" height="30" rx="6" fill="#dcd3c5"/>
+                    <!-- Projector body -->
+                    <rect x="78" y="54" width="184" height="62" rx="12" fill="#ffffff" stroke="#1f4b6e" stroke-width="3"/>
+                    <!-- Ventilation grille -->
+                    <line x1="96" y1="72" x2="146" y2="72" stroke="#c5d9ea" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="96" y1="82" x2="146" y2="82" stroke="#c5d9ea" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="96" y1="92" x2="146" y2="92" stroke="#c5d9ea" stroke-width="3" stroke-linecap="round"/>
+                    <!-- Lens + Tilted/Loose Latch highlighted -->
+                    <circle cx="212" cy="85" r="22" fill="#1f4b6e"/>
+                    <circle cx="212" cy="85" r="13" fill="#4f83ad"/>
+                    <circle cx="207" cy="80" r="4" fill="#d9ebf8"/>
+                    <rect x="184" y="45" width="26" height="6" rx="3" fill="#ad3026" transform="rotate(-14 197 48)"/>
+                    <circle cx="197" cy="50" r="18" fill="none" stroke="#ad3026" stroke-width="2.5" stroke-dasharray="4 3"/>
+                    <text x="170" y="28" text-anchor="middle" font-size="11.5" fill="#ad3026" font-weight="700" font-family="sans-serif">AFTER: Top lens cover latch visibly loose</text>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="timeline-head">
+                <h3 style="margin:0;font-size:15px;color:var(--indigo-dark);">Structured Phrase Timeline (Loan #${d.loanId})</h3>
+                <label class="toggle-inline">
+                  <input type="checkbox" ${d.showOriginalLang ? "checked" : ""} onchange="toggleShowOriginal(this.checked)" />
+                  <span>Show original sender language</span>
+                </label>
+              </div>
+
+              <div class="timeline-list">${timelineHtml}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function unlockBreakGlass() {
+      const select = document.getElementById("bg-reason-select");
+      const reason = select ? select.value : "Damaged Item Claim";
+
+      state.dispute.unlocked = true;
+      state.dispute.reason = reason;
+      state.dispute.remainingSeconds = 15 * 60;
+
+      if (breakGlassTimerId) clearInterval(breakGlassTimerId);
+      breakGlassTimerId = setInterval(() => {
+        if (!state.dispute.unlocked) {
+          clearInterval(breakGlassTimerId);
+          return;
+        }
+        state.dispute.remainingSeconds -= 1;
+        const el = document.getElementById("bg-countdown");
+        if (el) el.textContent = `⏱ ${formatCountdown(Math.max(0, state.dispute.remainingSeconds))}`;
+
+        if (state.dispute.remainingSeconds <= 0) {
+          clearInterval(breakGlassTimerId);
+          state.dispute.unlocked = false;
+          appendAudit("Break-Glass", "break_glass.expired", `Loan #${state.dispute.loanId}`, "15-minute Break-Glass session expired and re-locked automatically.");
+          render();
+          showToast("Break-Glass session expired and re-locked", "amber");
+        }
+      }, 1000);
+
+      appendAudit(
+        "Break-Glass",
+        "break_glass.unlocked",
+        `Loan #${state.dispute.loanId} (${state.dispute.itemName})`,
+        `Unlocked 15-min evidence session — Reason: ${reason}.`
+      );
+      render();
+      showToast("Break-Glass access unlocked (15:00) & logged", "amber");
+    }
+
+    function toggleShowOriginal(checked) {
+      state.dispute.showOriginalLang = checked;
+      render();
+    }
+
+    function sendEscalationNotice() {
+      state.dispute.escalationNoticeSent = true;
+      appendAudit(
+        "Break-Glass",
+        "dispute.notice_sent",
+        `Loan #${state.dispute.loanId} (${state.dispute.groupName})`,
+        "Dispatched structured platform escalation notice to Maria (en), Tanaka (ja), and Group Admin Sato."
+      );
+      render();
+      showToast("Platform escalation notice dispatched in each resident's language", "green");
+    }
+
+    function markDisputeResolved() {
+      state.dispute.resolved = true;
+      state.dispute.status = "Resolved by Platform";
+      appendAudit(
+        "Break-Glass",
+        "dispute.resolved",
+        `Loan #${state.dispute.loanId} (${state.dispute.itemName})`,
+        "Marked dispute resolved after condition photo verification."
+      );
+      render();
+      showToast("Loan #104 marked as resolved", "green");
+    }
+
+    function relockBreakGlass() {
+      if (breakGlassTimerId) clearInterval(breakGlassTimerId);
+      state.dispute.unlocked = false;
+      state.dispute.remainingSeconds = 0;
+      appendAudit(
+        "Break-Glass",
+        "break_glass.relocked",
+        `Loan #${state.dispute.loanId}`,
+        "Super Admin manually re-locked Break-Glass privacy shield."
+      );
+      render();
+      showToast("Break-Glass session re-locked");
+    }
+
+    /* -----------------------------------------------------------------------
+       9. SECTION 5: IMMUTABLE AUDIT LOG
+       ----------------------------------------------------------------------- */
+    function badgeForCategory(cat) {
+      if (cat === "Group") return "badge-indigo";
+      if (cat === "Catalog") return "badge-green";
+      if (cat === "Break-Glass") return "badge-amber";
+      return "badge-muted";
+    }
+
+    function renderAudit(container) {
+      const filters = ["All", "Group", "Catalog", "Break-Glass", "System"];
+      const chipsHtml = filters.map((f) => `
+        <button class="chip ${state.auditFilter === f ? "active" : ""}" type="button" onclick="setAuditFilter('${f}')">
+          ${esc(f)}
+        </button>
+      `).join("");
+
+      const entries = state.auditFilter === "All"
+        ? state.auditLog
+        : state.auditLog.filter((e) => e.category === state.auditFilter);
+
+      const rows = entries.map((e) => `
+        <tr>
+          <td style="white-space:nowrap;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">${esc(e.time)}</td>
+          <td><span class="badge ${badgeForCategory(e.category)}">${esc(e.category)}</span></td>
+          <td><strong>${esc(e.actor)}</strong></td>
+          <td><span class="key-tag">${esc(e.action)}</span></td>
+          <td><strong>${esc(e.target)}</strong></td>
+          <td>${esc(e.detail)}</td>
+        </tr>
+      `).join("");
+
+      container.innerHTML = `
+        <div class="page-head">
+          <div>
+            <h1>Immutable Audit Log</h1>
+            <p>Append-only governance trail (newest first). Entries cannot be edited or deleted.</p>
+          </div>
+          <span class="badge badge-muted">${state.auditLog.length} total records</span>
+        </div>
+
+        <div class="card">
+          <div class="chips-bar" role="group" aria-label="Filter audit logs by action type">${chipsHtml}</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Type</th>
+                  <th>Actor</th>
+                  <th>Action Key</th>
+                  <th>Target</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function setAuditFilter(filter) {
+      state.auditFilter = filter;
+      render();
+    }
+
+    /* -----------------------------------------------------------------------
+       10. INITIALIZE
+       ----------------------------------------------------------------------- */
+    window.addEventListener("DOMContentLoaded", () => {
+      render();
+    });
+  </script>
+</body>
+</html>
