@@ -17,7 +17,7 @@ export default function DemoButtons({ loanId, lang, onDone }: { loanId: number; 
 
   async function fastForward(to: 'dueSoon' | 'overdue') {
     try {
-      await api.post(`/demo/fast-forward/${loanId}`, { to });
+      await api.post(`/demo/loans/${loanId}/fast-forward`, { to });
     } catch {
       // E.g. the item was returned in the meantime: reloading the loan shows what happened.
     }

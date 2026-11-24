@@ -40,7 +40,7 @@ function AddressLine({ posterLang }: { posterLang: Lang }) {
 export default function Poster() {
   const { lang, group: myGroup } = useUser();
   const [searchParams] = useSearchParams();
-  const [poster, setPoster] = useState<PosterData | null>(null); // { code, joinUrl, qrCode, name, type, city, memberCount }
+  const [poster, setPoster] = useState<PosterData | null>(null); // { code, joinUrl, qrCode, name, type, city, member_count }
   const [problem, setProblem] = useState<UiKey | null>(null); // the text to show instead
 
   const code = (searchParams.get('code') || myGroup?.code || '').trim().toUpperCase();
@@ -51,7 +51,7 @@ export default function Poster() {
     setProblem(null);
     const joinUrl = `${JOIN_PAGE}?code=${encodeURIComponent(code)}`;
     api
-      .get<GroupPreview>(`/groups/by-code/${encodeURIComponent(code)}`)
+      .get<GroupPreview>(`/groups/${encodeURIComponent(code)}`)
       .then(async (group) => setPoster({ code, joinUrl, qrCode: await qrPicture(joinUrl), ...group }))
       .catch((error) => setProblem(errorStatus(error) === 404 ? 'join.groupNotFound' : 'common.error'));
   }, [code]);

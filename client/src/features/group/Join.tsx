@@ -19,7 +19,7 @@ export default function Join() {
   const [searchParams] = useSearchParams();
 
   const [code, setCode] = useState(searchParams.get('code') ?? '');
-  const [preview, setPreview] = useState<GroupPreview | null>(null); // { name, type, city, memberCount } for a valid code
+  const [preview, setPreview] = useState<GroupPreview | null>(null); // { name, type, city, member_count } for a valid code
   const [notFound, setNotFound] = useState(false);
   const [nickname, setNickname] = useState('');
   const [lang, setLang] = useState(startLang); // the page switches to the language you pick
@@ -38,7 +38,7 @@ export default function Join() {
     let cancelled = false; // ignore answers for a code that has changed since
     const timer = setTimeout(() => {
       api
-        .get<GroupPreview>(`/groups/by-code/${encodeURIComponent(cleanCode)}`)
+        .get<GroupPreview>(`/groups/${encodeURIComponent(cleanCode)}`)
         .then((group) => {
           if (!cancelled) setPreview(group);
         })
@@ -67,7 +67,10 @@ export default function Join() {
     setBusy(true);
     setFailed(false);
     try {
-      const result = await api.post<Login>('/join', { code: cleanCode, nickname: nickname.trim(), lang });
+      const result = await api.post<Login>(`/groups/${encodeURIComponent(cleanCode)}/members`, {
+        nickname: nickname.trim(),
+        lang,
+      });
       login(result);
       navigate('/', { replace: true });
     } catch {
@@ -124,7 +127,7 @@ export default function Join() {
                 <div>
                   <strong>{t(lang, 'join.groupFound', { group: preview.name, city: preview.city })}</strong>
                   <p className="inline-icon-text">
-                    {t(lang, `groupType.${preview.type}`)} · <UsersIcon className="icon-xs" /> {preview.memberCount}
+                    {t(lang, `groupType.${preview.type}`)} · <UsersIcon className="icon-xs" /> {preview.member_count}
                   </p>
                 </div>
               </div>

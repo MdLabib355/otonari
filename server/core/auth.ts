@@ -1,5 +1,5 @@
 // Login check: "Authorization: Bearer <token>" → req.user (the full row from the users table).
-// There are no passwords: the random token from /api/v1/join IS the identity.
+// There are no passwords: the random token from /api/v1/groups/:code/members IS the identity.
 // It is the first step of every route that needs a user (see http.ts).
 
 import type { Request } from 'express';

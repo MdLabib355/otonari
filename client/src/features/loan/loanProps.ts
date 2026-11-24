@@ -2,7 +2,7 @@
 
 import type { Lang, Loan } from '../../../../shared/types.ts';
 
-// Sends an action ('accept', 'received', ...) for this loan.
+// POST /api/v1/loans/:id/<action>, e.g. 'accept' or 'confirm-handover'.
 export type Act = (action: string, body?: object) => void;
 
 // What the handover step and the return step need.
@@ -13,5 +13,5 @@ export interface StepProps {
   lang: Lang;
   busy: boolean;
   act: Act;
-  sendPhoto: (action: 'handover' | 'return', file: Blob) => void;
+  sendPhoto: (action: 'handover-photo' | 'return-photo', file: Blob) => void;
 }

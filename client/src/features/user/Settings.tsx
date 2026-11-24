@@ -43,7 +43,7 @@ export default function Settings() {
   async function leave() {
     setLeaving(true);
     try {
-      await api.post('/leave');
+      await api.delete('/me');
       logout();
     } catch (error) {
       // 409: there is still an accepted or active loan. 403: demo neighbors can't leave.

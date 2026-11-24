@@ -1,25 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { ShelfItem } from '../../../../shared/types.ts';
 import { ArrowRightIcon } from '../../components/Icons.tsx';
 import { api } from '../../core/api.ts';
+import { usePolling } from '../../core/usePolling.ts';
 import { useMember } from '../../core/UserContext.ts';
 import { t } from '../../i18n/index.ts';
 import ItemCard from './ItemCard.tsx';
 import NeighborShelf from './NeighborShelf.tsx';
 
+const POLL_EVERY_MS = 3000;
+
 // The neighborhood shelf: what my neighbors are happy to lend, and below it what I lend myself.
+// It keeps itself up to date: new items, and items that are reserved, lent or back again, appear by themselves.
 export default function Shelf() {
   const { user, group, lang } = useMember();
   const [items, setItems] = useState<ShelfItem[] | null>(null); // null = still loading
   const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
-    api
-      .get<ShelfItem[]>('/shelf')
-      .then(setItems)
-      .catch(() => setFailed(true));
-  }, []);
+  async function loadItems() {
+    try {
+      setItems(await api.get<ShelfItem[]>('/items'));
+      setFailed(false);
+    } catch {
+      setFailed(true); // the next try follows by itself; until then the items stay on the screen
+    }
+  }
+  usePolling(loadItems, POLL_EVERY_MS);
 
   const neighborItems = items?.filter((item) => item.owner_id !== user.id) ?? [];
   const myItems = items?.filter((item) => item.owner_id === user.id) ?? [];
@@ -33,7 +40,7 @@ export default function Shelf() {
         </div>
       </div>
 
-      {failed && <p className="error">{t(lang, 'common.error')}</p>}
+      {failed && !items && <p className="error">{t(lang, 'common.error')}</p>}
       {!items && !failed && <p>{t(lang, 'common.loading')}</p>}
       {items?.length === 0 && (
         <div className="empty-state surface-card narrow-page">

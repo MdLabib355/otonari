@@ -17,7 +17,7 @@ export default function MyItems() {
 
   function loadItems() {
     api
-      .get<MyItem[]>('/my-items')
+      .get<MyItem[]>('/me/items')
       .then(setItems)
       .catch(() => setFailed(true));
   }

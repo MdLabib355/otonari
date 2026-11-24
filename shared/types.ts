@@ -45,17 +45,17 @@ export interface Me {
   group: Group;
 }
 
-// POST /api/v1/join and POST /api/v1/demo/login
+// POST /api/v1/groups/:code/members and POST /api/v1/demo/login
 export interface Login extends Me {
   token: string;
 }
 
-// GET /api/v1/groups/by-code/:code
+// GET /api/v1/groups/:code
 export interface GroupPreview {
   name: string;
   type: GroupType;
   city: string;
-  memberCount: number;
+  member_count: number;
 }
 
 // POST /api/v1/groups
@@ -67,7 +67,7 @@ export interface DemoUser extends User {
   group_code: string;
 }
 
-// GET /api/v1/my-items
+// GET /api/v1/me/items
 export interface MyItem {
   id: number;
   item_key: string;
@@ -77,7 +77,7 @@ export interface MyItem {
   status: ItemStatus;
 }
 
-// GET /api/v1/shelf
+// GET /api/v1/items
 export interface ShelfItem extends MyItem {
   owner_id: number;
   owner_nickname: string;
@@ -150,7 +150,7 @@ export interface LoanDetails {
   messages: Message[];
 }
 
-// GET /api/v1/inbox
+// GET /api/v1/me/inbox
 export interface InboxMessage {
   id: number;
   loan_id: number;

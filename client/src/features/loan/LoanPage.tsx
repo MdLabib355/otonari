@@ -77,7 +77,7 @@ function Loan({ loanId }: { loanId: number }) {
     }
   }
 
-  function sendPhoto(action: 'handover' | 'return', file: Blob) {
+  function sendPhoto(action: 'handover-photo' | 'return-photo', file: Blob) {
     const form = new FormData();
     form.append('photo', file);
     act(action, form);

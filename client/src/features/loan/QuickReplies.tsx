@@ -15,7 +15,7 @@ export default function QuickReplies({ item, lang, busy, act }: { item: LoanItem
             type="button"
             className="chip"
             disabled={busy}
-            onClick={() => act('quick-reply', { phrase_key: phraseKey })}
+            onClick={() => act('messages', { phrase_key: phraseKey })}
           >
             {renderPhrase(lang, phraseKey, { spot: item.spot })}
           </button>

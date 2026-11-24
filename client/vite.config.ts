@@ -37,7 +37,7 @@ const pwa = VitePWA({
 });
 
 // In development, Vite serves the React app on :5173 and forwards API calls and photos to the
-// Express server on :3001. So the client always uses relative URLs like "/api/v1/shelf", and the
+// Express server on :3001. So the client always uses relative URLs like "/api/v1/items", and the
 // same code works in production, where Express serves everything from a single port.
 export default defineConfig({
   plugins: [react(), pwa],

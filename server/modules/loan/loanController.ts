@@ -162,5 +162,5 @@ export async function quickReply(req: Request) {
   }
   const otherId = loan.borrower_id === req.user.id ? loan.lender_id : loan.borrower_id;
   await createMessage(loan, req.user.id, otherId, phraseKey);
-  return showLoan(req);
+  return reply(201, await loanDetailsView(loan.id, req.user.id));
 }

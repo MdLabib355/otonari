@@ -4,7 +4,7 @@ import type { Group, GroupPreview, NewGroupAnswer } from '../../../shared/types.
 
 // For the join page and the poster: without the code.
 export function groupPreviewView(group: Group, memberCount: number): GroupPreview {
-  return { name: group.name, type: group.type, city: group.city, memberCount };
+  return { name: group.name, type: group.type, city: group.city, member_count: memberCount };
 }
 
 export function newGroupView({ code, name, type, city }: NewGroupAnswer): NewGroupAnswer {

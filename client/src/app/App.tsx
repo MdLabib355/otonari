@@ -51,7 +51,7 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [pathname]);
 
-  // After /api/v1/join or the demo login: remember the token and who we are.
+  // After /api/v1/groups/:code/members or the demo login: remember the token and who we are.
   function login({ token, user, group }: Login) {
     saveToken(token);
     clearInbox();

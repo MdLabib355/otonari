@@ -7,7 +7,7 @@
 //  user    { id, group_id, nickname, lang, elder_mode }   (undefined before joining)
 //  group   { id, code, name, type, city }                 (undefined before joining)
 //  lang    the language to show the app in
-//  login   call with the { token, user, group } from /api/v1/join or the demo login
+//  login   call with the { token, user, group } from /api/v1/groups/:code/members or the demo login
 //  logout  forget the token (back to the join screen)
 //  setMe   call with the { user, group } from PATCH /api/v1/me to update the whole app at once
 //  inbox, refreshInbox, markRead   my unread messages (see useInbox.ts)

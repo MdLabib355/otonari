@@ -1,5 +1,5 @@
 // Small fetch wrapper for our own API (/api/v1/...).
-//  - adds "Authorization: Bearer <token>" when we have one. The token comes from /api/v1/join and is
+//  - adds "Authorization: Bearer <token>" when we have one. The token comes from /api/v1/groups/:code/members and is
 //    kept in localStorage: it is the user's whole identity (no accounts, no passwords).
 //  - sends JSON (or FormData, for photos) and returns the JSON answer.
 //  - throws an ApiError with .status (e.g. 400, 403, 404) and .data (the JSON answer) when the server says no.
@@ -7,7 +7,7 @@
 // The type of the answer (see shared/types.ts) goes in the angle brackets:
 //
 //    const me = await api.get<Me>('/me');
-//    const result = await api.post<Login>('/join', { code, nickname, lang });
+//    const result = await api.post<Login>(`/groups/${code}/members`, { nickname, lang });
 
 // The version of the API that this app uses. Paths are written without it: api.get('/me').
 const API_BASE = '/api/v1';

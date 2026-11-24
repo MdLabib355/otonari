@@ -30,7 +30,7 @@ export async function fastForward(req: Request) {
   const to: unknown = req.body?.to;
   if (to !== 'dueSoon' && to !== 'overdue') return refuse(400, "to must be 'dueSoon' or 'overdue'");
 
-  const loan = await findLoan(toId(req.params.loanId));
+  const loan = await findLoan(toId(req.params.id));
   if (!loan) return refuse(404, 'Loan not found');
   if (loan.borrower_id !== req.user.id && loan.lender_id !== req.user.id) return refuse(403, 'Not your loan');
   if (loan.status !== 'active') return refuse(409, 'Only an active loan can be fast-forwarded');

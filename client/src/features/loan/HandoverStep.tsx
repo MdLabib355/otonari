@@ -10,7 +10,7 @@ export default function HandoverStep({ loan, iAmLender, otherName, lang, busy, a
     return (
       <div className="step">
         <p className="label">{t(lang, 'loan.handoverStep')}</p>
-        <PhotoCapture lang={lang} busy={busy} onSend={(file) => sendPhoto('handover', file)} />
+        <PhotoCapture lang={lang} busy={busy} onSend={(file) => sendPhoto('handover-photo', file)} />
       </div>
     );
   }
@@ -19,7 +19,7 @@ export default function HandoverStep({ loan, iAmLender, otherName, lang, busy, a
   return (
     <div className="step">
       <TipCard lang={lang} tipKey="atHandover" />
-      <button type="button" className="button-primary" disabled={busy} onClick={() => act('received')}>
+      <button type="button" className="button-primary" disabled={busy} onClick={() => act('confirm-handover')}>
         {t(lang, 'loan.confirmReceived')}
       </button>
     </div>

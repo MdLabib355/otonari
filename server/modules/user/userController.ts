@@ -11,9 +11,9 @@ import { loginView, meView } from './userView.ts';
 
 // No account, no password, no email: a nickname and a language are enough.
 export async function join(req: Request) {
-  const { code, nickname, lang }: Record<string, unknown> = req.body ?? {};
+  const { nickname, lang }: Record<string, unknown> = req.body ?? {};
 
-  const group = await findGroupByCode(code);
+  const group = await findGroupByCode(req.params.code);
   if (!group) return refuse(404, 'Group not found');
 
   // The only free text a member ever types.

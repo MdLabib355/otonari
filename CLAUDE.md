@@ -80,7 +80,8 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
 - **Automatic polite reminders** (so the lender never has to ask):
   - 24 h before due → reminder to borrower.
   - When overdue → reminder to borrower AND a notice to the lender saying "we reminded them for you".
-- In-app notifications: the client polls `/api/v1/inbox` every 5 s and shows a banner for new messages.
+- The shelf polls `/api/v1/items` every 3 s while it is on the screen (`core/usePolling.ts`), so it changes by itself.
+- In-app notifications: the client polls `/api/v1/me/inbox` every 5 s and shows a banner for new messages.
 
 ### Cheap extras
 - **Elder mode**: large text, large buttons, and a 🔊 read-aloud button on every message
@@ -162,6 +163,7 @@ otonari/
 │       ├── core/           # used by all features
 │       │   ├── api.ts          # fetch wrapper; adds "Authorization: Bearer <token>"
 │       │   ├── UserContext.ts  # useUser() / useMember(): me, my group, my language and my inbox
+│       │   ├── usePolling.ts   # loads again every few seconds (the shelf)
 │       │   └── useInbox.ts     # my unread messages (banner, Loans badge, loan page)
 │       ├── components/     # used by several features: ChipGroup  FilterStrip  Icons  SpeakButton  TipCard
 │       │                   # TrustLine
@@ -312,30 +314,33 @@ and `left_at` is set: the token no longer works, and they are no longer counted 
 
 | Method & path | Who | Does | Message created |
 |---|---|---|---|
-| `GET /api/v1/groups/by-code/:code` | anyone | group preview `{name,type,city,memberCount}` | – |
+| `GET /api/v1/groups/:code` | anyone | group preview `{name,type,city,member_count}` | – |
 | `POST /api/v1/groups` `{name,type,city,create_anyway?}` | anyone | creates a group with a random, unique join code → `{code,name,type,city}`; creates no user. `409 {error,existing_name}` if the same city has a group with the same name (ignoring case and spaces), unless `create_anyway` is `true` | – |
-| `POST /api/v1/join` `{code,nickname,lang}` | anyone | creates user → `{token,user,group}` | – |
+| `POST /api/v1/groups/:code/members` `{nickname,lang}` | anyone | creates user → `{token,user,group}` | – |
 | `GET /api/v1/me` / `PATCH /api/v1/me` `{lang,elder_mode}` | user | read/update me | – |
-| `POST /api/v1/leave` | user | leave the group, see section 5 (`409` with an accepted or active loan, `403` for seeded demo users) | `decline` → borrowers waiting for my items; `cancel` → lenders of my pending requests |
-| `GET /api/v1/shelf` | user | items in my group + owner nickname + status + `trusted_only` | – |
+| `DELETE /api/v1/me` | user | leave the group, see section 5 (`409` with an accepted or active loan, `403` for seeded demo users) | `decline` → borrowers waiting for my items; `cancel` → lenders of my pending requests |
+| `GET /api/v1/items` | user | items in my group + owner nickname + status + `trusted_only` | – |
 | `GET /api/v1/items/:id` | user (same group) | one item + owner nickname + owner lang (the item page previews the request in the owner's language) + `my_loan_id` + `allowed_for_me` (`false`: trusted neighbors only, and I'm not one) | – |
-| `GET /api/v1/my-items` / `POST /api/v1/items` `{item_key,max_days,spot,trusted_only?}` / `PATCH /api/v1/items/:id` `{trusted_only}` / `DELETE /api/v1/items/:id` | owner | manage my items (can't delete if reserved/lent; delete = soft delete, see section 5) | `decline` → pending borrowers (on delete) |
+| `GET /api/v1/me/items` / `POST /api/v1/items` `{item_key,max_days,spot,trusted_only?}` / `PATCH /api/v1/items/:id` `{trusted_only}` / `DELETE /api/v1/items/:id` | owner | manage my items (can't delete if reserved/lent; delete = soft delete, see section 5) | `decline` → pending borrowers (on delete) |
 | `POST /api/v1/loans` `{item_id,start_at,end_at}` | borrower | create pending loan, starting less than 3 days from now (`403` if the item is for trusted neighbors only and I'm not one) | `request` → lender |
 | `GET /api/v1/loans` | user | my loans as borrower and lender, with item + other user | – |
 | `GET /api/v1/loans/:id` | participant | loan + messages (+ sender lang for "show original"); for the lender also `borrower_trust` `{joined_days,on_time,late}` | – |
 | `POST /api/v1/loans/:id/accept` | lender | → accepted, item reserved (`409` if `end_at` has passed) | `accept` → borrower |
 | `POST /api/v1/loans/:id/decline` `{reason:'default'\|'busy'}` | lender | → declined | `decline` / `declineBusy` → borrower |
 | `POST /api/v1/loans/:id/cancel` | borrower (pending only) | → cancelled | `cancel` → lender |
-| `POST /api/v1/loans/:id/handover` (multipart `photo`) | lender | save handover_photo | `handoverPhoto` → borrower |
-| `POST /api/v1/loans/:id/received` | borrower | → active, item lent | `received` → lender |
-| `POST /api/v1/loans/:id/return` (multipart `photo`) | borrower | save return_photo | `returned` → lender |
-| `POST /api/v1/loans/:id/return-confirmed` | lender | → returned, item available | `returnConfirmed` → borrower |
-| `POST /api/v1/loans/:id/quick-reply` `{phrase_key}` | participant | only keys in QUICK_REPLIES, only when `accepted`, `active` or `returned` (else `409`) | that phrase → other side |
-| `GET /api/v1/inbox` | user | unread messages to me (with loan + item info; a `request` also has `borrower_trust`) | – |
-| `POST /api/v1/inbox/read` `{ids}` | user | mark read | – |
+| `POST /api/v1/loans/:id/handover-photo` (multipart `photo`) | lender | save handover_photo | `handoverPhoto` → borrower |
+| `POST /api/v1/loans/:id/confirm-handover` | borrower | → active, item lent | `received` → lender |
+| `POST /api/v1/loans/:id/return-photo` (multipart `photo`) | borrower | save return_photo | `returned` → lender |
+| `POST /api/v1/loans/:id/confirm-return` | lender | → returned, item available | `returnConfirmed` → borrower |
+| `POST /api/v1/loans/:id/messages` `{phrase_key}` | participant | only keys in QUICK_REPLIES, only when `accepted`, `active` or `returned` (else `409`) | that phrase → other side |
+| `GET /api/v1/me/inbox` | user | unread messages to me (with loan + item info; a `request` also has `borrower_trust`) | – |
+| `POST /api/v1/me/inbox/mark-read` `{ids}` | user | mark read | – |
 | `GET /api/v1/demo/users` | DEMO_MODE only | seeded users (`is_demo`, for "continue as") | – |
 | `POST /api/v1/demo/login` `{user_id}` | DEMO_MODE only | returns that user's token; `403` unless the user is seeded (`is_demo`) | – |
-| `POST /api/v1/demo/fast-forward/:loanId` `{to:'dueSoon'\|'overdue'}` | participant, DEMO_MODE only | moves `end_at` to now+12h or now−1h and `start_at` along with it (same loan length), also in that loan's messages, then runs the reminder check immediately | reminders |
+| `POST /api/v1/demo/loans/:id/fast-forward` `{to:'dueSoon'\|'overdue'}` | participant, DEMO_MODE only | moves `end_at` to now+12h or now−1h and `start_at` along with it (same loan length), also in that loan's messages, then runs the reminder check immediately | reminders |
+
+**Naming**: plural nouns for collections (`/items`, `/loans`), everything of my own under `/me`, kebab-case paths,
+snake_case fields. Steps of a loan that are more than changing a field are verbs: `POST /loans/:id/accept`.
 
 **Versions**: breaking changes go into a new version (`server/api/v2.ts`, mounted at `/api/v2`), next to v1.
 The client's version is `API_BASE` in `client/src/core/api.ts`. `GET /api/health` has no version.

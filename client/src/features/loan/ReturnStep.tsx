@@ -11,7 +11,7 @@ export default function ReturnStep({ loan, iAmLender, otherName, lang, busy, act
       <div className="step">
         <TipCard lang={lang} tipKey="atReturn" />
         <p className="label">{t(lang, 'loan.returnStep')}</p>
-        <PhotoCapture lang={lang} busy={busy} onSend={(file) => sendPhoto('return', file)} />
+        <PhotoCapture lang={lang} busy={busy} onSend={(file) => sendPhoto('return-photo', file)} />
       </div>
     );
   }
@@ -19,7 +19,7 @@ export default function ReturnStep({ loan, iAmLender, otherName, lang, busy, act
   if (!loan.return_photo) return <p className="notice">{t(lang, 'loan.waitReturn', { name: otherName })}</p>;
   return (
     <div className="step">
-      <button type="button" className="button-primary" disabled={busy} onClick={() => act('return-confirmed')}>
+      <button type="button" className="button-primary" disabled={busy} onClick={() => act('confirm-return')}>
         {t(lang, 'loan.confirmReturn')}
       </button>
     </div>
