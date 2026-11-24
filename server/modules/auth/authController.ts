@@ -1,16 +1,16 @@
-// Registering and logging in: email + password, a 6-digit code by email, or Google.
+// Registering: email → code → password, or Google. Logging in: email + password, email + code, or Google.
 // These are not write() routes: hashing a password and sending an email take long, and nobody else should have
 // to wait for that. Only the short part that changes the database is a transaction.
 
 import crypto from 'node:crypto';
 import type { Request } from 'express';
-import type { AuthConfig, Lang, Login } from '../../../shared/types.ts';
+import type { AuthConfig, Lang, Login, RegistrationTicket } from '../../../shared/types.ts';
 import { LANGUAGES, isOneOf } from '../../core/allowedKeys.ts';
 import { tokenOf } from '../../core/auth.ts';
 import { transaction } from '../../core/database.ts';
 import { refuse, reply, toText, type Answer } from '../../core/http.ts';
 import { forgetAttempts, tooMany } from '../../core/limiter.ts';
-import { DEMO_MODE, GOOGLE_CLIENT_ID } from '../../core/settings.ts';
+import { DEMO_MODE, GOOGLE_CLIENT_ID, MAILBOX_URL } from '../../core/settings.ts';
 import type { UserRow } from '../../types.ts';
 import {
   confirmEmail,
@@ -25,6 +25,7 @@ import { deleteEmailCode, saveEmailCode, useAttempt } from './emailCodeModel.ts'
 import { readGoogleToken } from './google.ts';
 import { canSendEmail, sendCode } from './mailer.ts';
 import { hashSecret, matchesHash } from './password.ts';
+import { createTicket, useTicket } from './registrationModel.ts';
 import { createSession, deleteSession, deleteSessionsOf } from './sessionModel.ts';
 
 const TOO_MANY = refuse(429, 'Too many attempts, please wait a few minutes');
@@ -35,7 +36,12 @@ const MAX_PASSWORD = 128;
 
 // The login page shows only what this server can do.
 export function showConfig() {
-  const config: AuthConfig = { google_client_id: GOOGLE_CLIENT_ID, email_code: canSendEmail, demo_mode: DEMO_MODE };
+  const config: AuthConfig = {
+    google_client_id: GOOGLE_CLIENT_ID,
+    email_code: canSendEmail,
+    demo_mode: DEMO_MODE,
+    mailbox_url: MAILBOX_URL,
+  };
   return reply(200, config);
 }
 
@@ -56,22 +62,29 @@ async function logIn(user: UserRow): Promise<Answer> {
   return reply(200, answer);
 }
 
+// Registering, step 3: the password. The ticket says that the email was proved in step 2.
 export async function register(req: Request) {
   if (tooMany(`register ${req.ip}`, 20, 60)) return TOO_MANY;
-  const email = toEmail(req.body?.email);
   const password: unknown = req.body?.password;
-  if (!email) return refuse(400, 'Not an email address');
   if (typeof password !== 'string' || password.length < MIN_PASSWORD || password.length > MAX_PASSWORD) {
     return refuse(400, `The password must be ${MIN_PASSWORD} to ${MAX_PASSWORD} characters`);
   }
 
   const passwordHash = await hashSecret(password);
   return transaction(async () => {
-    const existing = await findUserByEmail(email);
-    if (existing?.google_only) return USE_GOOGLE;
-    if (existing) return refuse(409, 'There is already an account with this email');
-    return logIn(await createUser({ email, password_hash: passwordHash, lang: toLang(req.body?.lang) }));
+    const email = await useTicket(toText(req.body?.ticket));
+    if (!email) return refuse(401, 'Please prove your email address again');
+    const refusal = refuseExisting(await findUserByEmail(email));
+    if (refusal) return refusal;
+    const lang = toLang(req.body?.lang);
+    return logIn(await createUser({ email, email_verified: true, password_hash: passwordHash, lang }));
   });
+}
+
+// One email = one account.
+function refuseExisting(user: UserRow | undefined): Answer | null {
+  if (user?.google_only) return USE_GOOGLE;
+  return user ? refuse(409, 'There is already an account with this email') : null;
 }
 
 export async function login(req: Request) {
@@ -90,16 +103,24 @@ export async function login(req: Request) {
   return logIn(user);
 }
 
-// The same answer whether there is an account or not: a new one is created with the code.
+// Sends a code. For registering (step 1) there must be no account yet, for logging in there must be one.
 export async function requestCode(req: Request) {
   if (!canSendEmail) return refuse(503, 'This server cannot send emails');
+  const purpose: unknown = req.body?.purpose;
+  if (!isOneOf(['register', 'login'], purpose)) return refuse(400, "purpose must be 'register' or 'login'");
   const email = toEmail(req.body?.email);
   if (!email) return refuse(400, 'Not an email address');
   if (tooMany(`code ${email}`, 5, 60) || tooMany(`code ${req.ip}`, 20, 60)) return TOO_MANY;
 
   const user = await findUserByEmail(email);
-  if (user?.google_only) return USE_GOOGLE;
-  if (user?.is_demo) return reply(204); // their addresses don't exist
+  if (purpose === 'register') {
+    const refusal = refuseExisting(user);
+    if (refusal) return refusal;
+  } else {
+    if (!user) return refuse(404, 'There is no account with this email');
+    if (user.google_only) return USE_GOOGLE;
+    if (user.is_demo) return refuse(403, 'Demo accounts log in with their password'); // their addresses don't exist
+  }
 
   const code = String(crypto.randomInt(1_000_000)).padStart(6, '0');
   await saveEmailCode(email, await hashSecret(code));
@@ -112,20 +133,35 @@ export async function requestCode(req: Request) {
   return reply(204);
 }
 
-export async function loginWithCode(req: Request) {
+// Is this the code that was sent to this address? Then it can't be used again.
+async function acceptCode(req: Request): Promise<{ email: string } | Answer> {
   const email = toEmail(req.body?.email);
-  const code = toText(req.body?.code);
   if (tooMany(`verify ${req.ip}`, 60, 15)) return TOO_MANY;
-
   const codeHash = email ? await useAttempt(email) : undefined;
-  if (!(await matchesHash(code, codeHash)) || !codeHash) return refuse(401, 'Wrong or expired code');
+  const correct = (await matchesHash(toText(req.body?.code), codeHash)) && codeHash !== undefined;
+  if (!correct || !(await deleteEmailCode(email, codeHash))) return refuse(401, 'Wrong or expired code');
+  return { email };
+}
 
+// Registering, step 2: the code proves the email address.
+export async function verifyCode(req: Request) {
+  const result = await acceptCode(req);
+  if (!('email' in result)) return result;
+  const refusal = refuseExisting(await findUserByEmail(result.email));
+  if (refusal) return refusal;
+  const answer: RegistrationTicket = { ticket: await createTicket(result.email) };
+  return reply(200, answer);
+}
+
+// Logging in without a password.
+export async function loginWithCode(req: Request) {
+  const result = await acceptCode(req);
+  if (!('email' in result)) return result;
   return transaction(async () => {
-    if (!(await deleteEmailCode(email, codeHash))) return refuse(401, 'Wrong or expired code');
-    const user = await findUserByEmail(email);
-    if (user?.google_only) return USE_GOOGLE;
-    if (user) return logIn(await provedEmail(user));
-    return logIn(await createUser({ email, email_verified: true, lang: toLang(req.body?.lang) }));
+    const user = await findUserByEmail(result.email);
+    if (!user) return refuse(404, 'There is no account with this email');
+    if (user.google_only) return USE_GOOGLE;
+    return logIn(await provedEmail(user));
   });
 }
 

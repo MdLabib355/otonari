@@ -48,14 +48,20 @@ export interface Me {
   group: Group | null; // null before joining one
 }
 
+// POST /api/v1/auth/email-codes/verify
+export interface RegistrationTicket {
+  ticket: string;
+}
+
 // GET /api/v1/auth/config
 export interface AuthConfig {
   google_client_id: string | null; // null: no Google login
   email_code: boolean;
   demo_mode: boolean;
+  mailbox_url: string | null; // the test mailbox, if emails go there
 }
 
-// POST /api/v1/auth/register, /login, /google and /email-codes/verify
+// POST /api/v1/auth/register, /login, /login-with-code and /google
 export interface Login extends Me {
   token: string;
 }

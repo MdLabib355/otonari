@@ -61,3 +61,7 @@
 .admin-role {
   max-width: none;
 }
+
+.text-input:read-only {
+  background: var(--quiet);
+}

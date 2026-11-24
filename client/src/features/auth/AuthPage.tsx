@@ -1,23 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import type { AuthConfig, Login } from '../../../../shared/types.ts';
-import ChipGroup from '../../components/ChipGroup.tsx';
+import type { AuthConfig } from '../../../../shared/types.ts';
 import { api } from '../../core/api.ts';
 import { useUser } from '../../core/UserContext.ts';
 import { t } from '../../i18n/index.ts';
-import CodeForm from './CodeForm.tsx';
 import GoogleButton from './GoogleButton.tsx';
-import PasswordForm from './PasswordForm.tsx';
+import LoginForm from './LoginForm.tsx';
+import RegisterForm from './RegisterForm.tsx';
 
-type Way = 'password' | 'code';
-
-// Log in (/login) and Register (/register): with a password, with a code by email, or with Google.
+// Log in (/login) and Register (/register): with Google, or with an email address.
 // Somebody who scanned a poster (?code=...) goes on to its group afterwards, see App.tsx.
 export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { lang, login } = useUser();
   const { search } = useLocation(); // keeps ?code=... when switching between the two pages
   const [config, setConfig] = useState<AuthConfig | null>(null);
-  const [way, setWay] = useState<Way>('password');
+  const [withEmail, setWithEmail] = useState(false);
 
   useEffect(() => {
     api
@@ -25,31 +22,24 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       .then(setConfig)
       .catch(() => setConfig(null));
   }, []);
+  useEffect(() => setWithEmail(false), [mode]);
 
-  const ways: { value: Way; label: string }[] = [
-    { value: 'password', label: t(lang, 'auth.wayPassword') },
-    { value: 'code', label: t(lang, 'auth.wayCode') },
-  ];
+  // Without Google there is nothing to choose.
+  const showForm = withEmail || (config !== null && !config.google_client_id);
 
   return (
     <section className="narrow-page surface-card">
       <h1>{t(lang, mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}</h1>
       {search.includes('code=') && <p className="notice">{t(lang, 'auth.thenJoin')}</p>}
 
-      {config?.google_client_id && (
-        <GoogleButton clientId={config.google_client_id} onLogin={(answer: Login) => login(answer)} />
+      {config?.google_client_id && <GoogleButton clientId={config.google_client_id} onLogin={login} />}
+      {config && !showForm && (
+        <button type="button" className="button-primary" onClick={() => setWithEmail(true)}>
+          {t(lang, 'auth.continueEmail')}
+        </button>
       )}
-
-      {config?.email_code && (
-        <div className="field">
-          <ChipGroup label={t(lang, 'auth.wayLabel')} options={ways} value={way} onChange={setWay} />
-        </div>
-      )}
-      {way === 'password' ? (
-        <PasswordForm key={mode} mode={mode} onLogin={(answer: Login) => login(answer)} />
-      ) : (
-        <CodeForm onLogin={(answer: Login) => login(answer)} />
-      )}
+      {config && showForm && mode === 'login' && <LoginForm config={config} onLogin={login} />}
+      {config && showForm && mode === 'register' && <RegisterForm config={config} onLogin={login} />}
 
       <p className="auth-switch">
         {t(lang, mode === 'login' ? 'auth.noAccount' : 'auth.haveAccount')}{' '}

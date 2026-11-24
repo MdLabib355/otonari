@@ -16,6 +16,9 @@ export const SMTP = {
   from: process.env.SMTP_FROM || process.env.SMTP_USER || 'otonari@localhost',
 };
 
+// The test mailbox of docker-compose.yml, shown on the login page. Only if that is where the emails go.
+export const MAILBOX_URL = SMTP.host === 'mail' ? process.env.MAILBOX_URL || null : null;
+
 // This account is the first super_admin. It is created (or updated) whenever the server starts.
 export const SUPER_ADMIN = {
   email: process.env.SUPER_ADMIN_EMAIL || null,

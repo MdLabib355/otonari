@@ -45,8 +45,9 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
 - `/login` and `/register` offer the three ways to log in. The QR code's `/join?code=...` leads there first.
 
 ### Accounts and roles
-- **Everyone logs in first**, then joins a group (with its code) or starts one. Three ways: email + password, a 6-digit
-  code by email (10 minutes, 5 attempts), or "Continue with Google". One email = one account: who registered with Google
+- **Everyone logs in first**, then joins a group (with its code) or starts one. **Registering**: email → 6-digit
+  code by email (10 minutes, 5 attempts) → password twice; or "Continue with Google". **Logging in**: "Continue with
+  Google" (creates the account if there is none), or with email: with the password, or without it (code by email). One email = one account: who registered with Google
   logs in with Google only; for an account that was made another way, Google is one more way in. One account is in one
   group at a time.
 - `user`: a neighbor. `group_admin`: also sees and removes members and makes a new join code (whoever starts a group; if
@@ -131,7 +132,8 @@ push notifications, maps, payments, SMS.
 - **Database**: PostgreSQL 17, at `DATABASE_URL`. Recreated + seeded with `npm run seed`. Every request that changes
   something is one transaction (`write()` in `core/http.ts`), and they run one after the other (a lock in
   `transaction()`), so what a controller has checked stays true.
-- **Docker**: `docker compose up` starts everything: `db` (PostgreSQL, not reachable from outside), `server`, and
+- **Docker**: `docker compose up` starts everything: `db` (PostgreSQL, not reachable from outside), `server`, `mail` (a
+  test mailbox on http://localhost:8089, used unless `server/.env` has a mail server), and
   `client` (nginx: the built app, and `/api` and `/uploads` passed on to the server) on http://localhost:8088.
   Database and photos are volumes; `docker compose down -v` starts from zero.
 - **Photos**: in a private AWS S3 bucket if `S3_BUCKET` is set (`@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`):
@@ -189,7 +191,8 @@ otonari/
 │       ├── features/       # one folder per feature, like the modules of the server
 │       │   ├── landing/    # Landing (/ for visitors)  SamplePhrase
 │       │   ├── group/      # Join (/join)  NewGroup  Poster (/poster)
-│       │   ├── auth/       # AuthPage (/login, /register)  PasswordForm  CodeForm  GoogleButton  authErrors
+│       │   ├── auth/       # AuthPage (/login, /register)  LoginForm  RegisterForm  CodeField  AuthField
+│       │   │               # GoogleButton  authErrors
 │       │   ├── admin/      # GroupAdmin (/group-admin)  SuperAdmin (/admin)  ConfirmButton
 │       │   ├── user/       # Settings (/settings)
 │       │   ├── item/       # Shelf (/)  NeighborShelf  ItemCard  ItemPage (/item/:id)  BorrowForm  borrowTimes
@@ -223,7 +226,7 @@ otonari/
     ├── modules/            # modular MVC: one folder per feature. In each of them:
     │   │                   #   Routes = URL → steps (checks, controller), Controller = input + rules,
     │   │                   #   Model = the SQL of one table, View = the JSON the client gets
-    │   ├── auth/           # authRoutes  authController  sessionModel  emailCodeModel  password  mailer  google
+    │   ├── auth/           # authRoutes  authController  sessionModel  emailCodeModel  registrationModel  password  mailer  google
     │   │                   # superAdmin
     │   ├── admin/          # adminRoutes  adminController
     │   ├── group/          # groupRoutes  groupController  groupModel  groupView
@@ -281,6 +284,12 @@ CREATE TABLE email_codes (
   email TEXT PRIMARY KEY,
   code_hash TEXT NOT NULL,            -- scrypt of the 6-digit code
   attempts INTEGER NOT NULL DEFAULT 0,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE registrations (
+  ticket_hash TEXT PRIMARY KEY,       -- SHA-256 of the ticket: the email was proved, the password comes next
+  email TEXT NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL
 );
 
@@ -363,8 +372,9 @@ and `group_id` becomes NULL: they are no longer counted or listed as a member.
 | Method & path | Who | Does | Message created |
 |---|---|---|---|
 | `GET /api/v1/auth/config` | anyone | what the login page can offer `{google_client_id,email_code,demo_mode}` | – |
-| `POST /api/v1/auth/register` `{email,password,lang}` / `POST /api/v1/auth/login` `{email,password}` | anyone | → `{token,user,group}` (`401` wrong, `403` deactivated, `409` email taken, `429` too many attempts) | – |
-| `POST /api/v1/auth/email-codes` `{email,lang}` / `POST /api/v1/auth/email-codes/verify` `{email,code,lang}` | anyone | sends a 6-digit code / logs in with it (creates the account if new) | – |
+| `POST /api/v1/auth/email-codes` `{email,purpose:'register'\|'login',lang}` | anyone | sends a 6-digit code (`409` email taken / `404` no account, `429` too many attempts) | – |
+| `POST /api/v1/auth/email-codes/verify` `{email,code}` / `POST /api/v1/auth/register` `{ticket,password,lang}` | anyone | registering: → `{ticket}` (15 minutes) / → `{token,user,group}` | – |
+| `POST /api/v1/auth/login` `{email,password}` / `POST /api/v1/auth/login-with-code` `{email,code}` | anyone | → `{token,user,group}` (`401` wrong, `403` deactivated, `409 {use_google}`) | – |
 | `POST /api/v1/auth/google` `{credential,lang}` | anyone | checks Google's ID token, logs in (creates the account if new) | – |
 | `DELETE /api/v1/auth/session` | user | log out on this device | – |
 | `GET /api/v1/me/group/members` / `DELETE /api/v1/me/group/members/:id` / `POST /api/v1/me/group/change-code` | group admin | members (no emails), remove one (`409` during a loan), new join code | like leaving |

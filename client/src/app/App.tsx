@@ -69,11 +69,11 @@ export default function App() {
     setVisitorLangState(code);
   }
 
-  function logout() {
-    if (getToken()) api.delete('/auth/session').catch(() => {}); // the request already has the token
+  // A real page load at the end: the app starts again at the landing page, with nothing left of this person.
+  async function logout() {
+    if (getToken()) await api.delete('/auth/session').catch(() => {}); // e.g. offline: forget the token anyway
     clearToken();
-    clearInbox();
-    setMe(null);
+    window.location.assign('/');
   }
 
   let page;

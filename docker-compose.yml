@@ -36,16 +36,26 @@ services:
       PORT: 3001
       DEMO_MODE: 'true'
       DATABASE_URL: postgres://otonari:otonari@db:5432/otonari
+      MAILBOX_URL: http://localhost:${MAILBOX_PORT:-8089}
     volumes:
       - photos:/app/server/uploads
     depends_on:
       db:
         condition: service_healthy
+      mail:
+        condition: service_started
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3001/api/health']
       interval: 2s
       timeout: 5s
       retries: 30
+    restart: on-failure
+
+  # Shows the emails with the codes at http://localhost:8089, unless server/.env has a real mail server.
+  mail:
+    image: axllent/mailpit:v1.27
+    ports:
+      - '127.0.0.1:${MAILBOX_PORT:-8089}:8025'
     restart: on-failure
 
   client:

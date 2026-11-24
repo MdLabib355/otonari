@@ -114,6 +114,12 @@ export async function createTables() {
       expires_at TIMESTAMPTZ NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS registrations (
+      ticket_hash TEXT PRIMARY KEY,       -- SHA-256 of the ticket: the email was proved, the password comes next
+      email TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS items (
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       owner_id INTEGER NOT NULL REFERENCES users(id),
@@ -164,7 +170,7 @@ export async function addNewColumns() {
 
 // Start from empty tables: drop them all and create them again (used by seedData.ts).
 export async function resetDatabase() {
-  await query('DROP TABLE IF EXISTS messages, loans, items, sessions, email_codes, users, groups');
+  await query('DROP TABLE IF EXISTS messages, loans, items, sessions, email_codes, registrations, users, groups');
   await createTables();
 }
 

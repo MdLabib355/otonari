@@ -51,6 +51,8 @@ Then open <http://localhost:8088>. This starts the PostgreSQL database, the serv
 | group_admin | `tanaka@otonari.example` (Sakura Heights), `inoue@...` (Hamaguchi-machi) | `otonari2611` |
 | super_admin | `admin@otonari.example` | `otonari2611` |
 
+To register, open the code in the test mailbox at <http://localhost:8089> (unless `server/.env` has a real mail server).
+
 These passwords are public: before others can reach the server, set `DEMO_MODE=false` and your own `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`. The first start takes a few minutes. If port 8088 is taken, set `OTONARI_PORT` to another one.
 
 | Command | What it does |
@@ -62,7 +64,7 @@ These passwords are public: before others can reach the server, set `DEMO_MODE=f
 
 ### Without Docker for the app (development)
 
-You need [Node.js](https://nodejs.org) 22.18 or newer. Email codes and Google login are optional and need your own settings (`server/.env.example`).
+You need [Node.js](https://nodejs.org) 22.18 or newer. Real emails and Google login need your own settings (`server/.env.example`).
 
 **1. Install** (once)
 
