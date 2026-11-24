@@ -1,25 +1,21 @@
-// What the client may see about people.
+// What the client may see about people. Emails: only my own, and all of them for a super admin.
 
-import type { DemoUser, Login, Me, User } from '../../../shared/types.ts';
+import type { AdminUser, GroupMember, Me, User } from '../../../shared/types.ts';
 import type { UserRow } from '../../types.ts';
 import { getGroup } from '../group/groupModel.ts';
-import type { DemoUserRow } from './userModel.ts';
 
-// Everything except the token.
-function publicUser({ id, group_id, nickname, lang, elder_mode }: UserRow): User {
-  return { id, group_id, nickname, lang, elder_mode };
-}
-
-// "Me" as the client sees it: { user, group }.
+// "Me" as the client sees it: { user, group }. The group is null before joining one.
 export async function meView(user: UserRow): Promise<Me> {
-  return { user: publicUser(user), group: await getGroup(user.group_id) };
+  const { id, group_id, nickname, lang, elder_mode, email, role } = user;
+  const me: User = { id, group_id, nickname, lang, elder_mode, email, role };
+  return { user: me, group: group_id === null ? null : await getGroup(group_id) };
 }
 
-// After joining and after the demo login: the only answers with a token.
-export async function loginView(user: UserRow): Promise<Login> {
-  return { token: user.token, ...(await meView(user)) };
+export function memberView({ id, nickname, lang, role, joined_at }: UserRow): GroupMember {
+  return { id, nickname, lang, role, joined_at };
 }
 
-export function demoUserView(user: DemoUserRow): DemoUser {
-  return { ...publicUser(user), group_name: user.group_name, group_code: user.group_code };
+export function adminUserView(user: UserRow & { group_name: string | null }): AdminUser {
+  const { id, email, nickname, role, group_name, created_at } = user;
+  return { id, email, nickname, role, group_name, created_at, active: user.deactivated_at === null };
 }

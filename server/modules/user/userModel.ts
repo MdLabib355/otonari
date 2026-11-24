@@ -1,14 +1,23 @@
-// The users table: the neighbors, and how reliable they have been as borrowers.
+// The users table: the accounts, and how reliable people have been as borrowers.
 
-import crypto from 'node:crypto';
-import type { Lang, Person, Trust } from '../../../shared/types.ts';
+import type { Lang, Person, Role, Trust } from '../../../shared/types.ts';
 import { found, query, queryOne } from '../../core/database.ts';
 import type { CountRow, UserRow } from '../../types.ts';
 
-export type DemoUserRow = UserRow & { group_name: string; group_code: string };
-
 export async function getUser(userId: number): Promise<UserRow> {
-  return found(await queryOne<UserRow>('SELECT * FROM users WHERE id = $1', [userId]));
+  return found(await findUser(userId));
+}
+
+export async function findUser(userId: number): Promise<UserRow | undefined> {
+  return queryOne<UserRow>('SELECT * FROM users WHERE id = $1', [userId]);
+}
+
+export async function findUserByEmail(email: string): Promise<UserRow | undefined> {
+  return queryOne<UserRow>('SELECT * FROM users WHERE email = $1', [email]);
+}
+
+export async function findUserByGoogle(sub: string): Promise<UserRow | undefined> {
+  return queryOne<UserRow>('SELECT * FROM users WHERE google_sub = $1', [sub]);
 }
 
 // What the two people in a loan may know about each other.
@@ -16,39 +25,92 @@ export async function getPerson(userId: number): Promise<Person> {
   return found(await queryOne<Person>('SELECT id, nickname, lang FROM users WHERE id = $1', [userId]));
 }
 
-// A member is someone who hasn't left.
-export async function findMember(userId: number): Promise<UserRow | undefined> {
-  return queryOne<UserRow>('SELECT * FROM users WHERE id = $1 AND left_at IS NULL', [userId]);
+interface NewUser {
+  email: string;
+  lang: Lang;
+  password_hash?: string;
+  email_verified?: boolean;
+  google_sub?: string; // registers with Google: then that is the only way to log in
+  nickname?: string;
 }
 
-export async function findMemberByToken(token: string): Promise<UserRow | undefined> {
-  return queryOne<UserRow>('SELECT * FROM users WHERE token = $1 AND left_at IS NULL', [token]);
+// A new account. The nickname is asked when they join or create a group.
+export async function createUser(user: NewUser): Promise<UserRow> {
+  const row = await queryOne<UserRow>(
+    `INSERT INTO users (email, lang, password_hash, email_verified, google_sub, google_only, nickname)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [
+      user.email,
+      user.lang,
+      user.password_hash ?? null,
+      user.email_verified ?? false,
+      user.google_sub ?? null,
+      user.google_sub !== undefined,
+      user.nickname ?? '',
+    ]
+  );
+  return found(row);
+}
+
+// The address is proved. A password or Google account that was set without that proof stops working.
+export async function confirmEmail(userId: number) {
+  await query('UPDATE users SET email_verified = true, password_hash = NULL, google_sub = NULL WHERE id = $1', [userId]);
+}
+
+// `only`: from now on there is no other way to log in.
+export async function setGoogle(userId: number, sub: string, only: boolean) {
+  await query('UPDATE users SET google_sub = $1, google_only = $2 WHERE id = $3', [sub, only, userId]);
+}
+
+// From the settings (super admin): whoever can set that owns the server, so the address counts as proved.
+export async function setPassword(userId: number, passwordHash: string) {
+  await query('UPDATE users SET password_hash = $1, email_verified = true, google_only = false, deactivated_at = NULL WHERE id = $2', [
+    passwordHash,
+    userId,
+  ]);
+}
+
+export async function setRole(userId: number, role: Role) {
+  await query('UPDATE users SET role = $1 WHERE id = $2', [role, userId]);
+}
+
+export async function setActive(userId: number, active: boolean) {
+  await query('UPDATE users SET deactivated_at = CASE WHEN $1 THEN NULL ELSE now() END WHERE id = $2', [active, userId]);
+}
+
+export async function listUsers(): Promise<(UserRow & { group_name: string | null })[]> {
+  return query<UserRow & { group_name: string | null }>(
+    `SELECT users.*, groups.name AS group_name
+     FROM users LEFT JOIN groups ON groups.id = users.group_id ORDER BY users.id`
+  );
+}
+
+// Longest-standing first.
+export async function listMembers(groupId: number): Promise<UserRow[]> {
+  return query<UserRow>('SELECT * FROM users WHERE group_id = $1 ORDER BY joined_at, id', [groupId]);
 }
 
 export async function countMembers(groupId: number): Promise<number> {
-  const row = await queryOne<CountRow>(
-    'SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND left_at IS NULL',
-    [groupId]
-  );
-  return found(row).count;
+  return found(await queryOne<CountRow>('SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1', [groupId])).count;
 }
 
-export async function listDemoUsers(): Promise<DemoUserRow[]> {
-  return query<DemoUserRow>(
-    `SELECT users.*, groups.name AS group_name, groups.code AS group_code
-     FROM users JOIN groups ON groups.id = users.group_id
-     WHERE users.is_demo AND users.left_at IS NULL
-     ORDER BY users.group_id, users.id`
-  );
+export async function joinGroup(userId: number, groupId: number, nickname: string, lang: Lang) {
+  await query('UPDATE users SET group_id = $1, nickname = $2, lang = $3, joined_at = now() WHERE id = $4', [
+    groupId,
+    nickname,
+    lang,
+    userId,
+  ]);
 }
 
-// The new random token is the user's whole identity (the client keeps it in localStorage).
-export async function createUser(groupId: number, nickname: string, lang: Lang): Promise<UserRow> {
-  const user = await queryOne<UserRow>(
-    'INSERT INTO users (group_id, nickname, lang, token) VALUES ($1, $2, $3, $4) RETURNING *',
-    [groupId, nickname, lang, crypto.randomUUID()]
+// The account stays. Whoever managed the group doesn't anymore; a super admin stays one.
+export async function clearGroup(userId: number) {
+  await query(
+    `UPDATE users SET group_id = NULL, joined_at = NULL,
+       role = CASE WHEN role = 'group_admin' THEN 'user' ELSE role END
+     WHERE id = $1`,
+    [userId]
   );
-  return found(user);
 }
 
 export async function setLang(userId: number, lang: Lang) {
@@ -59,16 +121,11 @@ export async function setElderMode(userId: number, on: boolean) {
   await query('UPDATE users SET elder_mode = $1 WHERE id = $2', [on, userId]);
 }
 
-// From now on their token doesn't work anymore.
-export async function markLeft(userId: number) {
-  await query('UPDATE users SET left_at = now() WHERE id = $1', [userId]);
-}
-
 // How reliable a borrower has been: { joined_days, on_time, late }. Only completed returns count,
 // and "on time" means that the return photo was sent before the loan was due.
 export async function trustOf(userId: number): Promise<Trust> {
   const trust = await queryOne<Trust>(
-    `SELECT EXTRACT(DAY FROM now() - users.created_at)::int AS joined_days,
+    `SELECT COALESCE(EXTRACT(DAY FROM now() - users.joined_at), 0)::int AS joined_days,
             COUNT(*) FILTER (WHERE loans.returned_at <= loans.end_at)::int AS on_time,
             COUNT(*) FILTER (WHERE loans.returned_at > loans.end_at)::int AS late
      FROM users LEFT JOIN loans ON loans.borrower_id = users.id AND loans.status = 'returned'

@@ -1,21 +1,20 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { GroupPreview, Lang, Login } from '../../../../shared/types.ts';
-import { api, errorStatus } from '../../core/api.ts';
+import type { GroupPreview, Me } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
-import DemoUsers from '../demo/DemoUsers.tsx';
-import NewGroup from './NewGroup.tsx';
 import { BlockIcon, BuildingIcon, UsersIcon } from '../../components/Icons.tsx';
+import { api, errorStatus } from '../../core/api.ts';
+import { useUser } from '../../core/UserContext.ts';
 import { LANGUAGES } from '../../data/catalog.ts';
 import { meta, t } from '../../i18n/index.ts';
-import { useUser } from '../../core/UserContext.ts';
+import NewGroup from './NewGroup.tsx';
 
 const GROUP_ICONS = { building: BuildingIcon, block: BlockIcon };
 
-// The join screen. The QR code on the poster opens /join?code=SAKURA-2611.
-// No account, no password: pick a nickname and a language, and you're in.
+// For people who are logged in, but not in a neighborhood yet: join one with the code from its poster, or
+// start a new one. The QR code on the poster opens /join?code=SAKURA-2611.
 export default function Join() {
-  const { user, lang: startLang, setVisitorLang, login } = useUser();
+  const { lang: startLang, setMe } = useUser();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -33,6 +32,7 @@ export default function Join() {
   useEffect(() => {
     setPreview(null);
     setNotFound(false);
+    setFailed(false);
     if (!cleanCode) return;
 
     let cancelled = false; // ignore answers for a code that has changed since
@@ -54,24 +54,12 @@ export default function Join() {
     };
   }, [cleanCode]);
 
-  // The header has a language choice too: both always show the same language.
-  useEffect(() => setLang(startLang), [startLang]);
-
-  function pickLang(code: Lang) {
-    setLang(code);
-    if (!user) setVisitorLang(code);
-  }
-
   async function handleJoin(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setFailed(false);
     try {
-      const result = await api.post<Login>(`/groups/${encodeURIComponent(cleanCode)}/members`, {
-        nickname: nickname.trim(),
-        lang,
-      });
-      login(result);
+      setMe(await api.post<Me>(`/groups/${encodeURIComponent(cleanCode)}/members`, { nickname: nickname.trim(), lang }));
       navigate('/', { replace: true });
     } catch {
       setFailed(true);
@@ -80,17 +68,31 @@ export default function Join() {
   }
 
   const languageOptions = LANGUAGES.map((language) => ({ value: language, label: meta(language).name }));
-
   const GroupIcon = GROUP_ICONS[preview?.type ?? 'building'];
 
   return (
     <section className="narrow-page surface-card">
-      <header className="brand">
-        <p className="brand-name">{t(lang, 'appName')}</p>
-        <p className="brand-tagline">{t(lang, 'tagline')}</p>
-      </header>
-
       <h1>{t(lang, 'join.title')}</h1>
+
+      {/* For both: joining and starting a group */}
+      <div className="field">
+        <label className="label" htmlFor="join-nickname">
+          {t(lang, 'join.nicknameLabel')}
+        </label>
+        <input
+          id="join-nickname"
+          className="text-input"
+          value={nickname}
+          onChange={(event) => setNickname(event.target.value)}
+          maxLength={20}
+          autoComplete="nickname"
+        />
+        <p className="hint">{t(lang, 'join.nicknameHint')}</p>
+      </div>
+      <div className="field">
+        <p className="label">{t(lang, 'join.languageLabel')}</p>
+        <ChipGroup label={t(lang, 'join.languageLabel')} options={languageOptions} value={lang} onChange={setLang} />
+      </div>
 
       <form onSubmit={handleJoin}>
         <div className="field">
@@ -123,40 +125,13 @@ export default function Join() {
           </div>
         </div>
 
-        <div className="field">
-          <label className="label" htmlFor="join-nickname">
-            {t(lang, 'join.nicknameLabel')}
-          </label>
-          <input
-            id="join-nickname"
-            className="text-input"
-            value={nickname}
-            onChange={(event) => setNickname(event.target.value)}
-            maxLength={20}
-            autoComplete="nickname"
-          />
-          <p className="hint">{t(lang, 'join.nicknameHint')}</p>
-        </div>
-
-        <div className="field">
-          <p className="label">{t(lang, 'join.languageLabel')}</p>
-          <ChipGroup
-            label={t(lang, 'join.languageLabel')}
-            options={languageOptions}
-            value={lang}
-            onChange={pickLang}
-          />
-        </div>
-
         {failed && <p className="error">{t(lang, 'common.error')}</p>}
         <button type="submit" className="button-primary" disabled={!preview || !nickname.trim() || busy}>
           {t(lang, 'join.button')}
         </button>
       </form>
 
-      <NewGroup lang={lang} />
-
-      <DemoUsers lang={lang} groupCode={preview ? cleanCode : undefined} />
+      <NewGroup lang={lang} nickname={nickname.trim()} />
     </section>
   );
 }

@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import type { Lang, Login as LoginAnswer, Me } from '../../../shared/types.ts';
+import type { Lang, Login, Me } from '../../../shared/types.ts';
 import { api, clearToken, errorStatus, getToken, saveToken } from '../core/api.ts';
 import { t } from '../i18n/index.ts';
 import { useInbox } from '../core/useInbox.ts';
 import BottomNav from './BottomNav.tsx';
+import AccountHeader from './AccountHeader.tsx';
 import Header from './Header.tsx';
 import PublicHeader from './PublicHeader.tsx';
 import { UserContext, saveVisitorLanguage, visitorLanguage, type SharedValues } from '../core/UserContext.ts';
 import Landing from '../features/landing/Landing.tsx';
-import Login from '../features/user/Login.tsx';
+import AuthPage from '../features/auth/AuthPage.tsx';
+import GroupAdmin from '../features/admin/GroupAdmin.tsx';
+import SuperAdmin from '../features/admin/SuperAdmin.tsx';
 import Join from '../features/group/Join.tsx';
 import Shelf from '../features/item/Shelf.tsx';
 import ItemPage from '../features/item/ItemPage.tsx';
@@ -20,12 +23,12 @@ import Settings from '../features/user/Settings.tsx';
 import Poster from '../features/group/Poster.tsx';
 
 export default function App() {
-  const [me, setMe] = useState<Me | null>(null); // { user, group } of the logged-in neighbor
+  const [me, setMe] = useState<Me | null>(null); // { user, group } of whoever is logged in
   const [visitorLang, setVisitorLangState] = useState(visitorLanguage);
   const [loading, setLoading] = useState(Boolean(getToken()));
   const [loadFailed, setLoadFailed] = useState(false);
   const { inbox, refreshInbox, markRead, clearInbox } = useInbox(); // unread messages to me
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   // On start: if we have a token, ask the server who we are.
   useEffect(() => {
@@ -34,7 +37,7 @@ export default function App() {
       .get<Me>('/me')
       .then(setMe)
       .catch((error) => {
-        // 401 = the server doesn't know this token. api.ts already forgot it → join screen.
+        // 401 = the server doesn't know this token. api.ts already forgot it.
         if (errorStatus(error) !== 401) setLoadFailed(true);
       })
       .finally(() => setLoading(false));
@@ -54,8 +57,8 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [pathname]);
 
-  // After /api/v1/groups/:code/members or the demo login: remember the token and who we are.
-  function login({ token, user, group }: LoginAnswer) {
+  // Remember the token and who we are.
+  function login({ token, user, group }: Login) {
     saveToken(token);
     clearInbox();
     setMe({ user, group });
@@ -66,10 +69,11 @@ export default function App() {
     setVisitorLangState(code);
   }
 
-  function logout() {
+  // A real page load at the end: the app starts again at the landing page, with nothing left of this person.
+  async function logout() {
+    if (getToken()) await api.delete('/auth/session').catch(() => {}); // e.g. offline: forget the token anyway
     clearToken();
-    clearInbox();
-    setMe(null);
+    window.location.assign('/');
   }
 
   let page;
@@ -78,15 +82,29 @@ export default function App() {
   } else if (loadFailed) {
     page = <p className="error narrow-page">{t(lang, 'common.error')}</p>;
   } else if (!me) {
-    // Not a member: the pages for visitors, and a poster opened by its code.
     page = (
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Join />} />
-        <Route path="/join" element={<Join />} />
+        <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/register" element={<AuthPage mode="register" />} />
+        {/* From the QR code on a poster: log in first. The ?code= stays in the address. */}
+        <Route path="/join" element={<Navigate to={{ pathname: '/register', search }} replace />} />
         <Route path="/poster" element={<Poster />} />
         <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  } else if (!me.group) {
+    // Logged in, but in no neighborhood yet. (After logging in, the address may still be /login?code=...)
+    const isAdmin = me.user.role === 'super_admin';
+    page = (
+      <Routes>
+        <Route path="/join" element={<Join />} />
+        <Route path="/admin" element={<SuperAdmin />} />
+        <Route path="/poster" element={<Poster />} />
+        <Route
+          path="*"
+          element={<Navigate to={isAdmin && !search ? '/admin' : { pathname: '/join', search }} replace />}
+        />
       </Routes>
     );
   } else {
@@ -98,17 +116,18 @@ export default function App() {
         <Route path="/loans" element={<Loans />} />
         <Route path="/loan/:id" element={<LoanPage />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/group-admin" element={<GroupAdmin />} />
+        <Route path="/admin" element={<SuperAdmin />} />
         <Route path="/poster" element={<Poster />} />
-        <Route path="/join" element={<Join />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
 
-  const showNav = me && pathname !== '/join';
+  const isMember = Boolean(me?.group);
   const shared: SharedValues = {
     user: me?.user,
-    group: me?.group,
+    group: me?.group ?? undefined,
     lang,
     setVisitorLang,
     login,
@@ -122,10 +141,11 @@ export default function App() {
   return (
     <UserContext.Provider value={shared}>
       <div className="app-shell">
-        {showNav && <Header />}
-        {!me && pathname !== '/poster' && <PublicHeader />}
+        {isMember && <Header />}
+        {me && !isMember && <AccountHeader />}
+        {!me && !loading && pathname !== '/poster' && <PublicHeader />}
         <main className="page">{page}</main>
-        {showNav && <BottomNav lang={lang} unreadCount={inbox.length} />}
+        {isMember && <BottomNav lang={lang} unreadCount={inbox.length} />}
       </div>
     </UserContext.Provider>
   );

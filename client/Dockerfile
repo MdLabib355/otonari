@@ -2,7 +2,8 @@
 FROM node:22-alpine AS build
 WORKDIR /app/client
 COPY client/package.json client/package-lock.json ./
-RUN npm ci
+# The cache keeps downloaded packages, so a slow or interrupted build does not start from zero.
+RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline --no-audit --no-fund
 COPY shared /app/shared
 COPY client ./
 RUN npm run build

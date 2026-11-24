@@ -5,7 +5,6 @@
 import type { Request } from 'express';
 import type { LoanStatus, MyLoans } from '../../../shared/types.ts';
 import { DURATIONS, QUICK_REPLY_KEYS, isOneOf } from '../../core/allowedKeys.ts';
-import { found } from '../../core/database.ts';
 import { refuse, reply, toId } from '../../core/http.ts';
 import { findItem, getItem } from '../item/itemModel.ts';
 import { createMessage } from '../message/messageModel.ts';
@@ -24,7 +23,6 @@ import {
   saveReturnPhoto,
 } from './loanModel.ts';
 import { loanDetailsView } from './loanView.ts';
-import { savePhoto } from './photoFiles.ts';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -49,7 +47,7 @@ export async function requestLoan(req: Request) {
   if (!Number.isInteger(Number(item_id))) return refuse(400, 'item_id must be a number');
   const item = await findItem(toId(item_id));
   if (!item) return refuse(404, 'Item not found');
-  if (item.group_id !== req.user.group_id) return refuse(403, 'Not in your neighborhood');
+  if (item.group_id !== req.groupId) return refuse(403, 'Not in your neighborhood');
   if (item.owner_id === req.user.id) return refuse(403, "You can't borrow your own item");
 
   // Checked before the item status: once my request is accepted, the item is reserved (for me).
@@ -113,13 +111,15 @@ export async function cancel(req: Request) {
   return showLoan(req);
 }
 
-// Handover, part 1: the lender's condition photo.
+// Handover, part 1: the lender's condition photo. (The check runs twice: before the photo is stored, so that a
+// refused one is never stored, and again in the transaction.)
+export function canHandOver({ loan }: Request) {
+  const allowed = loan.status === 'accepted' && !loan.handover_photo;
+  return allowed ? null : refuse(409, 'The handover photo is taken once, after accepting');
+}
+
 export async function handover(req: Request) {
-  const loan = req.loan;
-  if (loan.status !== 'accepted' || loan.handover_photo) {
-    return refuse(409, 'The handover photo is taken once, after accepting');
-  }
-  await saveHandoverPhoto(loan, savePhoto(found(req.file))); // receivePhoto has checked that there is one
+  await saveHandoverPhoto(req.loan, req.photo);
   return showLoan(req);
 }
 
@@ -134,12 +134,13 @@ export async function received(req: Request) {
 }
 
 // Return, part 1: the borrower's photo of the item they bring back.
+export function canGiveBack({ loan }: Request) {
+  const allowed = loan.status === 'active' && !loan.return_photo;
+  return allowed ? null : refuse(409, 'The return photo is taken once, while borrowing');
+}
+
 export async function giveBack(req: Request) {
-  const loan = req.loan;
-  if (loan.status !== 'active' || loan.return_photo) {
-    return refuse(409, 'The return photo is taken once, while borrowing');
-  }
-  await saveReturnPhoto(loan, savePhoto(found(req.file))); // receivePhoto has checked that there is one
+  await saveReturnPhoto(req.loan, req.photo);
   return showLoan(req);
 }
 

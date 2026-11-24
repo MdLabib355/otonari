@@ -1,17 +1,23 @@
 // Rows exactly as PostgreSQL returns them (the tables are in core/database.ts). Times are ISO 8601 text.
 
-import type { ItemStatus, Lang, Loan } from '../shared/types.ts';
+import type { ItemStatus, Lang, Loan, Role } from '../shared/types.ts';
 
 export interface UserRow {
   id: number;
-  group_id: number;
+  email: string;
+  email_verified: boolean;
+  password_hash: string | null;
+  google_sub: string | null;
+  google_only: boolean;
+  role: Role;
+  group_id: number | null;
+  joined_at: string | null;
   nickname: string;
   lang: Lang;
   elder_mode: boolean;
-  token: string;
   is_demo: boolean;
+  deactivated_at: string | null;
   created_at: string;
-  left_at: string | null;
 }
 
 export interface ItemRow {
@@ -34,12 +40,14 @@ export interface CountRow {
   count: number;
 }
 
-// What the steps add to requests: requireUser (core/auth.ts) and loanRole (modules/loan).
+// What the steps add to requests: requireUser / requireMember (core/auth.ts) and loanRole (modules/loan).
 declare global {
   namespace Express {
     interface Request {
       user: UserRow;
+      groupId: number; // only after requireMember
       loan: LoanRow;
+      photo: string; // only after storePhoto
     }
   }
 }

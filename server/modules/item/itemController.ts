@@ -10,7 +10,7 @@ import { itemDetailsView } from './itemView.ts';
 import { removeItem } from './removeItem.ts';
 
 export async function showShelf(req: Request) {
-  return reply(200, await listShelf(req.user.group_id));
+  return reply(200, await listShelf(req.groupId));
 }
 
 export async function showMyItems(req: Request) {
@@ -20,7 +20,7 @@ export async function showMyItems(req: Request) {
 export async function showItem(req: Request) {
   const item = await findItemWithOwner(toId(req.params.id));
   if (!item) return refuse(404, 'Item not found');
-  if (item.group_id !== req.user.group_id) return refuse(403, 'Not in your neighborhood');
+  if (item.group_id !== req.groupId) return refuse(403, 'Not in your neighborhood');
 
   const myLoan = await findOpenLoan(item.id, req.user.id);
   const allowedForMe = !item.trusted_only || (await isTrusted(req.user.id));
@@ -36,7 +36,7 @@ export async function addItem(req: Request) {
   if (!isOneOf(SPOT_KEYS, spot)) return refuse(400, 'Unknown handover spot');
   if (typeof trusted_only !== 'boolean') return refuse(400, 'trusted_only must be true or false');
 
-  return reply(201, await createItem(req.user.id, req.user.group_id, item_key, max_days, spot, trusted_only));
+  return reply(201, await createItem(req.user.id, req.groupId, item_key, max_days, spot, trusted_only));
 }
 
 // Requests that are already waiting stay: the owner can still answer them with No.

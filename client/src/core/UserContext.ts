@@ -4,12 +4,9 @@
 //    const { user, group, lang, login, logout, setMe } = useUser();
 //    const { user, group } = useMember();   on pages that only members can open: never undefined
 //
-//  user    { id, group_id, nickname, lang, elder_mode }   (undefined before joining)
-//  group   { id, code, name, type, city }                 (undefined before joining)
+//  user    my account: { id, group_id, nickname, lang, elder_mode, email, role }   (undefined before logging in)
+//  group   { id, code, name, type, city }                                        (undefined before joining one)
 //  lang    the language to show the app in
-//  login   call with the { token, user, group } from /api/v1/groups/:code/members or the demo login
-//  logout  forget the token (back to the join screen)
-//  setMe   call with the { user, group } from PATCH /api/v1/me to update the whole app at once
 //  inbox, refreshInbox, markRead   my unread messages (see useInbox.ts)
 //
 // (This lives in its own file so pages don't have to import App.tsx, which imports them.)
@@ -19,15 +16,15 @@ import type { Group, Lang, Login, Me, User } from '../../../shared/types.ts';
 import { LANGUAGES } from '../data/catalog.ts';
 import type { Inbox } from './useInbox.ts';
 
-// `user` and `group` are undefined on the pages for people who haven't joined (Join and Poster).
+// `user` is undefined before logging in, `group` before joining one.
 export interface SharedValues extends Pick<Inbox, 'inbox' | 'refreshInbox' | 'markRead'> {
   user: User | undefined;
   group: Group | undefined;
   lang: Lang;
   setVisitorLang: (lang: Lang) => void; // before joining
-  login: (answer: Login) => void;
+  login: (answer: Login) => void; // after one of the ways to log in
   logout: () => void;
-  setMe: (me: Me) => void;
+  setMe: (me: Me) => void; // after a change of me or my group
 }
 
 export const UserContext = createContext<SharedValues | null>(null);
@@ -39,7 +36,7 @@ export function useUser(): SharedValues {
 }
 
 // For the pages that only members can open (App.tsx sends everyone else to the join page).
-export function useMember(): SharedValues & Me {
+export function useMember(): SharedValues & { user: User; group: Group } {
   const shared = useUser();
   const { user, group } = shared;
   if (!user || !group) throw new Error('This page is only for members');

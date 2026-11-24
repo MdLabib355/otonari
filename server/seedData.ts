@@ -1,13 +1,18 @@
 // The demo data (CLAUDE.md section 9). Used by seed.ts, and by index.ts when the database is empty.
 
-import crypto from 'node:crypto';
-import type { GroupType, Lang } from '../shared/types.ts';
+import type { GroupType, Lang, Role } from '../shared/types.ts';
 import { found, query, queryOne, resetDatabase, transaction } from './core/database.ts';
 import { listGroups } from './modules/group/groupModel.ts';
+import { hashSecret } from './modules/auth/password.ts';
+import { ensureSuperAdmin } from './modules/auth/superAdmin.ts';
 import { createItem } from './modules/item/itemModel.ts';
 import { deletePhotos } from './modules/loan/photoFiles.ts';
 import { createMessage } from './modules/message/messageModel.ts';
 import type { ItemRow, LoanRow, UserRow } from './types.ts';
+
+// For all demo accounts: sato@otonari.example, tanaka@otonari.example, ... It is public, so these accounts
+// work only in demo mode.
+const DEMO_PASSWORD = 'otonari2611';
 
 type SeedItem = [itemKey: string, maxDays: number, spot: string, trustedOnly?: boolean];
 
@@ -16,7 +21,7 @@ interface SeedGroup {
   name: string;
   type: GroupType;
   city: string;
-  users: { nickname: string; lang: Lang; elder: boolean; items: SeedItem[] }[];
+  users: { nickname: string; lang: Lang; elder: boolean; role?: Role; items: SeedItem[] }[];
 }
 
 // Rahim is NOT here on purpose: he joins live during the demo.
@@ -40,6 +45,7 @@ const GROUPS: SeedGroup[] = [
       },
       {
         nickname: 'Tanaka',
+        role: 'group_admin',
         lang: 'ja',
         elder: false,
         items: [
@@ -85,6 +91,7 @@ const GROUPS: SeedGroup[] = [
     users: [
       {
         nickname: 'Inoue',
+        role: 'group_admin',
         lang: 'ja',
         elder: true,
         items: [
@@ -127,11 +134,22 @@ async function insertGroup(group: SeedGroup): Promise<number> {
 
 // They joined a month ago (the returned loan below is from last week).
 async function insertUsersAndItems(group: SeedGroup, groupId: number, userIds: UserIds) {
+  const passwordHash = await hashSecret(DEMO_PASSWORD);
   for (const user of group.users) {
     const row = await queryOne<{ id: number }>(
-      `INSERT INTO users (group_id, nickname, lang, elder_mode, token, is_demo, created_at)
-       VALUES ($1, $2, $3, $4, $5, true, now() - INTERVAL '30 days') RETURNING id`,
-      [groupId, user.nickname, user.lang, user.elder, crypto.randomUUID()]
+      `INSERT INTO users (email, password_hash, email_verified, role, group_id, joined_at, nickname, lang, elder_mode,
+                          is_demo, created_at)
+       VALUES ($1, $2, true, $3, $4, now() - INTERVAL '30 days', $5, $6, $7, true, now() - INTERVAL '30 days')
+       RETURNING id`,
+      [
+        `${user.nickname.toLowerCase()}@otonari.example`,
+        passwordHash,
+        user.role ?? 'user',
+        groupId,
+        user.nickname,
+        user.lang,
+        user.elder,
+      ]
     );
     const userId = found(row).id;
     userIds[user.nickname] = userId;
@@ -186,17 +204,19 @@ export async function seed(empty: boolean) {
     }
     if (!empty) await insertReturnedLoan(userIds.Maria, userIds.Tanaka);
   });
-  deletePhotos(); // they belonged to the old loans
+  await deletePhotos(); // they belonged to the old loans
+  await ensureSuperAdmin(); // the reset has removed it
   await printSummary(empty);
 }
 
-// Short summary (the user ids are handy for POST /api/v1/demo/login).
+// Short summary.
 async function printSummary(empty: boolean) {
   console.log(empty ? 'Seeded two empty groups:' : 'Seeded the Nagasaki demo data:');
   for (const group of await listGroups()) {
     const members = await query<UserRow>('SELECT * FROM users WHERE group_id = $1 ORDER BY id', [group.id]);
     const items = await query<ItemRow>('SELECT * FROM items WHERE group_id = $1', [group.id]);
-    const names = members.map((member) => `${member.nickname} #${member.id}`).join(', ');
+    const names = members.map((member) => `${member.nickname} (${member.role})`).join(', ');
     console.log(`  ${group.name} (${group.code}): ${names || 'nobody yet'} | ${items.length} items`);
   }
+  if (!empty) console.log(`  Log in with e.g. sato@otonari.example, password ${DEMO_PASSWORD}`);
 }

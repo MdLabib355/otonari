@@ -13,7 +13,7 @@ services:
       POSTGRES_PASSWORD: otonari
       POSTGRES_DB: otonari
     volumes:
-      - database:/var/lib/postgresql/data
+      - accounts_database:/var/lib/postgresql/data
     healthcheck:
       # 127.0.0.1: while the image sets itself up, it answers only on its local socket.
       test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U otonari -d otonari']
@@ -27,20 +27,35 @@ services:
       context: .
       dockerfile: server/Dockerfile
     init: true # stops immediately on Ctrl+C
+    # docker.env: a super admin to try out. Your own settings (email, Google, super admin) in server/.env win.
+    env_file:
+      - path: server/docker.env
+      - path: server/.env
+        required: false
     environment:
       PORT: 3001
       DEMO_MODE: 'true'
       DATABASE_URL: postgres://otonari:otonari@db:5432/otonari
+      MAILBOX_URL: http://localhost:${MAILBOX_PORT:-8089}
     volumes:
       - photos:/app/server/uploads
     depends_on:
       db:
         condition: service_healthy
+      mail:
+        condition: service_started
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3001/api/health']
       interval: 2s
       timeout: 5s
       retries: 30
+    restart: on-failure
+
+  # Shows the emails with the codes at http://localhost:8089, unless server/.env has a real mail server.
+  mail:
+    image: axllent/mailpit:v1.27
+    ports:
+      - '127.0.0.1:${MAILBOX_PORT:-8089}:8025'
     restart: on-failure
 
   client:
@@ -55,5 +70,5 @@ services:
     restart: on-failure
 
 volumes:
-  database:
+  accounts_database: # not "database": that one is from before there were accounts
   photos:

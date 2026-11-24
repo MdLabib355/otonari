@@ -3,16 +3,17 @@
 // `npm run build`, then `npm start`: this server also serves the built React app, on one port.
 // Docker: nginx serves the React app and forwards /api and /uploads (client/nginx.conf).
 
-import './core/env.ts'; // first: the others need the settings
 import fs from 'node:fs';
 import path from 'node:path';
 import cors from 'cors';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { createV1 } from './api/v1.ts';
-import { createTables, query, waitForDatabase } from './core/database.ts';
+import { addNewColumns, createTables, query, waitForDatabase } from './core/database.ts';
 import { startReminders } from './modules/loan/reminders.ts';
 import { countGroups } from './modules/group/groupModel.ts';
+import { ensureSuperAdmin } from './modules/auth/superAdmin.ts';
+import { DEMO_MODE } from './core/settings.ts';
 import { seed } from './seedData.ts';
 
 const PORT = process.env.PORT || 3001;
@@ -69,10 +70,12 @@ app.use((err: Error & { status?: number }, req: Request, res: Response, next: Ne
 // An empty database (e.g. after a fresh deploy) gets the demo data, exactly like `npm run seed`.
 await waitForDatabase();
 await createTables();
+await addNewColumns();
 if ((await countGroups()) === 0) {
   console.log('The database is empty, so it gets the demo data.');
-  await seed(false);
+  await seed(!DEMO_MODE); // without demo mode: only the two groups
 }
+await ensureSuperAdmin();
 
 // Express 5 also calls this function when the server can NOT start (e.g. the port is taken).
 app.listen(PORT, (error) => {
@@ -81,7 +84,7 @@ app.listen(PORT, (error) => {
     console.error('Is another app (or another copy of this server) already using that port?');
     process.exit(1);
   }
-  const demo = process.env.DEMO_MODE === 'true' ? 'on' : 'off';
+  const demo = DEMO_MODE ? 'on' : 'off';
   console.log(`Otonari server running on http://localhost:${PORT} (demo mode: ${demo})`);
   startReminders();
 });
