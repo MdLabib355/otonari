@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { DemoUser, GroupPreview, Login } from '../../../../shared/types.ts';
+import type { GroupPreview, Lang, Login } from '../../../../shared/types.ts';
 import { api, errorStatus } from '../../core/api.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
+import DemoUsers from '../demo/DemoUsers.tsx';
 import NewGroup from './NewGroup.tsx';
 import { BlockIcon, BuildingIcon, UsersIcon } from '../../components/Icons.tsx';
 import { LANGUAGES } from '../../data/catalog.ts';
@@ -14,7 +15,7 @@ const GROUP_ICONS = { building: BuildingIcon, block: BlockIcon };
 // The join screen. The QR code on the poster opens /join?code=SAKURA-2611.
 // No account, no password: pick a nickname and a language, and you're in.
 export default function Join() {
-  const { lang: startLang, login } = useUser();
+  const { user, lang: startLang, setVisitorLang, login } = useUser();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -23,7 +24,6 @@ export default function Join() {
   const [notFound, setNotFound] = useState(false);
   const [nickname, setNickname] = useState('');
   const [lang, setLang] = useState(startLang); // the page switches to the language you pick
-  const [demoUsers, setDemoUsers] = useState<DemoUser[]>([]);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -54,13 +54,13 @@ export default function Join() {
     };
   }, [cleanCode]);
 
-  // The server only answers this when DEMO_MODE=true; otherwise it's a 404 and no demo buttons show.
-  useEffect(() => {
-    api
-      .get<DemoUser[]>('/demo/users')
-      .then(setDemoUsers)
-      .catch(() => setDemoUsers([]));
-  }, []);
+  // The header has a language choice too: both always show the same language.
+  useEffect(() => setLang(startLang), [startLang]);
+
+  function pickLang(code: Lang) {
+    setLang(code);
+    if (!user) setVisitorLang(code);
+  }
 
   async function handleJoin(event: FormEvent) {
     event.preventDefault();
@@ -79,20 +79,7 @@ export default function Join() {
     }
   }
 
-  async function continueAs(userId: number) {
-    setFailed(false);
-    try {
-      const result = await api.post<Login>('/demo/login', { user_id: userId });
-      login(result);
-      navigate('/', { replace: true });
-    } catch {
-      setFailed(true);
-    }
-  }
-
   const languageOptions = LANGUAGES.map((language) => ({ value: language, label: meta(language).name }));
-  // With a valid code, only offer the neighbors of that group.
-  const visibleDemoUsers = preview ? demoUsers.filter((user) => user.group_code === cleanCode) : demoUsers;
 
   const GroupIcon = GROUP_ICONS[preview?.type ?? 'building'];
 
@@ -157,7 +144,7 @@ export default function Join() {
             label={t(lang, 'join.languageLabel')}
             options={languageOptions}
             value={lang}
-            onChange={setLang}
+            onChange={pickLang}
           />
         </div>
 
@@ -169,21 +156,7 @@ export default function Join() {
 
       <NewGroup lang={lang} />
 
-      {visibleDemoUsers.length > 0 && (
-        <section className="demo">
-          <h2>{t(lang, 'join.demoTitle')}</h2>
-          <div className="demo-users">
-            {visibleDemoUsers.map((user) => (
-              <button key={user.id} type="button" className="demo-user" onClick={() => continueAs(user.id)}>
-                <strong>{user.nickname}</strong>
-                <span>
-                  {meta(user.lang).name} · {user.group_name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+      <DemoUsers lang={lang} groupCode={preview ? cleanCode : undefined} />
     </section>
   );
 }

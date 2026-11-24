@@ -12,6 +12,9 @@
 // The version of the API that this app uses. Paths are written without it: api.get('/me').
 const API_BASE = '/api/v1';
 
+// Pages that also work without being a member.
+const VISITOR_PAGES = ['/join', '/register', '/login', '/poster'];
+
 const TOKEN_KEY = 'otonari-token';
 
 // The JSON answer when the server says no.
@@ -67,10 +70,10 @@ async function request<T>(method: string, path: string, body?: object): Promise<
   const response = await fetch(API_BASE + path, { method, headers, body: payload });
 
   if (response.status === 401) {
-    // The server doesn't know our token (e.g. after `npm run seed`): forget it and join again.
+    // The server doesn't know our token (e.g. after `npm run seed`): forget it and start again at the landing page.
     clearToken();
-    if (window.location.pathname !== '/join') {
-      window.location.assign('/join');
+    if (!VISITOR_PAGES.includes(window.location.pathname)) {
+      window.location.assign('/');
     }
   }
 

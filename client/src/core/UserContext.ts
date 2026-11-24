@@ -16,6 +16,7 @@
 
 import { createContext, useContext } from 'react';
 import type { Group, Lang, Login, Me, User } from '../../../shared/types.ts';
+import { LANGUAGES } from '../data/catalog.ts';
 import type { Inbox } from './useInbox.ts';
 
 // `user` and `group` are undefined on the pages for people who haven't joined (Join and Poster).
@@ -23,6 +24,7 @@ export interface SharedValues extends Pick<Inbox, 'inbox' | 'refreshInbox' | 'ma
   user: User | undefined;
   group: Group | undefined;
   lang: Lang;
+  setVisitorLang: (lang: Lang) => void; // before joining
   login: (answer: Login) => void;
   logout: () => void;
   setMe: (me: Me) => void;
@@ -44,8 +46,19 @@ export function useMember(): SharedValues & Me {
   return { ...shared, user, group };
 }
 
-// Before someone joins we don't know their language, so start with the browser's.
-export function browserLanguage(): Lang {
+const LANG_KEY = 'otonari-lang';
+
+// Before someone joins we don't know their language: the one they picked on this device, or the browser's.
+export function visitorLanguage(): Lang {
+  const saved = localStorage.getItem(LANG_KEY);
+  return LANGUAGES.find((lang) => lang === saved) ?? browserLanguage();
+}
+
+export function saveVisitorLanguage(lang: Lang) {
+  localStorage.setItem(LANG_KEY, lang);
+}
+
+function browserLanguage(): Lang {
   const code = (navigator.language || 'en').toLowerCase();
   if (code.startsWith('ja')) return 'ja';
   if (code.startsWith('bn')) return 'bn';

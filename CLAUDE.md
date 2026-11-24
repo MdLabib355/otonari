@@ -39,6 +39,12 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
 
 ## 2. Features (scope is FIXED — do not add features not listed here)
 
+### Landing page
+- Visitors (not a member on this device) see the landing page at `/`: the vision, how it works, a real phrase in two
+  languages, and the buttons Register and Log in. Members see the shelf at `/`.
+- `/register` is the Join page (same as `/join`). `/login` has **no password**: it explains that this device remembers
+  its members, leads to the join code, and in demo mode offers the demo neighbors.
+
 ### Must-have 1 — Neighborhood shelf
 - Join a **neighborhood group** (type `building` or `block`) with a **join code** (from the QR poster).
   No account, no password, no email. User picks nickname + language. Identity is a random token
@@ -159,7 +165,7 @@ otonari/
 │   ├── public/             # icons for PWA (icon-192.png, icon-512.png, icon-maskable-512.png)
 │   └── src/
 │       ├── main.tsx        # starts the app, loads the styles
-│       ├── app/            # App (routes), Header, BottomNav, navTabs, serviceWorker (reloads an open app after a deploy)
+│       ├── app/            # App (routes), Header, PublicHeader, BottomNav, navTabs, serviceWorker (reloads an open app after a deploy)
 │       ├── core/           # used by all features
 │       │   ├── api.ts          # fetch wrapper; adds "Authorization: Bearer <token>"
 │       │   ├── UserContext.ts  # useUser() / useMember(): me, my group, my language and my inbox
@@ -168,14 +174,15 @@ otonari/
 │       ├── components/     # used by several features: ChipGroup  FilterStrip  Icons  SpeakButton  TipCard
 │       │                   # TrustLine
 │       ├── features/       # one folder per feature, like the modules of the server
-│       │   ├── group/      # Join (/join)  NewGroup  Poster (/poster)
-│       │   ├── user/       # Settings (/settings)
+│       │   ├── landing/    # Landing (/ for visitors)  SamplePhrase
+│       │   ├── group/      # Join (/join, /register)  NewGroup  Poster (/poster)
+│       │   ├── user/       # Settings (/settings)  Login (/login)
 │       │   ├── item/       # Shelf (/)  NeighborShelf  ItemCard  ItemPage (/item/:id)  BorrowForm  borrowTimes
 │       │   │               # MyItems (/my-items)  MyItemRow  Catalog  AddItemDialog  TrustedSwitch
 │       │   ├── loan/       # Loans (/loans)  LoanPage (/loan/:id)  LoanHeader  LoanStepper  PendingActions  HandoverStep
 │       │   │               # ReturnStep  QuickReplies  LoanPhotos  PhotoCapture  loanProps
 │       │   ├── message/    # Banner (polling)  NotificationBell  PhraseBubble ("show original" + 🔊)
-│       │   └── demo/       # DemoButtons (fast-forward)
+│       │   └── demo/       # DemoButtons (fast-forward)  DemoUsers ("continue as")
 │       ├── i18n/
 │       │   ├── index.ts    # t(), renderPhrase(), formatDate(), useLang()
 │       │   ├── en.json  ja.json  ja-easy.json  bn.json

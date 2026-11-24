@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import type { Login, Me } from '../../../shared/types.ts';
+import type { Lang, Login as LoginAnswer, Me } from '../../../shared/types.ts';
 import { api, clearToken, errorStatus, getToken, saveToken } from '../core/api.ts';
 import { t } from '../i18n/index.ts';
 import { useInbox } from '../core/useInbox.ts';
 import BottomNav from './BottomNav.tsx';
 import Header from './Header.tsx';
-import { UserContext, browserLanguage, type SharedValues } from '../core/UserContext.ts';
+import PublicHeader from './PublicHeader.tsx';
+import { UserContext, saveVisitorLanguage, visitorLanguage, type SharedValues } from '../core/UserContext.ts';
+import Landing from '../features/landing/Landing.tsx';
+import Login from '../features/user/Login.tsx';
 import Join from '../features/group/Join.tsx';
 import Shelf from '../features/item/Shelf.tsx';
 import ItemPage from '../features/item/ItemPage.tsx';
@@ -18,6 +21,7 @@ import Poster from '../features/group/Poster.tsx';
 
 export default function App() {
   const [me, setMe] = useState<Me | null>(null); // { user, group } of the logged-in neighbor
+  const [visitorLang, setVisitorLangState] = useState(visitorLanguage);
   const [loading, setLoading] = useState(Boolean(getToken()));
   const [loadFailed, setLoadFailed] = useState(false);
   const { inbox, refreshInbox, markRead, clearInbox } = useInbox(); // unread messages to me
@@ -36,8 +40,7 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Before joining we don't know the user's language yet, so use the browser's.
-  const lang = me ? me.user.lang : browserLanguage();
+  const lang = me ? me.user.lang : visitorLang;
 
   // Elder mode is a class on <body>; styles/elder.css uses it to make everything bigger.
   // <html lang> helps screen readers, and makes browsers pick Japanese fonts for Japanese.
@@ -52,10 +55,15 @@ export default function App() {
   }, [pathname]);
 
   // After /api/v1/groups/:code/members or the demo login: remember the token and who we are.
-  function login({ token, user, group }: Login) {
+  function login({ token, user, group }: LoginAnswer) {
     saveToken(token);
     clearInbox();
     setMe({ user, group });
+  }
+
+  function setVisitorLang(code: Lang) {
+    saveVisitorLanguage(code);
+    setVisitorLangState(code);
   }
 
   function logout() {
@@ -69,13 +77,21 @@ export default function App() {
     page = <p className="narrow-page">{t(lang, 'common.loading')}</p>;
   } else if (loadFailed) {
     page = <p className="error narrow-page">{t(lang, 'common.error')}</p>;
-  } else if (!me && pathname !== '/join' && pathname !== '/poster') {
-    // No token yet (not a member): only the join page, and a poster opened by its code.
-    page = <Navigate to="/join" replace />;
+  } else if (!me) {
+    // Not a member: the pages for visitors, and a poster opened by its code.
+    page = (
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Join />} />
+        <Route path="/join" element={<Join />} />
+        <Route path="/poster" element={<Poster />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
   } else {
     page = (
       <Routes>
-        <Route path="/join" element={<Join />} />
         <Route path="/" element={<Shelf />} />
         <Route path="/item/:id" element={<ItemPage />} />
         <Route path="/my-items" element={<MyItems />} />
@@ -83,18 +99,31 @@ export default function App() {
         <Route path="/loan/:id" element={<LoanPage />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/poster" element={<Poster />} />
+        <Route path="/join" element={<Join />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
 
   const showNav = me && pathname !== '/join';
-  const shared: SharedValues = { user: me?.user, group: me?.group, lang, login, logout, setMe, inbox, refreshInbox, markRead };
+  const shared: SharedValues = {
+    user: me?.user,
+    group: me?.group,
+    lang,
+    setVisitorLang,
+    login,
+    logout,
+    setMe,
+    inbox,
+    refreshInbox,
+    markRead,
+  };
 
   return (
     <UserContext.Provider value={shared}>
       <div className="app-shell">
         {showNav && <Header />}
+        {!me && pathname !== '/poster' && <PublicHeader />}
         <main className="page">{page}</main>
         {showNav && <BottomNav lang={lang} unreadCount={inbox.length} />}
       </div>
