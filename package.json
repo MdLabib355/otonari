@@ -8,7 +8,7 @@
   "scripts": {
     "postinstall": "npm install --prefix client && npm install --prefix server",
     "dev": "concurrently --names server,client --prefix-colors blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "db": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db",
+    "db": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait db",
     "seed": "node server/seed.ts",
     "seed:empty": "node server/seed.ts --empty",
     "build": "npm run build --prefix client",
