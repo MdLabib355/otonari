@@ -36,96 +36,134 @@ Otonari (お隣, "next door") is an installable web app (PWA) that lets neighbor
 
 ## How to run
 
-### With Docker: everything at once
+Choose one way:
 
-You need only [Docker](https://www.docker.com/products/docker-desktop/).
+| | Way A: Docker | Way B: Node.js |
+|---|---|---|
+| **Best for** | Trying the app out | Changing the code |
+| **You need** | Git and Docker Desktop | Git, Docker Desktop (for the database) and Node.js 22.18 or newer |
+| **Address** | <http://localhost:8088> | <http://localhost:5173> |
+
+Downloads: [Git](https://git-scm.com/downloads), [Docker Desktop](https://www.docker.com/products/docker-desktop/), [Node.js](https://nodejs.org).
+
+### Way A: Docker (easiest)
+
+**Step 1. Start Docker Desktop** and wait until it is running.
+
+**Step 2. Download the project.**
 
 ```bash
-docker compose up
+git clone https://github.com/MdLabib355/otonari.git
+cd otonari
 ```
 
-Then open <http://localhost:8088>. This starts the PostgreSQL database, the server and the app, with the demo data.
+**Step 3. Start everything.** The first start takes a few minutes. No settings file is needed.
 
-| Role | Email | Password |
-|---|---|---|
-| user | `sato@otonari.example`, `maria@...`, `ayesha@...` | `otonari2611` |
-| group_admin | `tanaka@otonari.example` (Sakura Heights), `inoue@...` (Hamaguchi-machi) | `otonari2611` |
-| super_admin | `admin@otonari.example` | `otonari2611` |
+```bash
+docker compose up --build
+```
 
-To register, open the code in the test mailbox at <http://localhost:8089> (unless `server/.env` has a real mail server).
+**Step 4. Open the app** at <http://localhost:8088> and log in with a [demo account](#demo-accounts).
 
-These passwords are public: before others can reach the server, set `DEMO_MODE=false` and your own `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`. The first start takes a few minutes. If port 8088 is taken, set `OTONARI_PORT` to another one.
+**Step 5. Stop it** with `Ctrl+C`. The data stays. Next time, start again with step 3.
 
 | Command | What it does |
 |---|---|
-| `docker compose up` | Starts everything. `Ctrl+C` stops it; the data stays. |
-| `docker compose up --build` | The same, after changing the code. |
-| `docker compose exec server node seed.ts` | Resets the demo data. |
-| `docker compose down -v` | Removes everything, including the data. |
+| `docker compose up --build` | Starts everything, with the newest code. Run it again after every `git pull`. |
+| `docker compose up --build -d` | The same, in the background. Stop it with `docker compose down` (the data stays). |
+| `docker compose exec server node seed.ts` | Resets the demo data. **Deletes all accounts, items and loans.** |
+| `docker compose down -v` | Removes everything. **Deletes the database and the photos too.** |
 
-### Without Docker for the app (development)
+### Way B: Node.js (for development)
 
-You need [Node.js](https://nodejs.org) 22.18 or newer. Real emails and Google login need your own settings (`server/.env.example`).
-
-**1. Install** (once)
+**Step 1. Start Docker Desktop**, then check that Node.js is 22.18 or newer:
 
 ```bash
-git clone <URL of this repository>
+node --version
+```
+
+**Step 2. Download and install.** `npm install` also installs the `client` and `server` folders.
+
+```bash
+git clone https://github.com/MdLabib355/otonari.git
 cd otonari
 npm install
 ```
 
-`npm install` also installs the `client` and `server` folders. Then create the settings file:
+**Step 3. Create the settings file.** It works without changes.
 
-```bash
-cp server/.env.example server/.env
-```
+| Terminal | Command |
+|---|---|
+| macOS, Linux, Git Bash, PowerShell | `cp server/.env.example server/.env` |
+| Windows command prompt | `copy server\.env.example server\.env` |
 
-(In the Windows command prompt: `copy server\.env.example server\.env`)
-
-**2. Start and fill the database** (PostgreSQL in Docker, port 5433; or put the address of your own in `DATABASE_URL`)
+**Step 4. Start the database** (PostgreSQL in Docker, port 5433).
 
 ```bash
 npm run db
-npm run seed
 ```
 
-(The server does this by itself when it starts with an empty database.)
-
-**3. Run it**
-
-While developing, with automatic reload:
+**Step 5. Start the server and the client.** The server fills an empty database with the demo data.
 
 ```bash
 npm run dev
 ```
 
-Open <http://localhost:5173>.
+**Step 6. Open the app** at <http://localhost:5173> and log in with a [demo account](#demo-accounts).
 
-For a demo, as one server without file watching:
-
-```bash
-npm run build
-npm start
-```
-
-Open <http://localhost:3001>, or `http://<IP address of this computer>:3001` on a phone in the same Wi-Fi.
-
-Register and join with the code `SAKURA-2611` (Sakura Heights) or `HAMA-3CHOME` (Hamaguchi-machi 3-chome), or log in with a demo account (see below). To show two neighbors on one computer, open the second one in a private window. The 5-step demo script is in [CLAUDE.md](CLAUDE.md), section 10.
-
-To install the app, choose "Install app" in the browser's menu ("Add to Home Screen" on an iPhone). Browsers allow this only over HTTPS and on `localhost`: at `http://<IP address of this computer>:3001` the app works, but can't be installed. On an iPhone, install it first and join inside the installed app, because it doesn't share the login with the browser.
+**Step 7. Stop it** with `Ctrl+C`. Next time, only steps 4 and 5 are needed.
 
 | Command | What it does |
 |---|---|
-| `npm run seed` | Resets the database, deletes all photos, and adds the demo neighbors with their items. |
-| `npm run seed:empty` | The same reset, but with only the two groups and nobody in them: for a demo with real people. |
-| `npm run db` | Starts only the database, in Docker. |
+| `npm run db` | Starts only the database, in Docker. Ways A and B share this database. |
 | `npm run dev` | Server (port 3001) and client (port 5173) with automatic reload. |
-| `npm run build` | Builds the client. Run it again after every change. |
+| `npm run seed` | Resets the demo data. **Deletes all accounts, items, loans and the photos in `server/uploads/`.** |
+| `npm run seed:empty` | The same reset, but with only the two groups and nobody in them: for a demo with real people. |
 | `npm run typecheck` | Checks the types of client and server. |
+| `npm run build` | Builds the client. Run it again after every change. |
 | `npm start` | Runs the server with the built client on port 3001. |
 
-Settings in `server/.env`: `PORT`, `DATABASE_URL`, and `DEMO_MODE`. With `DEMO_MODE=true`, an active loan has fast-forward buttons for the reminders, and the demo accounts can log in. All settings are in `server/.env.example`.
+**For a demo**, use `npm run build` and then `npm start` instead of `npm run dev`. Open <http://localhost:3001>, or `http://<IP address of this computer>:3001` on a phone in the same Wi-Fi.
+
+### Demo accounts
+
+| Role | Email | Password |
+|---|---|---|
+| User | `tanaka@otonari.example`, `yamamoto@...`, `maria@...`, `ayesha@...` (Sakura Heights), `kobayashi@...` (Hamaguchi-machi) | `otonari2611` |
+| Group admin | `sato@otonari.example` (Sakura Heights), `inoue@otonari.example` (Hamaguchi-machi) | `otonari2611` |
+| Super admin | `admin@otonari.example` (only Way A; in Way B, set `SUPER_ADMIN_...`) | `otonari2611` |
+
+- **Registering a new account:** in Way A, the 6-digit code is in the test mailbox at <http://localhost:8089> (unless `server/.env` has a real mail server). In Way B, set `SMTP_...` first.
+- **Join codes:** `SAKURA-2611` (Sakura Heights) and `HAMA-3CHOME` (Hamaguchi-machi 3-chome).
+- **Two neighbors on one computer:** open the second one in a private window. The 5-step demo script is in [CLAUDE.md](CLAUDE.md), section 10.
+- **These passwords are public.** Before others can reach the server, set `DEMO_MODE=false` (in Way A, in `docker-compose.yml`) and your own `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`.
+
+### Settings (optional)
+
+All settings are explained in [server/.env.example](server/.env.example). To use one, remove the `# ` in front of it in `server/.env`, enter your value, and start the app again. In Way A, create this file as in Way B, step 3. Never commit `server/.env`: it holds secrets.
+
+| Setting | What it is for | Without it |
+|---|---|---|
+| `SMTP_...` | Sends the 6-digit codes as real emails | Way A: test mailbox. Way B: no registering by email |
+| `GOOGLE_CLIENT_ID` | "Continue with Google" | No Google button |
+| `S3_BUCKET`, `AWS_...` | Photos in a private AWS S3 bucket | Photos are stored on this computer |
+| `SUPER_ADMIN_...` | The first super admin | Way A: the demo super admin. Way B: none |
+| `DEMO_MODE` | `true`: the demo accounts can log in, and an active loan has fast-forward buttons for the reminders | Demo accounts can't log in |
+
+### Install it like an app
+
+Choose "Install app" in the browser's menu ("Add to Home Screen" on an iPhone). Browsers allow this only over HTTPS and on `localhost`, and it doesn't work with `npm run dev`. On an iPhone, install it first and log in inside the installed app, because it doesn't share the login with the browser.
+
+### If something goes wrong
+
+| Problem | What to do |
+|---|---|
+| `Cannot connect to the Docker daemon`, or an error about `docker_engine` | Start Docker Desktop and wait until it is running. |
+| Port 8088 or 8089 is already in use | Create a file named `.env` in the project folder (next to `docker-compose.yml`) with `OTONARI_PORT=9000` or `MAILBOX_PORT=9001`. |
+| Port 3001 or 5173 is already in use | Close the other server, for example an older `npm run dev`. |
+| The server says "Waiting for the database" | Run `npm run db` again, also after `docker compose up`: only `npm run db` opens port 5433. |
+| A change is not visible | Way A: `docker compose up --build`. With `npm start`: `npm run build`, then `npm start` again. |
+| Demo accounts can't log in | Check that `DEMO_MODE=true` in `server/.env`. |
 
 ## Deploy on Render
 
