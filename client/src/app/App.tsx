@@ -27,7 +27,7 @@ export default function App() {
   useEffect(() => {
     if (!getToken()) return;
     api
-      .get<Me>('/api/me')
+      .get<Me>('/me')
       .then(setMe)
       .catch((error) => {
         // 401 = the server doesn't know this token. api.ts already forgot it → join screen.
@@ -51,7 +51,7 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [pathname]);
 
-  // After /api/join or the demo login: remember the token and who we are.
+  // After /api/v1/join or the demo login: remember the token and who we are.
   function login({ token, user, group }: Login) {
     saveToken(token);
     clearInbox();

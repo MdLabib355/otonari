@@ -1,7 +1,7 @@
-//   POST  /api/join    anyone   { code, nickname, lang } → { token, user, group }
-//   GET   /api/me      user     → { user, group }
-//   PATCH /api/me      user     { lang?, elder_mode? } → { user, group }
-//   POST  /api/leave   user     leave the group (not while a loan is accepted or active)
+//   POST  /api/v1/join    anyone   { code, nickname, lang } → { token, user, group }
+//   GET   /api/v1/me      user     → { user, group }
+//   PATCH /api/v1/me      user     { lang?, elder_mode? } → { user, group }
+//   POST  /api/v1/leave   user     leave the group (not while a loan is accepted or active)
 
 import express from 'express';
 import { join, leave, showMe, updateMe } from './userController.ts';

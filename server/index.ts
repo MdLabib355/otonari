@@ -9,14 +9,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
+import { createV1 } from './api/v1.ts';
 import { startReminders } from './modules/loan/reminders.ts';
 import { countGroups } from './modules/group/groupModel.ts';
-import demoRoutes from './modules/demo/demoRoutes.ts';
-import groupRoutes from './modules/group/groupRoutes.ts';
-import inboxRoutes from './modules/message/messageRoutes.ts';
-import itemRoutes from './modules/item/itemRoutes.ts';
-import loanRoutes from './modules/loan/loanRoutes.ts';
-import userRoutes from './modules/user/userRoutes.ts';
 
 // Load server/.env by its full path, because `npm start` runs from the project root
 // while `npm run dev` runs from the server folder.
@@ -36,22 +31,13 @@ app.use(express.json());
 // Handover and return photos, e.g. /uploads/3f9c1a.jpg
 app.use('/uploads', express.static(uploadsDir));
 
+// Not versioned: it only says that the server is running.
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });
 });
 
-// API routes. Each module's routes file uses full paths (e.g. '/join'), so all are mounted at /api.
-// Login is checked per route with requireUser (see core/auth.ts).
-app.use('/api', groupRoutes);
-app.use('/api', userRoutes);
-app.use('/api', itemRoutes);
-app.use('/api', loanRoutes);
-app.use('/api', inboxRoutes);
-
-// Demo-only routes ("continue as a neighbor"): only when DEMO_MODE=true in server/.env.
-if (process.env.DEMO_MODE === 'true') {
-  app.use('/api', demoRoutes);
-}
+// The API, one line per version. Older versions stay here for as long as clients use them.
+app.use('/api/v1', createV1());
 
 // API routes are mounted above this line.
 // Unknown API URLs get a JSON 404, never the React page (that would confuse fetch()).

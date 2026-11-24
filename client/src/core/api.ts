@@ -1,20 +1,23 @@
-// Small fetch wrapper for our own API (/api/...).
-//  - adds "Authorization: Bearer <token>" when we have one. The token comes from /api/join and is
+// Small fetch wrapper for our own API (/api/v1/...).
+//  - adds "Authorization: Bearer <token>" when we have one. The token comes from /api/v1/join and is
 //    kept in localStorage: it is the user's whole identity (no accounts, no passwords).
 //  - sends JSON (or FormData, for photos) and returns the JSON answer.
 //  - throws an ApiError with .status (e.g. 400, 403, 404) and .data (the JSON answer) when the server says no.
 //
 // The type of the answer (see shared/types.ts) goes in the angle brackets:
 //
-//    const me = await api.get<Me>('/api/me');
-//    const result = await api.post<Login>('/api/join', { code, nickname, lang });
+//    const me = await api.get<Me>('/me');
+//    const result = await api.post<Login>('/join', { code, nickname, lang });
+
+// The version of the API that this app uses. Paths are written without it: api.get('/me').
+const API_BASE = '/api/v1';
 
 const TOKEN_KEY = 'otonari-token';
 
 // The JSON answer when the server says no.
 interface ErrorData {
   error?: string;
-  existing_name?: string; // only POST /api/groups
+  existing_name?: string; // only POST /api/v1/groups
 }
 
 export class ApiError extends Error {
@@ -61,7 +64,7 @@ async function request<T>(method: string, path: string, body?: object): Promise<
     payload = JSON.stringify(body);
   }
 
-  const response = await fetch(path, { method, headers, body: payload });
+  const response = await fetch(API_BASE + path, { method, headers, body: payload });
 
   if (response.status === 401) {
     // The server doesn't know our token (e.g. after `npm run seed`): forget it and join again.

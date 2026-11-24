@@ -34,7 +34,7 @@ function Loan({ loanId }: { loanId: number }) {
 
   function loadLoan() {
     api
-      .get<LoanDetails>(`/api/loans/${loanId}`)
+      .get<LoanDetails>(`/loans/${loanId}`)
       .then((result) => {
         setDetails(result);
         setFailed(false);
@@ -66,7 +66,7 @@ function Loan({ loanId }: { loanId: number }) {
     setBusy(true);
     setFailed(false);
     try {
-      setDetails(await api.post<LoanDetails>(`/api/loans/${loanId}/${action}`, body));
+      setDetails(await api.post<LoanDetails>(`/loans/${loanId}/${action}`, body));
     } catch (error) {
       // 409: the other person was faster (e.g. cancelled). Reloading shows what happened.
       if (errorStatus(error) === 409) loadLoan();

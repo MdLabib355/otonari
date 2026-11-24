@@ -16,7 +16,7 @@ export default function Loans() {
   const unreadIds = inbox.map((message) => message.id).join(',');
   useEffect(() => {
     api
-      .get<MyLoans>('/api/loans')
+      .get<MyLoans>('/loans')
       .then((result) => {
         setLoans(result);
         setFailed(false);

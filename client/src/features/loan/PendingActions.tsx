@@ -56,7 +56,7 @@ function FirstRequestTip({ loanId, lang }: { loanId: number; lang: Lang }) {
 
   useEffect(() => {
     api
-      .get<MyLoans>('/api/loans')
+      .get<MyLoans>('/loans')
       .then(({ lending }) => {
         const otherLanguage = lending.filter((loan) => loan.other_lang !== lang);
         setIsFirst(otherLanguage.at(-1)?.id === loanId); // newest first, so the last one is the first

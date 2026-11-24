@@ -16,7 +16,7 @@ export default function Shelf() {
 
   useEffect(() => {
     api
-      .get<ShelfItem[]>('/api/shelf')
+      .get<ShelfItem[]>('/shelf')
       .then(setItems)
       .catch(() => setFailed(true));
   }, []);

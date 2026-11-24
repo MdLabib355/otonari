@@ -133,6 +133,7 @@ otonari/
 │       └── styles/           plain CSS, one file per part of the app
 ├── server/                   the Express API (modular MVC)
 │   ├── index.ts              starts the server (and serves the built client)
+│   ├── api/v1.ts             version 1 of the API (/api/v1): which routes belong to it
 │   ├── core/                 used by all modules: database tables, login check, the only keys the server accepts
 │   ├── modules/              one folder per feature, each with its routes, controller, model and view:
 │   │   ├── group/  user/  item/  message/  demo/

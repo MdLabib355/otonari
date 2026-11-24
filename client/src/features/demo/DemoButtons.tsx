@@ -10,14 +10,14 @@ export default function DemoButtons({ loanId, lang, onDone }: { loanId: number; 
   // The demo routes only exist in demo mode, so an answer means it is on (like on the join page).
   useEffect(() => {
     api
-      .get('/api/demo/users')
+      .get('/demo/users')
       .then(() => setDemoMode(true))
       .catch(() => setDemoMode(false));
   }, []);
 
   async function fastForward(to: 'dueSoon' | 'overdue') {
     try {
-      await api.post(`/api/demo/fast-forward/${loanId}`, { to });
+      await api.post(`/demo/fast-forward/${loanId}`, { to });
     } catch {
       // E.g. the item was returned in the meantime: reloading the loan shows what happened.
     }

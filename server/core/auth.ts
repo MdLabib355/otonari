@@ -1,8 +1,8 @@
 // Login check: "Authorization: Bearer <token>" → req.user (the full row from the users table).
-// There are no passwords: the random token from /api/join IS the identity.
+// There are no passwords: the random token from /api/v1/join IS the identity.
 //
 // Add it to each route that needs a user:  router.get('/me', requireUser, showMe)
-// (Not with router.use(requireUser): all routers are mounted at /api, so that would also
+// (Not with router.use(requireUser): all routers are mounted at the same address, so that would also
 // block the public routes in the routers mounted after it.)
 
 import type { NextFunction, Request, Response } from 'express';

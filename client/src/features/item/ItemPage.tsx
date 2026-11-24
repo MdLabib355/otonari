@@ -16,7 +16,7 @@ export default function ItemPage() {
 
   function loadItem() {
     api
-      .get<ItemDetails>(`/api/items/${id}`)
+      .get<ItemDetails>(`/items/${id}`)
       .then(setItem)
       .catch((error) => setProblem([403, 404].includes(errorStatus(error) ?? 0) ? 'missing' : 'failed'));
   }

@@ -22,7 +22,7 @@ export default function Settings() {
   async function save(change: { lang?: Lang; elder_mode?: boolean }) {
     setFailed(false);
     try {
-      setMe(await api.patch<Me>('/api/me', change));
+      setMe(await api.patch<Me>('/me', change));
     } catch {
       setFailed(true);
     }
@@ -42,7 +42,7 @@ export default function Settings() {
   async function leave() {
     setLeaving(true);
     try {
-      await api.post('/api/leave');
+      await api.post('/leave');
       logout();
     } catch (error) {
       // 409: there is still an accepted or active loan. 403: demo neighbors can't leave.

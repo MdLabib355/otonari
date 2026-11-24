@@ -19,7 +19,7 @@ export function useInbox() {
     version.current += 1;
     const myVersion = version.current;
     try {
-      const messages = await api.get<InboxMessage[]>('/api/inbox');
+      const messages = await api.get<InboxMessage[]>('/inbox');
       if (myVersion === version.current) setInbox(messages);
     } catch {
       // Server or Wi-Fi briefly away: the next poll tries again.
@@ -30,7 +30,7 @@ export function useInbox() {
     version.current += 1;
     setInbox((messages) => messages.filter((message) => !ids.includes(message.id)));
     try {
-      await api.post('/api/inbox/read', { ids });
+      await api.post('/inbox/read', { ids });
     } catch {
       // Still unread on the server, so the next poll brings them back.
     }

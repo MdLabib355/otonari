@@ -29,7 +29,7 @@ export default function NewGroup({ lang }: { lang: Lang }) {
     setBusy(true);
     setFailed(false);
     try {
-      setCreated(await api.post<NewGroupAnswer>('/api/groups', { ...form, create_anyway: createAnyway }));
+      setCreated(await api.post<NewGroupAnswer>('/groups', { ...form, create_anyway: createAnyway }));
     } catch (error) {
       // 409: a similar group exists. The server tells us its name (and never its code).
       if (error instanceof ApiError && error.status === 409) setExistingName(error.data?.existing_name ?? form.name);

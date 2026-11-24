@@ -51,7 +51,7 @@ export default function Poster() {
     setProblem(null);
     const joinUrl = `${JOIN_PAGE}?code=${encodeURIComponent(code)}`;
     api
-      .get<GroupPreview>(`/api/groups/by-code/${encodeURIComponent(code)}`)
+      .get<GroupPreview>(`/groups/by-code/${encodeURIComponent(code)}`)
       .then(async (group) => setPoster({ code, joinUrl, qrCode: await qrPicture(joinUrl), ...group }))
       .catch((error) => setProblem(errorStatus(error) === 404 ? 'join.groupNotFound' : 'common.error'));
   }, [code]);

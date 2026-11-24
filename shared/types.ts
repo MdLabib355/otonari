@@ -39,18 +39,18 @@ export interface Group {
   city: string;
 }
 
-// GET /api/me
+// GET /api/v1/me
 export interface Me {
   user: User;
   group: Group;
 }
 
-// POST /api/join and POST /api/demo/login
+// POST /api/v1/join and POST /api/v1/demo/login
 export interface Login extends Me {
   token: string;
 }
 
-// GET /api/groups/by-code/:code
+// GET /api/v1/groups/by-code/:code
 export interface GroupPreview {
   name: string;
   type: GroupType;
@@ -58,16 +58,16 @@ export interface GroupPreview {
   memberCount: number;
 }
 
-// POST /api/groups
+// POST /api/v1/groups
 export type NewGroupAnswer = Omit<Group, 'id'>;
 
-// GET /api/demo/users
+// GET /api/v1/demo/users
 export interface DemoUser extends User {
   group_name: string;
   group_code: string;
 }
 
-// GET /api/my-items
+// GET /api/v1/my-items
 export interface MyItem {
   id: number;
   item_key: string;
@@ -77,13 +77,13 @@ export interface MyItem {
   status: ItemStatus;
 }
 
-// GET /api/shelf
+// GET /api/v1/shelf
 export interface ShelfItem extends MyItem {
   owner_id: number;
   owner_nickname: string;
 }
 
-// GET /api/items/:id
+// GET /api/v1/items/:id
 export interface ItemDetails extends ShelfItem {
   group_id: number;
   owner_lang: Lang;
@@ -120,7 +120,7 @@ export interface LoanSummary {
   unread: number;
 }
 
-// GET /api/loans
+// GET /api/v1/loans
 export interface MyLoans {
   borrowing: LoanSummary[];
   lending: LoanSummary[];
@@ -140,7 +140,7 @@ export interface Message {
   from_lang: Lang | null; // null for system reminders
 }
 
-// GET /api/loans/:id, and the answer to every action on a loan
+// GET /api/v1/loans/:id, and the answer to every action on a loan
 export interface LoanDetails {
   loan: Loan;
   item: LoanItem;
@@ -150,7 +150,7 @@ export interface LoanDetails {
   messages: Message[];
 }
 
-// GET /api/inbox
+// GET /api/v1/inbox
 export interface InboxMessage {
   id: number;
   loan_id: number;

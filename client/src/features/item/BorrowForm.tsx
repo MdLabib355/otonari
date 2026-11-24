@@ -58,7 +58,7 @@ export default function BorrowForm({ item, onRefused }: Props) {
     setBusy(true);
     setFailed(false);
     try {
-      const result = await api.post<LoanDetails>('/api/loans', { item_id: item.id, start_at: startAt, end_at: endAt });
+      const result = await api.post<LoanDetails>('/loans', { item_id: item.id, start_at: startAt, end_at: endAt });
       navigate(`/loan/${result.loan.id}`, { state: { sentTo: item.owner_nickname } });
     } catch (error) {
       setBusy(false);

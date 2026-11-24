@@ -1,5 +1,5 @@
-//   GET  /api/groups/by-code/:code   anyone   group preview for the join screen and the poster
-//   POST /api/groups                 anyone   { name, type, city, create_anyway? } → the new group with
+//   GET  /api/v1/groups/by-code/:code   anyone   group preview for the join screen and the poster
+//   POST /api/v1/groups                 anyone   { name, type, city, create_anyway? } → the new group with
 //                                             its join code (the creator does NOT become a member)
 
 import express from 'express';

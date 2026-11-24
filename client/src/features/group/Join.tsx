@@ -37,7 +37,7 @@ export default function Join() {
     let cancelled = false; // ignore answers for a code that has changed since
     const timer = setTimeout(() => {
       api
-        .get<GroupPreview>(`/api/groups/by-code/${encodeURIComponent(cleanCode)}`)
+        .get<GroupPreview>(`/groups/by-code/${encodeURIComponent(cleanCode)}`)
         .then((group) => {
           if (!cancelled) setPreview(group);
         })
@@ -56,7 +56,7 @@ export default function Join() {
   // The server only answers this when DEMO_MODE=true; otherwise it's a 404 and no demo buttons show.
   useEffect(() => {
     api
-      .get<DemoUser[]>('/api/demo/users')
+      .get<DemoUser[]>('/demo/users')
       .then(setDemoUsers)
       .catch(() => setDemoUsers([]));
   }, []);
@@ -66,7 +66,7 @@ export default function Join() {
     setBusy(true);
     setFailed(false);
     try {
-      const result = await api.post<Login>('/api/join', { code: cleanCode, nickname: nickname.trim(), lang });
+      const result = await api.post<Login>('/join', { code: cleanCode, nickname: nickname.trim(), lang });
       login(result);
       navigate('/', { replace: true });
     } catch {
@@ -78,7 +78,7 @@ export default function Join() {
   async function continueAs(userId: number) {
     setFailed(false);
     try {
-      const result = await api.post<Login>('/api/demo/login', { user_id: userId });
+      const result = await api.post<Login>('/demo/login', { user_id: userId });
       login(result);
       navigate('/', { replace: true });
     } catch {

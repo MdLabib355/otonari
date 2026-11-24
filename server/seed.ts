@@ -197,7 +197,7 @@ const seed = db.transaction(() => {
 seed();
 deletePhotos(); // they belonged to the old loans
 
-// Short summary (the user ids are handy for POST /api/demo/login).
+// Short summary (the user ids are handy for POST /api/v1/demo/login).
 console.log(EMPTY ? 'Seeded two empty groups:' : 'Seeded the Nagasaki demo data:');
 for (const group of listGroups()) {
   const members = db

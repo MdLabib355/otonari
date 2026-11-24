@@ -28,7 +28,7 @@ export default function MyItems() {
 
   function loadItems() {
     api
-      .get<MyItem[]>('/api/my-items')
+      .get<MyItem[]>('/my-items')
       .then(setItems)
       .catch(() => setFailed(true));
   }
@@ -41,7 +41,7 @@ export default function MyItems() {
     setBusy(true);
     setFailed(false);
     try {
-      await api.post('/api/items', { item_key: itemKey, max_days: maxDays, spot, trusted_only: trustedOnly });
+      await api.post('/items', { item_key: itemKey, max_days: maxDays, spot, trusted_only: trustedOnly });
       setItemKey(null);
       setTrustedOnly(false); // off by default, for every new item
       loadItems();
@@ -56,7 +56,7 @@ export default function MyItems() {
   async function removeItem(id: number) {
     setFailed(false);
     try {
-      await api.delete(`/api/items/${id}`);
+      await api.delete(`/items/${id}`);
     } catch (error) {
       // 409: it was reserved or lent in the meantime; reloading shows that.
       if (errorStatus(error) !== 409) setFailed(true);
@@ -67,7 +67,7 @@ export default function MyItems() {
   async function changeTrustedOnly(id: number, value: boolean) {
     setFailed(false);
     try {
-      await api.patch(`/api/items/${id}`, { trusted_only: value });
+      await api.patch(`/items/${id}`, { trusted_only: value });
     } catch {
       setFailed(true);
     }
