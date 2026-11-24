@@ -259,7 +259,7 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
                     </label>
                     <select
                       id="sa-cg-type"
-                      className="sa-select"
+                      className="select-input"
                       value={newType}
                       onChange={(e) => setNewType(e.target.value as GroupType)}
                     >
@@ -327,7 +327,7 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
                   </label>
                   <select
                     id="sa-rescue-member"
-                    className="sa-select"
+                    className="select-input"
                     value={rescueUserId}
                     onChange={(e) => setRescueUserId(Number(e.target.value))}
                   >
@@ -344,7 +344,7 @@ export default function GroupsDirectory({ groups, onRefresh, onNotify }: GroupsD
                   </label>
                   <select
                     id="sa-rescue-reason"
-                    className="sa-select"
+                    className="select-input"
                     value={rescueReason}
                     onChange={(e) => setRescueReason(e.target.value)}
                   >

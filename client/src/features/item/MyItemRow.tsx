@@ -1,6 +1,6 @@
 import type { Lang, MyItem } from '../../../../shared/types.ts';
 import ItemVisual from '../../components/ItemVisual.tsx';
-import { itemName, spotName, t } from '../../i18n/index.ts';
+import { itemDisplayTitle, spotName, t } from '../../i18n/index.ts';
 import TrustedSwitch from './TrustedSwitch.tsx';
 
 // One of my items. It can't be removed while it is reserved or lent.
@@ -18,12 +18,15 @@ export default function MyItemRow({ item, lang, onEdit, onRemove, onTrustedOnly 
 
   return (
     <li className="my-item">
-      <ItemVisual itemKey={item.item_key} photo={item.photo} alt="" />
+      <ItemVisual itemKey={item.item_key} categoryKey={item.category_key} photo={item.photo} alt="" />
       <div className="my-item-text">
-        <strong>{itemName(lang, item.item_key)}</strong>
+        <strong>{itemDisplayTitle(lang, item.item_key, item.custom_title)}</strong>
         <span className="muted">
           {days} · {t(lang, 'item.spot', { spot: spotName(lang, item.spot) })}
         </span>
+        {item.approval_status === 'pending' && (
+          <span className="badge badge-approval">{t(lang, 'itemRequest.pending')}</span>
+        )}
         {!canRemove && <span className="hint">{t(lang, 'myItems.cantRemove')}</span>}
       </div>
       <button type="button" className="button-secondary" onClick={() => onEdit(item)}>

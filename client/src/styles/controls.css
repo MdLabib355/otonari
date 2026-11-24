@@ -120,3 +120,14 @@ input {
   background: var(--accent);
   color: #fff;
 }
+
+.select-input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}

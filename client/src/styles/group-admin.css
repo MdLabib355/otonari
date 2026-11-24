@@ -474,3 +474,9 @@ body.elder .ga-avatar {
 body.elder .ga-badge {
   white-space: normal;
 }
+
+.ga-identity-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

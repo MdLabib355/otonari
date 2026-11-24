@@ -456,17 +456,6 @@
   box-shadow: var(--shadow-md);
 }
 
-.sa-select {
-  width: 100%;
-  min-height: 42px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-}
-
 .sa-form-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

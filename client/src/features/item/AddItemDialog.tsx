@@ -4,7 +4,7 @@ import ItemVisual from '../../components/ItemVisual.tsx';
 import Modal from '../../components/Modal.tsx';
 import PhotoField, { appendPhoto, type PhotoChange } from '../../components/PhotoField.tsx';
 import { api } from '../../core/api.ts';
-import { itemName, t } from '../../i18n/index.ts';
+import { itemDisplayTitle, t } from '../../i18n/index.ts';
 import LendingFields, { NEW_LENDING, appendLending, type Lending } from './LendingFields.tsx';
 
 interface Props {
@@ -45,8 +45,8 @@ export default function AddItemDialog({ lang, itemKey, item, onSaved, onClose }:
 
   return (
     <Modal
-      title={itemName(lang, itemKey)}
-      icon={<ItemVisual itemKey={itemKey} alt="" size="sm" />}
+      title={itemDisplayTitle(lang, itemKey, item?.custom_title)}
+      icon={<ItemVisual itemKey={itemKey} categoryKey={item?.category_key} alt="" size="sm" />}
       onClose={onClose}
     >
       <div className="modal-body">

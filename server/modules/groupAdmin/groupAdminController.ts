@@ -326,6 +326,7 @@ export async function moderateItem(req: Request) {
   const item = await findGroupItem(req.groupId, toId(req.params.itemId));
   if (!item) return refuse(404, 'Item not found');
 
+  if (item.approval_status !== 'approved') return refuse(409, 'Approve or reject the item first');
   if (hidden === true && item.status !== 'available') {
     return refuse(409, 'Cannot hide an item while it is reserved or lent');
   }
@@ -341,7 +342,7 @@ export async function moderateItem(req: Request) {
       action: 'item.trusted_only_changed',
       targetType: 'item',
       targetId: item.id,
-      detail: `Set "${item.item_key}" Trusted-Only to ${trusted_only ? 'ON' : 'OFF'}.`,
+      detail: `Set "${item.custom_title ?? item.item_key}" Trusted-Only to ${trusted_only ? 'ON' : 'OFF'}.`,
       ipAddress: req.ip ?? null,
     });
   }
@@ -358,7 +359,7 @@ export async function moderateItem(req: Request) {
       action: hidden ? 'item.hidden' : 'item.restored',
       targetType: 'item',
       targetId: item.id,
-      detail: `${hidden ? 'Hidden' : 'Restored'} shelf item "${item.item_key}".`,
+      detail: `${hidden ? 'Hidden' : 'Restored'} shelf item "${item.custom_title ?? item.item_key}".`,
       ipAddress: req.ip ?? null,
     });
   }

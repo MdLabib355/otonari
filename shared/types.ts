@@ -6,6 +6,8 @@ export type Role = 'super_admin' | 'group_admin' | 'user';
 export type GroupRole = 'user' | 'group_admin';
 export type GroupType = 'building' | 'block';
 export type ItemStatus = 'available' | 'reserved' | 'lent';
+// Only custom items (item_key 'custom') wait for a group admin.
+export type ApprovalStatus = 'approved' | 'pending' | 'rejected';
 export type LoanStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'active' | 'returned';
 
 export type MemberStatus = 'pending' | 'active' | 'borrow_muted' | 'suspended';
@@ -17,7 +19,8 @@ export type DisputeStatus = 'open' | 'resolved';
 
 // Golden rule: keys and raw values only, never translated text.
 export interface PhraseParams {
-  item?: string; // key from the catalog
+  item?: string; // key from the catalog, or 'custom'
+  item_label?: string; // the title a group admin has approved, if the item has one; shown as it is, like a name
   spot?: string; // key from SPOTS
   start?: string; // ISO 8601
   end?: string; // ISO 8601
@@ -132,6 +135,9 @@ export interface MyItem {
   trusted_only: boolean;
   status: ItemStatus;
   photo: string | null; // URL of the owner's photo of it
+  custom_title: string | null; // instead of the name in the catalog
+  category_key: string | null; // instead of the category in the catalog
+  approval_status: ApprovalStatus;
 }
 
 // GET /api/v1/items
@@ -171,6 +177,8 @@ export interface LoanSummary {
   start_at: string;
   end_at: string;
   item_key: string;
+  custom_title: string | null;
+  category_key: string | null;
   item_photo: string | null;
   spot: string;
   other_nickname: string;
@@ -185,7 +193,7 @@ export interface MyLoans {
 }
 
 export type Person = Pick<User, 'id' | 'nickname' | 'lang'> & { avatar?: string | null };
-export type LoanItem = Pick<MyItem, 'id' | 'item_key' | 'max_days' | 'spot' | 'status' | 'photo'>;
+export type LoanItem = Pick<MyItem, 'id' | 'item_key' | 'max_days' | 'spot' | 'status' | 'photo' | 'custom_title' | 'category_key'>;
 
 export interface Message {
   id: number;
@@ -219,6 +227,7 @@ export interface InboxMessage {
   from_nickname: string | null; // null for system reminders
   from_lang: Lang | null;
   item_key: string;
+  category_key: string | null;
   borrower_trust: Trust | null; // only with a request
 }
 
@@ -235,6 +244,7 @@ export interface GroupAnnouncement {
 export interface GroupAdminDashboard {
   group: Group;
   pending_count: number;
+  pending_item_count: number;
   active_member_count: number;
   overdue_loan_count: number;
   flagged_loan_count: number;
@@ -281,6 +291,8 @@ export interface GroupAdminLoan {
   id: number;
   item_id: number;
   item_key: string;
+  custom_title: string | null;
+  category_key: string | null;
   item_photo: string | null;
   spot: string;
   status: LoanStatus;
@@ -338,6 +350,14 @@ export interface CatalogCategoryRecord {
   label_ja_easy: string;
   label_bn: string;
   updated_at: string;
+}
+
+// GET /api/v1/super-admin/custom-items
+export interface SuperAdminCustomItemSummary {
+  id: number;
+  custom_title: string;
+  category_key: string | null;
+  group_name: string;
 }
 
 export interface ReminderHealth {
@@ -398,6 +418,8 @@ export interface DisputeSummary {
   group_name: string;
   loan_id: number;
   item_key: string;
+  custom_title: string | null;
+  category_key: string | null;
   spot: string;
   borrower_nickname: string;
   borrower_lang: Lang;
@@ -431,6 +453,8 @@ export interface BreakGlassEvidence {
   dispute_id: number;
   loan_id: number;
   item_key: string;
+  custom_title: string | null;
+  category_key: string | null;
   handover_photo: string | null;
   return_photo: string | null;
   loan_status: LoanStatus;

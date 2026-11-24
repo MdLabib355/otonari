@@ -68,7 +68,7 @@ function BannerMessage({ message, lang }: { message: InboxMessage; lang: Lang })
 
   return (
     <div className="banner">
-      <ItemVisual itemKey={message.item_key} alt="" size="sm" />
+      <ItemVisual itemKey={message.item_key} categoryKey={message.category_key} alt="" size="sm" />
       <div className="banner-text">
         <strong className="inline-icon-text">
           {isReminder && <BellIcon className="icon-sm" />}

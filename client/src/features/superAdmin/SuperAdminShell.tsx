@@ -6,6 +6,7 @@ import type {
   CatalogCategoryRecord,
   CatalogItemRecord,
   DisputeSummary,
+  SuperAdminCustomItemSummary,
   SuperAdminGroupSummary,
   SuperAdminOverview,
   User,
@@ -42,6 +43,7 @@ export default function SuperAdminShell({
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [catalog, setCatalog] = useState<CatalogItemRecord[]>([]);
   const [categories, setCategories] = useState<CatalogCategoryRecord[]>([]);
+  const [customItems, setCustomItems] = useState<SuperAdminCustomItemSummary[]>([]);
   const [disputes, setDisputes] = useState<DisputeSummary[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,12 +57,13 @@ export default function SuperAdminShell({
   }, []);
 
   const refreshAll = useCallback(async () => {
-    const [ov, grp, acc, cat, cats, disp, logs] = await Promise.all([
+    const [ov, grp, acc, cat, cats, custom, disp, logs] = await Promise.all([
       api.get<SuperAdminOverview>('/super-admin/overview'),
       api.get<SuperAdminGroupSummary[]>('/super-admin/groups'),
       api.get<AdminUser[]>('/admin/users'),
       api.get<CatalogItemRecord[]>('/super-admin/catalog'),
       api.get<CatalogCategoryRecord[]>('/super-admin/categories'),
+      api.get<SuperAdminCustomItemSummary[]>('/super-admin/custom-items'),
       api.get<DisputeSummary[]>('/super-admin/disputes'),
       api.get<AuditLogEntry[]>('/super-admin/audit-logs'),
     ]);
@@ -69,6 +72,7 @@ export default function SuperAdminShell({
     setUsers(acc);
     setCatalog(cat);
     setCategories(cats);
+    setCustomItems(custom);
     setDisputes(disp);
     setAuditLogs(logs);
     syncDynamicCatalog(cat.filter((c) => c.is_active));
@@ -241,6 +245,7 @@ export default function SuperAdminShell({
                 <CatalogPhraseStudio
                   catalog={catalog}
                   categories={categories}
+                  customItems={customItems}
                   onRefresh={refreshAll}
                   onNotify={notify}
                 />

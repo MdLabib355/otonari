@@ -56,7 +56,9 @@ export default function GroupAdminPage({ onAlertCountChange }: { onAlertCountCha
     setItems(itemRows);
     setLoans(loanRows);
     setActivityLog(logs);
-    onAlertCountChange?.(dash.pending_count + dash.overdue_loan_count + dash.flagged_loan_count);
+    onAlertCountChange?.(
+      dash.pending_count + dash.pending_item_count + dash.overdue_loan_count + dash.flagged_loan_count
+    );
   }, [isAdmin, onAlertCountChange]);
 
   useEffect(() => {
@@ -77,6 +79,7 @@ export default function GroupAdminPage({ onAlertCountChange }: { onAlertCountCha
 
   const currentGroup = dashboard?.group ?? group;
   const pendingCount = dashboard?.pending_count ?? 0;
+  const pendingItems = dashboard?.pending_item_count ?? 0;
   const attentionLoans = (dashboard?.overdue_loan_count ?? 0) + (dashboard?.flagged_loan_count ?? 0);
 
   return (
@@ -109,6 +112,7 @@ export default function GroupAdminPage({ onAlertCountChange }: { onAlertCountCha
         >
           <ShelfIcon className="icon-sm" />
           <span>{t(lang, 'groupAdmin.tabShelf')}</span>
+          {pendingItems > 0 && <span className="ga-count">{pendingItems}</span>}
         </button>
 
         <button

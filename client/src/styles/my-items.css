@@ -81,3 +81,27 @@
   border-color: var(--accent);
   background: var(--bg);
 }
+
+.request-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--radius);
+}
+
+.request-item .hint {
+  flex: 1 1 200px;
+  margin: 0;
+}
+
+.badge-approval {
+  align-self: flex-start;
+  margin-top: 4px;
+  background: var(--warn-soft);
+  color: var(--warn);
+}

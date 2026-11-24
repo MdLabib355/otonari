@@ -14,6 +14,7 @@ export function dashboardView(
   group: Group,
   stats: {
     pending_count: number;
+    pending_item_count: number;
     active_member_count: number;
     overdue_loan_count: number;
     flagged_loan_count: number;

@@ -55,6 +55,11 @@ export function itemName(lang: Lang, itemKey: string): string {
   return dynamicItemLabel(lang, itemKey) ?? lookup(lang, 'items', itemKey);
 }
 
+// What an item is called: the title of a custom item is shown as it is, in every language.
+export function itemDisplayTitle(lang: Lang, itemKey: string, customTitle: string | null | undefined): string {
+  return customTitle || itemName(lang, itemKey);
+}
+
 export function spotName(lang: Lang, spotKey: string): string {
   return lookup(lang, 'spots', spotKey);
 }
@@ -86,7 +91,7 @@ export function displayName(lang: Lang, nickname: string): string {
 }
 
 // Render one stored message in the viewer's language.
-// params may contain: item (key), spot (key), start/end (ISO), name (nickname), n (number)
+// params may contain: item (key), item_label (title of a custom item), spot (key), start/end (ISO), name (nickname), n (number)
 export function renderPhrase(lang: Lang, phraseKey: string, params: PhraseParams = {}): string {
   const values: Record<string, string | number> = {};
   let item = params.item ? itemName(lang, params.item) : undefined;
@@ -95,6 +100,7 @@ export function renderPhrase(lang: Lang, phraseKey: string, params: PhraseParams
   if (lang === 'en' && item && !item.startsWith('Bluetooth')) {
     item = item.charAt(0).toLowerCase() + item.slice(1);
   }
+  if (params.item_label) item = params.item_label;
   if (item) values.item = item;
   if (params.spot) values.spot = spotName(lang, params.spot);
   if (params.start) values.start = formatDate(lang, params.start);

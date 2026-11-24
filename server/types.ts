@@ -1,6 +1,7 @@
 // Rows exactly as PostgreSQL returns them (the tables are in core/database.ts). Times are ISO 8601 text.
 
 import type {
+  ApprovalStatus,
   GroupLifecycleStatus,
   GroupType,
   ItemStatus,
@@ -56,6 +57,9 @@ export interface ItemRow {
   max_days: number;
   spot: string;
   trusted_only: boolean;
+  custom_title: string | null;
+  category_key: string | null;
+  approval_status: ApprovalStatus;
   photo: string | null; // 's3:photos/xxx.jpg' or '/uploads/xxx.jpg'
   status: ItemStatus;
   created_at: string;

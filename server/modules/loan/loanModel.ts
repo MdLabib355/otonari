@@ -23,7 +23,7 @@ export async function getLoan(loanId: number): Promise<LoanRow> {
 // way round. `unread` counts the messages to me in that loan that I haven't seen yet.
 async function listLoans(myColumn: LoanSide, otherColumn: LoanSide, userId: number): Promise<LoanSummary[]> {
   const loans = await query<LoanSummary>(
-    `SELECT loans.id, loans.status, loans.start_at, loans.end_at, items.item_key,
+    `SELECT loans.id, loans.status, loans.start_at, loans.end_at, items.item_key, items.custom_title, items.category_key,
             items.photo AS item_photo, items.spot,
             other.nickname AS other_nickname, other.lang AS other_lang,
             (SELECT COUNT(*)::int FROM messages

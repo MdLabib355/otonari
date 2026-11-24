@@ -84,6 +84,9 @@ export const CANONICAL_CATALOG: CanonicalCatalogSeed[] = [
   { item_key: 'suitcase', emoji: '🧳', category: 'outdoor', label_en: 'Suitcase', label_ja: 'スーツケース', label_ja_easy: 'スーツケース', label_bn: 'স্যুটকেস' },
 ];
 
+// The item_key of items that are not in the catalog (they have a custom_title).
+export const CUSTOM_ITEM_KEY = 'custom';
+
 export const ITEM_KEYS = CANONICAL_CATALOG.map((item) => item.item_key);
 
 // Handover spots: shared places only, never a home address or room number.

@@ -100,7 +100,7 @@ function NotificationItem({ message, lang, onOpen }: NotificationItemProps) {
   return (
     <li>
       <Link to={`/loan/${message.loan_id}`} className="notif-item-link" onClick={onOpen}>
-        <ItemVisual itemKey={message.item_key} alt="" size="sm" />
+        <ItemVisual itemKey={message.item_key} categoryKey={message.category_key} alt="" size="sm" />
         <div className="notif-item-text">
           <strong className="inline-icon-text">
             {message.from_nickname === null && <BellIcon className="icon-sm" />}

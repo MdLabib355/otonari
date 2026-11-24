@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import type { CatalogCategoryRecord, CatalogItemRecord, Lang } from '../../../../shared/types.ts';
+import type { CatalogCategoryRecord, CatalogItemRecord, Lang, SuperAdminCustomItemSummary } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
 import ItemVisual from '../../components/ItemVisual.tsx';
 import { api, ApiError } from '../../core/api.ts';
@@ -25,11 +25,12 @@ const EMPTY_FORM = { item_key: '', category: 'kitchen', ...EMPTY_LABELS };
 export interface CatalogPhraseStudioProps {
   catalog: CatalogItemRecord[];
   categories: CatalogCategoryRecord[];
+  customItems: SuperAdminCustomItemSummary[];
   onRefresh: () => Promise<void>;
   onNotify: (text: string, isError?: boolean) => void;
 }
 
-export default function CatalogPhraseStudio({ catalog, categories, onRefresh, onNotify }: CatalogPhraseStudioProps) {
+export default function CatalogPhraseStudio({ catalog, categories, customItems, onRefresh, onNotify }: CatalogPhraseStudioProps) {
   const [category, setCategory] = useState<string>('all');
   const [selectedPhrase, setSelectedPhrase] = useState<string>(INSPECTABLE_PHRASES[0]);
   const [addOpen, setAddOpen] = useState(false);
@@ -38,6 +39,26 @@ export default function CatalogPhraseStudio({ catalog, categories, onRefresh, on
   const [form, setForm] = useState(EMPTY_FORM);
 
   const filtered = category === 'all' ? catalog : catalog.filter((c) => c.category === category);
+
+  function openAdd(values: Partial<typeof EMPTY_FORM>) {
+    const firstActive = categories.find((c) => c.is_active)?.category_key ?? '';
+    setForm({ ...EMPTY_FORM, category: firstActive, ...values });
+    setAddOpen(true);
+  }
+
+  // The title goes into the labels as a start: the super admin corrects the translations before saving.
+  function promote(item: SuperAdminCustomItemSummary) {
+    const title = item.custom_title;
+    const isActive = categories.some((c) => c.is_active && c.category_key === item.category_key);
+    openAdd({
+      item_key: title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40),
+      ...(isActive && item.category_key ? { category: item.category_key } : {}),
+      label_en: title,
+      label_ja: title,
+      label_ja_easy: title,
+      label_bn: title,
+    });
+  }
 
   async function toggleActive(item: CatalogItemRecord) {
     setBusy(true);
@@ -88,7 +109,7 @@ export default function CatalogPhraseStudio({ catalog, categories, onRefresh, on
           <h1>Fixed Catalog &amp; i18n Phrases</h1>
           <p>Govern Otonari&apos;s curated item allowlist and inspect 4-locale structured phrase templates.</p>
         </div>
-        <button type="button" className="ga-btn ga-btn-primary" onClick={() => setAddOpen(true)}>
+        <button type="button" className="ga-btn ga-btn-primary" onClick={() => openAdd({})}>
           + Add Catalog Item
         </button>
       </div>
@@ -181,6 +202,32 @@ export default function CatalogPhraseStudio({ catalog, categories, onRefresh, on
 
       <CategoryManager categories={categories} onRefresh={onRefresh} onNotify={onNotify} />
 
+      <div className="sa-card">
+        <div className="sa-card-head">
+          <div>
+            <h2>Community Custom Items ({customItems.length})</h2>
+            <p className="ga-meta">Approved in a building, not in the global catalog yet. Check all 4 translations.</p>
+          </div>
+        </div>
+        {customItems.length === 0 && <p className="ga-meta">No approved custom items.</p>}
+        <div className="sa-category-grid">
+          {customItems.map((item) => (
+            <div key={item.id} className="sa-category">
+              <ItemVisual itemKey="custom" categoryKey={item.category_key} alt="" size="sm" />
+              <div className="sa-category-text">
+                <strong>{item.custom_title}</strong>
+                <span className="ga-meta">
+                  {item.group_name} · item #{item.id} · {item.category_key ?? 'no category'}
+                </span>
+              </div>
+              <button type="button" className="ga-btn ga-btn-soft" onClick={() => promote(item)}>
+                Promote to Global Catalog
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Read-Only 4-Locale Phrase Template Inspector */}
       <div className="sa-card">
         <div className="sa-card-head">
@@ -193,7 +240,7 @@ export default function CatalogPhraseStudio({ catalog, categories, onRefresh, on
           </div>
           <div style={{ minWidth: 260 }}>
             <select
-              className="sa-select"
+              className="select-input"
               aria-label="Select phrase key"
               value={selectedPhrase}
               onChange={(e) => setSelectedPhrase(e.target.value)}
@@ -240,7 +287,7 @@ export default function CatalogPhraseStudio({ catalog, categories, onRefresh, on
                     </label>
                     <select
                       id="ci-cat"
-                      className="sa-select"
+                      className="select-input"
                       value={form.category}
                       onChange={(e) => setForm({ ...form, category: e.target.value })}
                     >

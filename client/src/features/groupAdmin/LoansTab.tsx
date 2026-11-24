@@ -3,7 +3,7 @@ import type { GroupAdminLoan, Lang } from '../../../../shared/types.ts';
 import SpeakButton from '../../components/SpeakButton.tsx';
 import { api, ApiError } from '../../core/api.ts';
 import ItemVisual from '../../components/ItemVisual.tsx';
-import { displayName, formatDate, itemName, meta, renderPhrase, spotName, t } from '../../i18n/index.ts';
+import { displayName, formatDate, itemDisplayTitle, meta, renderPhrase, spotName, t } from '../../i18n/index.ts';
 
 const MEDIATION_KEYS = ['admin.gentleReminder', 'admin.spotAssist', 'admin.receivedAtDesk'] as const;
 
@@ -73,7 +73,7 @@ export default function LoansTab({ lang, loans, onRefresh, onNotify }: LoansTabP
         </div>
       ) : (
         loans.map((loan) => {
-          const label = itemName(lang, loan.item_key);
+          const label = itemDisplayTitle(lang, loan.item_key, loan.custom_title);
           const spot = spotName(lang, loan.spot);
           const statusCls = loan.is_overdue
             ? 'ga-badge-red'
@@ -86,7 +86,7 @@ export default function LoansTab({ lang, loans, onRefresh, onNotify }: LoansTabP
             <div key={loan.id} className={`ga-card ${loan.is_overdue ? 'ga-card-overdue' : ''}`}>
               <div className="ga-card-top">
                 <div className="ga-identity">
-                  <ItemVisual itemKey={loan.item_key} photo={loan.item_photo} alt="" />
+                  <ItemVisual itemKey={loan.item_key} categoryKey={loan.category_key} photo={loan.item_photo} alt="" />
                   <div>
                     <div className="ga-entity-name">
                       <span>
@@ -195,6 +195,7 @@ export default function LoansTab({ lang, loans, onRefresh, onNotify }: LoansTabP
                 {MEDIATION_KEYS.map((key) => {
                   const preview = renderPhrase(lang, key, {
                     item: mediationLoan.item_key,
+                    item_label: mediationLoan.custom_title ?? undefined,
                     spot: mediationLoan.spot,
                   });
                   return (
@@ -235,6 +236,7 @@ export default function LoansTab({ lang, loans, onRefresh, onNotify }: LoansTabP
                 ].map(({ roleLabel, targetLang }) => {
                   const text = renderPhrase(targetLang, selectedPhrase, {
                     item: mediationLoan.item_key,
+                    item_label: mediationLoan.custom_title ?? undefined,
                     spot: mediationLoan.spot,
                   });
                   return (

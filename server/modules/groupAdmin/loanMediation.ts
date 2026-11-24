@@ -12,6 +12,8 @@ import { createMessage } from '../message/messageModel.ts';
 
 interface GroupLoanQueryRow extends LoanRow {
   item_key: string;
+  custom_title: string | null;
+  category_key: string | null;
   item_photo: string | null;
   spot: string;
   borrower_nickname: string;
@@ -60,7 +62,7 @@ async function listTimelineForLoan(loanId: number): Promise<GroupAdminLoanTimeli
 export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdminLoan[]> {
   const rows = await query<GroupLoanQueryRow>(
     `SELECT loans.*,
-            items.item_key, items.photo AS item_photo, items.spot,
+            items.item_key, items.custom_title, items.category_key, items.photo AS item_photo, items.spot,
             borrower.nickname AS borrower_nickname, borrower.lang AS borrower_lang,
             lender.nickname AS lender_nickname, lender.lang AS lender_lang,
             dispute.reason_key AS flagged_reason,
@@ -109,6 +111,8 @@ export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdmi
         id: row.id,
         item_id: row.item_id,
         item_key: row.item_key,
+        custom_title: row.custom_title,
+        category_key: row.category_key,
         item_photo: itemPhoto,
         spot: row.spot,
         status: row.status,

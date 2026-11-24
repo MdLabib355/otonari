@@ -57,6 +57,7 @@ export async function countOwnedAvailableItemsByUser(groupId: number): Promise<M
     `SELECT owner_id, COUNT(*)::int AS count
      FROM items
      WHERE group_id = $1 AND removed_at IS NULL AND hidden_at IS NULL AND status = 'available'
+       AND approval_status = 'approved'
      GROUP BY owner_id`,
     [groupId]
   );
@@ -91,9 +92,13 @@ export async function getActiveAnnouncement(groupId: number): Promise<GroupAnnou
 }
 
 export async function getDashboardStats(groupId: number) {
-  const [pending, activeMembers, overdue, flagged, announcement] = await Promise.all([
+  const [pending, pendingItems, activeMembers, overdue, flagged, announcement] = await Promise.all([
     queryOne<CountRow>(
       "SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND deactivated_at IS NULL AND member_status = 'pending'",
+      [groupId]
+    ),
+    queryOne<CountRow>(
+      "SELECT COUNT(*)::int AS count FROM items WHERE group_id = $1 AND removed_at IS NULL AND approval_status = 'pending'",
       [groupId]
     ),
     queryOne<CountRow>(
@@ -115,6 +120,7 @@ export async function getDashboardStats(groupId: number) {
 
   return {
     pending_count: found(pending).count,
+    pending_item_count: found(pendingItems).count,
     active_member_count: found(activeMembers).count,
     overdue_loan_count: found(overdue).count,
     flagged_loan_count: found(flagged).count,
@@ -189,7 +195,7 @@ export async function updateMemberRole(groupId: number, userId: number, role: Gr
 export async function listGroupItemsForAdmin(groupId: number): Promise<GroupAdminItem[]> {
   const items = await query<GroupAdminItem>(
     `SELECT items.id, items.item_key, items.max_days, items.spot, items.trusted_only, items.status, items.photo,
-            items.owner_id, users.nickname AS owner_nickname, items.hidden_at
+            items.custom_title, items.category_key, items.approval_status, items.owner_id, users.nickname AS owner_nickname, items.hidden_at
      FROM items
      JOIN users ON users.id = items.owner_id
      WHERE items.group_id = $1 AND items.removed_at IS NULL
@@ -208,6 +214,20 @@ export async function findGroupItem(groupId: number, itemId: number): Promise<It
 
 export async function setItemHidden(itemId: number, hidden: boolean) {
   await query('UPDATE items SET hidden_at = CASE WHEN $2 THEN now() ELSE NULL END WHERE id = $1', [itemId, hidden]);
+}
+
+type ItemChanges = Pick<ItemRow, 'item_key' | 'custom_title' | 'category_key' | 'photo' | 'approval_status'>;
+
+export async function updateGroupItem(itemId: number, changes: ItemChanges) {
+  await query(
+    `UPDATE items SET item_key = $2, custom_title = $3, category_key = $4, photo = $5, approval_status = $6
+     WHERE id = $1`,
+    [itemId, changes.item_key, changes.custom_title, changes.category_key, changes.photo, changes.approval_status]
+  );
+}
+
+export async function markItemRejected(itemId: number) {
+  await query("UPDATE items SET approval_status = 'rejected', removed_at = now() WHERE id = $1", [itemId]);
 }
 
 export async function pinGroupAnnouncement(

@@ -96,7 +96,7 @@ export default function AccountsDirectory({ meId, users, onRefresh, onNotify }: 
                     </td>
                     <td>
                       <select
-                        className="sa-select"
+                        className="select-input"
                         aria-label={`Role for ${u.email}`}
                         value={u.role}
                         disabled={isSelf || busyId === u.id}

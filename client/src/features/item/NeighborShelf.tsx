@@ -14,7 +14,7 @@ export default function NeighborShelf({ items, lang }: { items: ShelfItem[]; lan
   const [search, setSearch] = useState('');
   const [availableOnly, setAvailableOnly] = useState(false);
 
-  const categoryOf = (item: ShelfItem) => findItem(item.item_key)?.category;
+  const categoryOf = (item: ShelfItem) => item.category_key ?? findItem(item.item_key)?.category;
 
   // Only offer the categories that actually have something on the shelf.
   const categoryOptions = [
@@ -29,7 +29,7 @@ export default function NeighborShelf({ items, lang }: { items: ShelfItem[]; lan
   function isVisible(item: ShelfItem) {
     if (category !== 'all' && categoryOf(item) !== category) return false;
     if (availableOnly && item.status !== 'available') return false;
-    const texts = [itemName(lang, item.item_key), displayName(lang, item.owner_nickname)];
+    const texts = [item.custom_title ?? '', itemName(lang, item.item_key), displayName(lang, item.owner_nickname)];
     return texts.some((text) => text.toLowerCase().includes(searchText));
   }
   const visibleItems = items.filter(isVisible);

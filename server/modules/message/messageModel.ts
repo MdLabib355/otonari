@@ -31,6 +31,7 @@ export async function createMessage(
     end: loan.end_at,
     name: other.nickname,
   };
+  if (item.custom_title) params.item_label = item.custom_title;
   const message = await queryOne<{ id: number }>(
     `INSERT INTO messages (loan_id, from_user_id, to_user_id, phrase_key, params)
      VALUES ($1, $2, $3, $4, $5) RETURNING id`,
@@ -59,7 +60,7 @@ export async function listUnread(userId: number): Promise<UnreadMessage[]> {
     `SELECT messages.id, messages.loan_id, messages.from_user_id, messages.phrase_key,
             messages.params, messages.created_at,
             sender.nickname AS from_nickname, sender.lang AS from_lang,  -- NULL for system reminders
-            items.item_key
+            items.item_key, items.category_key
      FROM messages
      JOIN loans ON loans.id = messages.loan_id
      JOIN items ON items.id = loans.item_id

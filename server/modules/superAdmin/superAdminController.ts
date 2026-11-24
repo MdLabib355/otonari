@@ -4,6 +4,7 @@ import type { Request } from 'express';
 import type { AuditCategory, SuperAdminOverview } from '../../../shared/types.ts';
 import {
   CATEGORY_ICON_KEYS,
+  CUSTOM_ITEM_KEY,
   GROUP_LIFECYCLE_STATUSES,
   GROUP_TYPES,
   JOIN_POLICIES,
@@ -35,6 +36,7 @@ import {
   insertCategory,
   listCatalogItems,
   listCategories,
+  listCustomItems,
   listEscalatedDisputes,
   listGroupsForSuperAdmin,
   rescuePrimaryAdmin,
@@ -277,7 +279,7 @@ export async function createCatalogEntry(req: Request) {
   const labelJaEasy = toText(req.body?.label_ja_easy);
   const labelBn = toText(req.body?.label_bn);
 
-  if (!ITEM_KEY_PATTERN.test(itemKey)) {
+  if (!ITEM_KEY_PATTERN.test(itemKey) || itemKey === CUSTOM_ITEM_KEY) {
     return refuse(400, 'item_key must be snake_case (2-40 lowercase letters, digits, underscores)');
   }
   if (emoji.length > 8) return refuse(400, 'emoji is too long');
@@ -440,6 +442,10 @@ export async function updateCategory(req: Request) {
     ipAddress: req.ip ?? null,
   });
   return reply(200, updated);
+}
+
+export async function showCustomItems() {
+  return reply(200, await listCustomItems());
 }
 
 export async function listDisputes() {

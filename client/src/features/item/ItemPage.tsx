@@ -4,7 +4,7 @@ import type { ItemDetails } from '../../../../shared/types.ts';
 import { ArrowLeftIcon, LockIcon } from '../../components/Icons.tsx';
 import { api, errorStatus } from '../../core/api.ts';
 import ItemVisual from '../../components/ItemVisual.tsx';
-import { displayName, itemName, spotName, t } from '../../i18n/index.ts';
+import { displayName, itemDisplayTitle, spotName, t } from '../../i18n/index.ts';
 import { useMember, useUser } from '../../core/UserContext.ts';
 import BorrowForm from './BorrowForm.tsx';
 
@@ -52,9 +52,9 @@ export default function ItemPage() {
     <section className="narrow-page surface-card">
       {backLink}
       <header className="item-header">
-        <ItemVisual itemKey={item.item_key} photo={item.photo} alt="" size="lg" />
+        <ItemVisual itemKey={item.item_key} categoryKey={item.category_key} photo={item.photo} alt="" size="lg" />
         <div>
-          <h1>{itemName(lang, item.item_key)}</h1>
+          <h1>{itemDisplayTitle(lang, item.item_key, item.custom_title)}</h1>
           <p className="muted">
             {mine ? t(lang, 'shelf.mine') : t(lang, 'shelf.from', { name: displayName(lang, item.owner_nickname) })}
           </p>

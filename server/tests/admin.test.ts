@@ -373,6 +373,105 @@ describe('Otonari Admin Panels — Guardrails, RBAC, Break-Glass, Catalog & Unif
     assert.equal((await photosOnShelf()).get(one.data.id), null);
   });
 
+  it('takes custom items through request, approval, editing and promotion', async () => {
+    const maria = await loginNickname('Maria');
+    const sato = await loginNickname('Sato');
+    const inoue = await loginNickname('Inoue');
+    const ayesha = await loginNickname('Ayesha');
+    const sa = await superAdminToken();
+    const request = (extra: Record<string, string | Blob> = {}) =>
+      formReq('POST', '/items/request', maria.token, { custom_title: 'Karaoke  machine', max_days: '2', spot: 'mailbox', ...extra });
+    const onShelf = async (id: number) =>
+      (await apiReq('GET', '/items', { token: ayesha.token })).data.find((i: { id: number }) => i.id === id);
+    const dashboard = async () => (await apiReq('GET', '/group-admin/dashboard', { token: sato.token })).data;
+
+    assert.equal((await request({ custom_title: ' x ' })).status, 400);
+    assert.equal((await request({ custom_title: 'x'.repeat(61) })).status, 400);
+    assert.equal((await request({ category_key: 'unknown' })).status, 400);
+    const asCatalog = { item_key: 'custom', max_days: 2, spot: 'mailbox' };
+    assert.equal((await apiReq('POST', '/items', { token: maria.token, body: asCatalog })).status, 400);
+
+    const before = (await dashboard()).pending_item_count;
+    const requested = await request({ photo: pngFile(20) });
+    assert.equal(requested.status, 202);
+    assert.equal(requested.data.custom_title, 'Karaoke machine');
+    assert.equal(requested.data.approval_status, 'pending');
+    const id: number = requested.data.id;
+    assert.equal((await dashboard()).pending_item_count, before + 1);
+
+    // Only the owner and the group admin see it, and nobody can borrow it
+    assert.equal(await onShelf(id), undefined);
+    assert.equal((await apiReq('GET', `/items/${id}`, { token: ayesha.token })).status, 404);
+    const mine = await apiReq('GET', '/me/items', { token: maria.token });
+    assert.ok(mine.data.some((i: { id: number; approval_status: string }) => i.id === id && i.approval_status === 'pending'));
+    const dates = {
+      start_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      end_at: new Date(Date.now() + 26 * 60 * 60 * 1000).toISOString(),
+    };
+    assert.equal((await apiReq('POST', '/loans', { token: ayesha.token, body: { item_id: id, ...dates } })).status, 404);
+
+    // Other groups and residents can't touch it
+    const category = { category_key: 'living' };
+    for (const [token, status] of [[inoue.token, 404], [maria.token, 403]] as const) {
+      assert.equal((await apiReq('POST', `/group-admin/items/${id}/approve`, { token, body: category })).status, status);
+      assert.equal((await apiReq('POST', `/group-admin/items/${id}/reject`, { token })).status, status);
+      assert.equal((await apiReq('PATCH', `/group-admin/items/${id}`, { token, body: category })).status, status);
+    }
+
+    // Approving needs a category; title and photo can be changed at the same time
+    assert.equal((await apiReq('POST', `/group-admin/items/${id}/approve`, { token: sato.token, body: {} })).status, 400);
+    const approved = await formReq('POST', `/group-admin/items/${id}/approve`, sato.token, {
+      custom_title: 'Karaoke set',
+      category_key: 'living',
+      photo: pngFile(21),
+    });
+    assert.equal(approved.status, 200);
+    assert.equal(uploadExists(requested.data.photo), false);
+    const shown = await onShelf(id);
+    assert.deepEqual([shown.custom_title, shown.category_key, shown.photo], ['Karaoke set', 'living', approved.data.photo]);
+    assert.equal((await apiReq('POST', `/group-admin/items/${id}/approve`, { token: sato.token, body: category })).status, 409);
+    assert.equal((await dashboard()).pending_item_count, before);
+
+    // Messages of a loan have the title
+    const loan = await apiReq('POST', '/loans', { token: ayesha.token, body: { item_id: id, ...dates } });
+    assert.equal(loan.status, 201);
+    assert.equal(loan.data.messages[0].params.item_label, 'Karaoke set');
+
+    const customItems = await apiReq('GET', '/super-admin/custom-items', { token: sa });
+    assert.equal(customItems.status, 200);
+    assert.ok(
+      customItems.data.some(
+        (i: { id: number; custom_title: string; group_name: string }) =>
+          i.id === id && i.custom_title === 'Karaoke set' && i.group_name === 'Sakura Heights'
+      )
+    );
+    assert.equal((await apiReq('GET', '/super-admin/custom-items', { token: sato.token })).status, 403);
+
+    // Editing afterwards
+    const edit = (body: object) => apiReq('PATCH', `/group-admin/items/${id}`, { token: sato.token, body });
+    assert.equal((await edit({ custom_title: '' })).status, 400); // a custom item needs a title
+    assert.equal((await edit({ category_key: 'unknown' })).status, 400);
+    assert.equal((await edit({ item_key: 'unknown' })).status, 400);
+    const edited = await edit({ custom_title: 'Karaoke box', category_key: 'outdoor', clear_photo: true });
+    assert.deepEqual([edited.data.custom_title, edited.data.category_key, edited.data.photo], ['Karaoke box', 'outdoor', null]);
+    assert.equal(uploadExists(approved.data.photo), false);
+    const mapped = await edit({ item_key: 'bluetooth_speaker' });
+    assert.deepEqual([mapped.data.item_key, mapped.data.custom_title, mapped.data.category_key], ['bluetooth_speaker', null, null]);
+    const titled = await edit({ custom_title: 'Loud speaker' });
+    assert.equal((await edit({ custom_title: '' })).data.custom_title, null);
+    assert.equal(titled.data.custom_title, 'Loud speaker');
+
+    const rejected = await request();
+    assert.equal((await apiReq('POST', `/group-admin/items/${rejected.data.id}/reject`, { token: sato.token })).status, 204);
+    const mineNow = await apiReq('GET', '/me/items', { token: maria.token });
+    assert.equal(mineNow.data.some((i: { id: number }) => i.id === rejected.data.id), false);
+
+    const log = await apiReq('GET', '/group-admin/activity-log', { token: sato.token });
+    for (const action of ['item.approved', 'item.edited', 'item.rejected']) {
+      assert.ok(log.data.some((a: { action: string; category: string }) => a.action === action && a.category === 'Shelf'));
+    }
+  });
+
   it('enforces lent-item hide lock (409) and allows hiding/restoring available items', async () => {
     const sato = await loginNickname('Sato');
     const itemsRes = await apiReq('GET', '/group-admin/items', { token: sato.token });

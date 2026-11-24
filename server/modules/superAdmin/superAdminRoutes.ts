@@ -19,6 +19,7 @@ import {
   sendDisputeNotice,
   showAuditLogs,
   showCategories,
+  showCustomItems,
   showDisputeEvidence,
   showOverview,
   showPublicCatalog,
@@ -51,6 +52,7 @@ router.patch('/super-admin/groups/:groupId/status', write(requireSuperAdmin, upd
 router.get('/super-admin/catalog', read(requireSuperAdmin, listCatalog));
 router.post('/super-admin/catalog', write(requireSuperAdmin, createCatalogEntry));
 router.patch('/super-admin/catalog/:key', write(requireSuperAdmin, updateCatalogEntry));
+router.get('/super-admin/custom-items', read(requireSuperAdmin, showCustomItems));
 
 // Global Categories
 router.get('/super-admin/categories', read(requireSuperAdmin, showCategories));

@@ -131,6 +131,10 @@ export async function createTables() {
       spot TEXT NOT NULL,
       trusted_only BOOLEAN NOT NULL DEFAULT false,
       photo TEXT, -- the owner's photo of it, like users.avatar; NULL = none
+      custom_title TEXT, -- NULL = the name in the catalog
+      category_key TEXT, -- NULL = the category in the catalog
+      approval_status TEXT NOT NULL DEFAULT 'approved'
+        CHECK (approval_status IN ('approved','pending','rejected')),
       status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','lent')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
       removed_at TIMESTAMPTZ,
@@ -248,6 +252,11 @@ export async function addNewColumns() {
 
     ALTER TABLE items ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ;
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo TEXT;
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS custom_title TEXT;
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS category_key TEXT;
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'approved'
+      CHECK (approval_status IN ('approved','pending','rejected'));
+    CREATE INDEX IF NOT EXISTS idx_items_pending ON items (group_id) WHERE approval_status = 'pending';
 
     -- There are no co-admins anymore: they become equal group admins, before the roles are limited to three.
     -- (One statement list = one transaction, so nobody can be made a co-admin in between.)

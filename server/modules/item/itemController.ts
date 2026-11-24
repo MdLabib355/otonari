@@ -1,14 +1,14 @@
 // The neighborhood shelf, and managing my own items.
 
 import type { Request } from 'express';
-import { DURATIONS, SPOT_KEYS, isActiveCatalogItemKey, isOneOf } from '../../core/allowedKeys.ts';
+import { DURATIONS, SPOT_KEYS, isActiveCatalogItemKey, isActiveCategoryKey, isOneOf } from '../../core/allowedKeys.ts';
 import { transaction } from '../../core/database.ts';
-import { refuse, reply, toId } from '../../core/http.ts';
+import { refuse, reply, toId, toText } from '../../core/http.ts';
 import { deletePhoto } from '../../core/photoFiles.ts';
 import { getGroupRow } from '../group/groupModel.ts';
 import { findOpenLoan } from '../loan/loanModel.ts';
 import { isTrusted } from '../user/userModel.ts';
-import { createItem, findItem, findItemWithOwner, listItemsOf, listShelf, updateItemSettings } from './itemModel.ts';
+import { createItem, createItemRequest, findItem, findItemWithOwner, listItemsOf, listShelf, updateItemSettings } from './itemModel.ts';
 import { itemDetailsView } from './itemView.ts';
 import { removeItem } from './removeItem.ts';
 
@@ -54,6 +54,42 @@ export async function addItem(req: Request) {
 
   const photo = req.optionalPhoto ?? null;
   return reply(201, await createItem(req.user.id, req.groupId, item_key as string, maxDays, spot, trustedOnly, photo));
+}
+
+// One line of text, without line breaks or other invisible control characters.
+export function toTitle(value: unknown): string {
+  return toText(value)
+    .replace(/[\p{Cc}\s]+/gu, ' ')
+    .trim();
+}
+
+export async function requestNewItem(req: Request) {
+  const body: Record<string, unknown> = req.body ?? {};
+  const title = toTitle(body.custom_title);
+  const category = toText(body.category_key) || null; // null: the group admin decides
+  const { spot } = body;
+  const maxDays = toDays(body.max_days);
+  const trustedOnly = toFlag(body.trusted_only ?? false);
+  const group = await getGroupRow(req.groupId);
+  if (group.lifecycle_status !== 'active') return refuse(403, 'This group is currently read-only');
+
+  if (title.length < 2 || title.length > 60) return refuse(400, 'custom_title must be 2 to 60 characters');
+  if (category !== null && !(await isActiveCategoryKey(category))) return refuse(400, 'Unknown category');
+  if (!isOneOf(DURATIONS, maxDays)) return refuse(400, `max_days must be one of ${DURATIONS.join(', ')}`);
+  if (!isOneOf(SPOT_KEYS, spot)) return refuse(400, 'Unknown handover spot');
+  if (typeof trustedOnly !== 'boolean') return refuse(400, 'trusted_only must be true or false');
+
+  const item = await createItemRequest({
+    owner_id: req.user.id,
+    group_id: req.groupId,
+    custom_title: title,
+    category_key: category,
+    max_days: maxDays,
+    spot,
+    trusted_only: trustedOnly,
+    photo: req.optionalPhoto ?? null,
+  });
+  return reply(202, item);
 }
 
 // The owner's settings; what is not sent stays as it is. Deleting the old photo can be slow, so it is done

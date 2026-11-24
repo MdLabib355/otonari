@@ -80,7 +80,7 @@ export default function App() {
     }
     api
       .get<GroupAdminDashboard>('/group-admin/dashboard')
-      .then((d) => setAdminAlertCount(d.pending_count + d.overdue_loan_count + d.flagged_loan_count))
+      .then((d) => setAdminAlertCount(d.pending_count + d.pending_item_count + d.overdue_loan_count + d.flagged_loan_count))
       .catch(() => {});
   }, [isGroupAdmin, isSuperAdminRoute, pathname]);
 

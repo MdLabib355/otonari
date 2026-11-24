@@ -9,9 +9,11 @@ import type {
   LoanStatus,
   MemberStatus,
   Role,
+  SuperAdminCustomItemSummary,
   SuperAdminGroupMemberPreview,
   SuperAdminGroupSummary,
 } from '../../../shared/types.ts';
+import { CUSTOM_ITEM_KEY } from '../../core/allowedKeys.ts';
 import { found, query, queryOne, transaction } from '../../core/database.ts';
 import type { CountRow, GroupRow, LoanRow } from '../../types.ts';
 import { photoUrl } from '../../core/photoFiles.ts';
@@ -264,10 +266,21 @@ export async function updateCategoryRecord(category: CategoryValues): Promise<Ca
   return found(row);
 }
 
+// What the group admins have approved and the catalog doesn't have (yet).
+export async function listCustomItems(): Promise<SuperAdminCustomItemSummary[]> {
+  return query<SuperAdminCustomItemSummary>(
+    `SELECT items.id, items.custom_title, items.category_key, groups.name AS group_name
+     FROM items JOIN groups ON groups.id = items.group_id
+     WHERE items.item_key = $1 AND items.approval_status = 'approved' AND items.removed_at IS NULL
+     ORDER BY items.id DESC`,
+    [CUSTOM_ITEM_KEY]
+  );
+}
+
 export async function listEscalatedDisputes(): Promise<DisputeSummary[]> {
   return query<DisputeSummary>(
     `SELECT d.id, d.group_id, g.name AS group_name, d.loan_id,
-            i.item_key, i.spot,
+            i.item_key, i.custom_title, i.category_key, i.spot,
             b.nickname AS borrower_nickname, b.lang AS borrower_lang,
             lender.nickname AS lender_nickname, lender.lang AS lender_lang,
             d.reason_key, d.status, d.escalation_notice_sent, d.resolution_note,
@@ -286,7 +299,7 @@ export async function listEscalatedDisputes(): Promise<DisputeSummary[]> {
 export async function findDisputeById(disputeId: number): Promise<DisputeSummary | undefined> {
   return queryOne<DisputeSummary>(
     `SELECT d.id, d.group_id, g.name AS group_name, d.loan_id,
-            i.item_key, i.spot,
+            i.item_key, i.custom_title, i.category_key, i.spot,
             b.nickname AS borrower_nickname, b.lang AS borrower_lang,
             lender.nickname AS lender_nickname, lender.lang AS lender_lang,
             d.reason_key, d.status, d.escalation_notice_sent, d.resolution_note,
@@ -304,8 +317,8 @@ export async function findDisputeById(disputeId: number): Promise<DisputeSummary
 
 export async function getDisputeEvidence(disputeId: number, loanId: number): Promise<BreakGlassEvidence> {
   const loan = found(
-    await queryOne<LoanRow & { item_key: string }>(
-      `SELECT l.*, i.item_key
+    await queryOne<LoanRow & { item_key: string; custom_title: string | null; category_key: string | null }>(
+      `SELECT l.*, i.item_key, i.custom_title, i.category_key
        FROM loans l JOIN items i ON i.id = l.item_id
        WHERE l.id = $1`,
       [loanId]
@@ -332,6 +345,8 @@ export async function getDisputeEvidence(disputeId: number, loanId: number): Pro
     dispute_id: disputeId,
     loan_id: loan.id,
     item_key: loan.item_key,
+    custom_title: loan.custom_title,
+    category_key: loan.category_key,
     handover_photo: handoverPhoto,
     return_photo: returnPhoto,
     loan_status: loan.status as LoanStatus,
