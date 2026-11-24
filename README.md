@@ -223,6 +223,10 @@ Each person's app renders it from that person's language file (`client/src/i18n/
 
 We used Claude in VS Code to write the code from our own specification ([CLAUDE.md](CLAUDE.md)), one step at a time ([BUILD_PROMPTS.md](BUILD_PROMPTS.md)). The phrases that neighbors send each other were written by the team and reviewed by a native Japanese speaker. Otonari itself uses no AI while it runs: every message comes from the language files.
 
+## Photos
+
+The photos on the landing page (`client/public/landing/`) are from [Unsplash](https://unsplash.com), under the [Unsplash License](https://unsplash.com/license): [apartments](https://unsplash.com/photos/-rSH6LjkGCc), [lane](https://unsplash.com/photos/1ol0cgfx8Ys), [fuji](https://unsplash.com/photos/2wqFYoOPsG8), [shop](https://images.unsplash.com/photo-1480796927426-f609979314bd), [street](https://images.unsplash.com/photo-1542931287-023b922fa89b). The apartment building with the neighbors is drawn in code (`NeighborBuilding.tsx`).
+
 ## Team
 
 | Name | Role |
