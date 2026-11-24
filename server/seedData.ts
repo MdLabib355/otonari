@@ -204,7 +204,7 @@ export async function seed(empty: boolean) {
     }
     if (!empty) await insertReturnedLoan(userIds.Maria, userIds.Tanaka);
   });
-  deletePhotos(); // they belonged to the old loans
+  await deletePhotos(); // they belonged to the old loans
   await ensureSuperAdmin(); // the reset has removed it
   await printSummary(empty);
 }

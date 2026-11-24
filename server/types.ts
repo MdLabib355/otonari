@@ -46,6 +46,7 @@ declare global {
       user: UserRow;
       groupId: number; // only after requireMember
       loan: LoanRow;
+      photo: string; // only after storePhoto
     }
   }
 }

@@ -140,7 +140,7 @@ The address is HTTPS, so phones can install the app. The free plan sleeps after 
 
 - **Client:** React 18, Vite, react-router-dom, TypeScript and plain CSS, `qrcode` for the poster, `vite-plugin-pwa` to make it installable
 - **Server:** Node.js (runs the TypeScript files directly), TypeScript, Express, pg, multer for photo uploads, cors, dotenv
-- **Database:** PostgreSQL 17; photos in `server/uploads/`
+- **Database:** PostgreSQL 17; photos in a private AWS S3 bucket, or in `server/uploads/` without one
 - **Docker:** docker compose with PostgreSQL, Node and nginx
 - **Development:** concurrently, nodemon
 

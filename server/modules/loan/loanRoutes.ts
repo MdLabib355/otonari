@@ -14,6 +14,8 @@
 import express from 'express';
 import {
   accept,
+  canGiveBack,
+  canHandOver,
   cancel,
   decline,
   giveBack,
@@ -28,6 +30,7 @@ import {
 import { requireMember } from '../../core/auth.ts';
 import { check, read, write } from '../../core/http.ts';
 import { loanRole } from './loanRole.ts';
+import { storePhoto } from './photoFiles.ts';
 import { receivePhoto } from './receivePhoto.ts';
 
 const router = express.Router();
@@ -43,9 +46,26 @@ router.post('/loans/:id/confirm-handover', write(requireMember, loanRole('borrow
 router.post('/loans/:id/confirm-return', write(requireMember, loanRole('lender'), returnConfirmed));
 router.post('/loans/:id/messages', write(requireMember, loanRole('participant'), quickReply));
 
-// Uploads can be slow, so the loan is loaded and checked AFTER the photo has arrived: its status may
-// have changed in the meantime.
-router.post('/loans/:id/handover-photo', check(requireMember), receivePhoto, write(requireMember, loanRole('lender'), handover));
-router.post('/loans/:id/return-photo', check(requireMember), receivePhoto, write(requireMember, loanRole('borrower'), giveBack));
+// Uploads can be slow, so everything is checked AFTER the photo has arrived: the loan may have changed in the
+// meantime. And again in the transaction, after the photo has been stored.
+const handoverSteps = [requireMember, loanRole('lender'), canHandOver];
+const returnSteps = [requireMember, loanRole('borrower'), canGiveBack];
+
+router.post(
+  '/loans/:id/handover-photo',
+  check(requireMember),
+  receivePhoto,
+  check(...handoverSteps),
+  storePhoto,
+  write(...handoverSteps, handover)
+);
+router.post(
+  '/loans/:id/return-photo',
+  check(requireMember),
+  receivePhoto,
+  check(...returnSteps),
+  storePhoto,
+  write(...returnSteps, giveBack)
+);
 
 export default router;

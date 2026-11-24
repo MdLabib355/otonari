@@ -132,7 +132,9 @@ push notifications, maps, payments, SMS.
 - **Docker**: `docker compose up` starts everything: `db` (PostgreSQL, not reachable from outside), `server`, and
   `client` (nginx: the built app, and `/api` and `/uploads` passed on to the server) on http://localhost:8088.
   Database and photos are volumes; `docker compose down -v` starts from zero.
-- **Photos**: saved to `server/uploads/` (git-ignored, keep `.gitkeep`), served at `/uploads/...`.
+- **Photos**: in a private AWS S3 bucket if `S3_BUCKET` is set (`@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`):
+  the database keeps `s3:photos/<name>`, and the answers contain a signed URL that works for an hour. Otherwise saved to
+  `server/uploads/` (git-ignored, keep `.gitkeep`), served at `/uploads/...`. Seeding never deletes photos in S3.
 - **Dev**: `npm run db` starts only the database in Docker (port 5433). The root `package.json` runs both with `concurrently` → `npm run dev`.
   Client on port 5173, server on port 3001, Vite proxies `/api` and `/uploads` to 3001.
   The server runs under `nodemon` (config in `server/package.json`): it watches only server `.ts` files and
@@ -141,11 +143,12 @@ push notifications, maps, payments, SMS.
 - **For the demo, always use `npm run build` + `npm start` (no file watcher).**
 - **Deploy** (Render.com, one free Node web service): build `npm run render-build`, start `npm start`,
   environment `NODE_VERSION=22`, `DEMO_MODE=true` and `DATABASE_URL` of a Render PostgreSQL database (Render sets
-  `PORT`). The free plan loses the photos on every restart. A server that starts without any groups runs the normal seed.
+  `PORT`). The free plan loses the photos on every restart
+  (unless they are in S3). A server that starts without any groups runs the normal seed.
 - **Types**: `shared/types.ts` (the API answers, used by both sides with `import type`) and `server/types.ts`
   (database rows). `typescript` and the `@types/*` packages are dev dependencies; `npm run typecheck` checks
   both sides. Vite and Node only remove the types, they don't check them.
-- **Secrets** (mail password, super admin password) exist only in `server/.env` or in the settings of the host, never in
+- **Secrets** (mail password, super admin password, AWS key) exist only in `server/.env` or in the settings of the host, never in
   Git. `server/.env.example` lists all settings. `server/docker.env` has a public super admin password for trying the app
   out on one's own computer.
   `.env` is in `.gitignore`; commit `.env.example`.
@@ -211,6 +214,7 @@ otonari/
     │   ├── database.ts     # PostgreSQL: query(), transaction(), creates tables
     │   ├── http.ts         # read() / write(): steps → answer
     │   ├── allowedKeys.ts  # the keys and values the server accepts (copied from catalog.ts)
+    │   ├── s3.ts           # puts photos into S3, signed URLs
     │   ├── settings.ts     # everything from .env
     │   ├── limiter.ts      # counts login attempts
     │   └── auth.ts         # requireUser / requireMember / requireGroupAdmin / requireSuperAdmin
@@ -299,7 +303,7 @@ CREATE TABLE loans (
   end_at TIMESTAMPTZ NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','accepted','declined','cancelled','active','returned')),
-  handover_photo TEXT,                -- '/uploads/xxx.jpg'
+  handover_photo TEXT,                -- 's3:photos/xxx.jpg' or '/uploads/xxx.jpg'
   return_photo TEXT,
   returned_at TIMESTAMPTZ,            -- when the borrower sent the return photo
   reminded_soon_at TIMESTAMPTZ,
@@ -517,5 +521,5 @@ Two browser windows side by side. Left = Rahim (phone-sized), right = Sato (elde
 - After finishing a step, tell the user exactly how to test it and suggest a commit message.
 - Ask before adding any new dependency not listed in section 3.
 - Ask before changing the data model, API, scope or anything in this file.
-- Never add free-text messaging, maps, payments, AI calls or other external APIs (only email and Google login).
+- Never add free-text messaging, maps, payments, AI calls or other external APIs (only email, Google login and S3).
 - Never commit `.env`, the database file or uploaded photos.

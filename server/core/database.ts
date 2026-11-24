@@ -135,7 +135,7 @@ export async function createTables() {
       end_at TIMESTAMPTZ NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending','accepted','declined','cancelled','active','returned')),
-      handover_photo TEXT,                -- '/uploads/xxx.jpg'
+      handover_photo TEXT,                -- 's3:photos/xxx.jpg' or '/uploads/xxx.jpg'
       return_photo TEXT,
       returned_at TIMESTAMPTZ,            -- when the borrower sent the return photo
       reminded_soon_at TIMESTAMPTZ,
