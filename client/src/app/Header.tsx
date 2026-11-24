@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
 import Avatar from '../components/Avatar.tsx';
 import GroupIcon from '../components/GroupIcon.tsx';
+import ThemeToggle from '../components/ThemeToggle.tsx';
 import { useMember } from '../core/UserContext.ts';
 import Banner from '../features/message/Banner.tsx';
 import NotificationBell from '../features/message/NotificationBell.tsx';
@@ -39,6 +40,7 @@ export default function Header({ adminAlertCount = 0 }: { adminAlertCount?: numb
           </nav>
 
           <div className="header-right">
+            <ThemeToggle />
             <Link to="/profile" className="header-user-pill" title={t(lang, 'profile.title')}>
               <Avatar url={user.avatar} />
               <span>{displayName(lang, user.nickname)}</span>

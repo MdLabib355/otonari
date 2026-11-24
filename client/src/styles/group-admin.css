@@ -109,6 +109,12 @@
   background: #fffdf7;
 }
 
+body.dark .ga-card-pending,
+:root[data-theme='dark'] .ga-card-pending {
+  background: var(--warn-soft);
+  border-color: rgba(223, 152, 40, 0.4);
+}
+
 .ga-card-overdue {
   border-color: rgba(179, 38, 30, 0.45);
 }
@@ -116,6 +122,11 @@
 .ga-card-dimmed {
   opacity: 0.72;
   background: #faf7f2;
+}
+
+body.dark .ga-card-dimmed,
+:root[data-theme='dark'] .ga-card-dimmed {
+  background: var(--quiet);
 }
 
 .ga-card-top {

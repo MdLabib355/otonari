@@ -6,6 +6,19 @@
 }
 
 @media print {
+  :root,
+  body.dark,
+  :root[data-theme='dark'] {
+    --bg: #ffffff !important;
+    --surface: #ffffff !important;
+    --text: #232629 !important;
+    --muted: #66635d !important;
+    --border: #e4ddd1 !important;
+    --accent: #1f4b6e !important;
+    --quiet: #ede8df !important;
+    color-scheme: light !important;
+  }
+
   .app-header,
   .bottom-nav,
   .banner-area,

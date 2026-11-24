@@ -20,6 +20,7 @@ import {
   SquaresIcon,
   UsersIcon,
 } from '../../components/Icons.tsx';
+import ThemeToggle from '../../components/ThemeToggle.tsx';
 import { api } from '../../core/api.ts';
 import { syncDynamicCatalog, syncDynamicCategories } from '../../data/catalog.ts';
 import AccountsDirectory from './AccountsDirectory.tsx';
@@ -207,6 +208,7 @@ export default function SuperAdminShell({
         </div>
 
         <div className="sa-topbar-right">
+          <ThemeToggle />
           <span className="ga-badge ga-badge-indigo sa-wide-only">{user.nickname || user.email}</span>
           <Link to="/profile" className="ga-btn sa-wide-only">
             Profile

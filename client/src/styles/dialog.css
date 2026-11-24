@@ -25,6 +25,11 @@ body:has(dialog[open]) {
   -webkit-backdrop-filter: blur(3px);
 }
 
+body.dark .modal-backdrop,
+:root[data-theme='dark'] .modal-backdrop {
+  background: rgba(8, 12, 18, 0.72);
+}
+
 .modal-backdrop::backdrop {
   background: none;
 }
