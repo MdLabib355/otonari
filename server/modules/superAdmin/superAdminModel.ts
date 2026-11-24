@@ -3,14 +3,17 @@
 import type {
   BreakGlassEvidence,
   BreakGlassEvidenceMessage,
+  CatalogCategoryRecord,
   CatalogItemRecord,
   DisputeSummary,
   LoanStatus,
   MemberStatus,
   Role,
+  SuperAdminCustomItemSummary,
   SuperAdminGroupMemberPreview,
   SuperAdminGroupSummary,
 } from '../../../shared/types.ts';
+import { CUSTOM_ITEM_KEY } from '../../core/allowedKeys.ts';
 import { found, query, queryOne, transaction } from '../../core/database.ts';
 import type { CountRow, GroupRow, LoanRow } from '../../types.ts';
 import { photoUrl } from '../../core/photoFiles.ts';
@@ -81,7 +84,7 @@ export async function listGroupsForSuperAdmin(): Promise<SuperAdminGroupSummary[
      WHERE u.group_id IS NOT NULL AND u.deactivated_at IS NULL AND u.member_status <> 'pending'
      GROUP BY u.id
      ORDER BY
-       CASE u.role WHEN 'group_admin' THEN 0 WHEN 'co_admin' THEN 1 ELSE 2 END,
+       CASE u.role WHEN 'group_admin' THEN 0 ELSE 1 END,
        u.id ASC`
   );
 
@@ -133,11 +136,11 @@ export async function rescuePrimaryAdmin(
 
   return transaction(async () => {
     const previous = await queryOne<{ id: number; nickname: string }>(
-      "SELECT id, nickname FROM users WHERE group_id = $1 AND deactivated_at IS NULL AND role = 'group_admin' LIMIT 1",
-      [groupId]
+      "SELECT id, nickname FROM users WHERE group_id = $1 AND deactivated_at IS NULL AND role = 'group_admin' ORDER BY (id = $2) DESC, id LIMIT 1",
+      [groupId, target.id]
     );
     if (previous && previous.id !== target.id) {
-      await query("UPDATE users SET role = 'co_admin' WHERE id = $1", [previous.id]);
+      await query("UPDATE users SET role = 'user' WHERE id = $1", [previous.id]);
     }
     await query("UPDATE users SET role = 'group_admin' WHERE id = $1", [target.id]);
     return { previousAdmin: previous?.nickname ?? null, newAdmin: target.nickname };
@@ -210,10 +213,74 @@ export async function updateCatalogItemRecord(
   return found(row);
 }
 
+export async function listCategories(activeOnly = false): Promise<CatalogCategoryRecord[]> {
+  return query<CatalogCategoryRecord>(
+    `SELECT * FROM catalog_categories ${activeOnly ? 'WHERE is_active' : ''} ORDER BY sort_order, category_key`
+  );
+}
+
+export async function findCategory(categoryKey: string): Promise<CatalogCategoryRecord | undefined> {
+  return queryOne<CatalogCategoryRecord>('SELECT * FROM catalog_categories WHERE category_key = $1', [categoryKey]);
+}
+
+type CategoryValues = Omit<CatalogCategoryRecord, 'sort_order' | 'updated_at'>;
+
+// New categories come after the existing ones.
+export async function insertCategory(category: CategoryValues): Promise<CatalogCategoryRecord> {
+  const row = await queryOne<CatalogCategoryRecord>(
+    `INSERT INTO catalog_categories (
+       category_key, icon_key, is_active, sort_order, label_en, label_ja, label_ja_easy, label_bn
+     )
+     VALUES ($1, $2, $3, (SELECT COALESCE(MAX(sort_order), 0) + 10 FROM catalog_categories), $4, $5, $6, $7)
+     RETURNING *`,
+    [
+      category.category_key,
+      category.icon_key,
+      category.is_active,
+      category.label_en,
+      category.label_ja,
+      category.label_ja_easy,
+      category.label_bn,
+    ]
+  );
+  return found(row);
+}
+
+export async function updateCategoryRecord(category: CategoryValues): Promise<CatalogCategoryRecord> {
+  const row = await queryOne<CatalogCategoryRecord>(
+    `UPDATE catalog_categories
+     SET icon_key = $2, is_active = $3, label_en = $4, label_ja = $5, label_ja_easy = $6, label_bn = $7,
+         updated_at = now()
+     WHERE category_key = $1
+     RETURNING *`,
+    [
+      category.category_key,
+      category.icon_key,
+      category.is_active,
+      category.label_en,
+      category.label_ja,
+      category.label_ja_easy,
+      category.label_bn,
+    ]
+  );
+  return found(row);
+}
+
+// What the group admins have approved and the catalog doesn't have (yet).
+export async function listCustomItems(): Promise<SuperAdminCustomItemSummary[]> {
+  return query<SuperAdminCustomItemSummary>(
+    `SELECT items.id, items.custom_title, items.category_key, groups.name AS group_name
+     FROM items JOIN groups ON groups.id = items.group_id
+     WHERE items.item_key = $1 AND items.approval_status = 'approved' AND items.removed_at IS NULL
+     ORDER BY items.id DESC`,
+    [CUSTOM_ITEM_KEY]
+  );
+}
+
 export async function listEscalatedDisputes(): Promise<DisputeSummary[]> {
   return query<DisputeSummary>(
     `SELECT d.id, d.group_id, g.name AS group_name, d.loan_id,
-            i.item_key, i.spot,
+            i.item_key, i.custom_title, i.category_key, i.spot,
             b.nickname AS borrower_nickname, b.lang AS borrower_lang,
             lender.nickname AS lender_nickname, lender.lang AS lender_lang,
             d.reason_key, d.status, d.escalation_notice_sent, d.resolution_note,
@@ -232,7 +299,7 @@ export async function listEscalatedDisputes(): Promise<DisputeSummary[]> {
 export async function findDisputeById(disputeId: number): Promise<DisputeSummary | undefined> {
   return queryOne<DisputeSummary>(
     `SELECT d.id, d.group_id, g.name AS group_name, d.loan_id,
-            i.item_key, i.spot,
+            i.item_key, i.custom_title, i.category_key, i.spot,
             b.nickname AS borrower_nickname, b.lang AS borrower_lang,
             lender.nickname AS lender_nickname, lender.lang AS lender_lang,
             d.reason_key, d.status, d.escalation_notice_sent, d.resolution_note,
@@ -250,8 +317,8 @@ export async function findDisputeById(disputeId: number): Promise<DisputeSummary
 
 export async function getDisputeEvidence(disputeId: number, loanId: number): Promise<BreakGlassEvidence> {
   const loan = found(
-    await queryOne<LoanRow & { item_key: string }>(
-      `SELECT l.*, i.item_key
+    await queryOne<LoanRow & { item_key: string; custom_title: string | null; category_key: string | null }>(
+      `SELECT l.*, i.item_key, i.custom_title, i.category_key
        FROM loans l JOIN items i ON i.id = l.item_id
        WHERE l.id = $1`,
       [loanId]
@@ -278,6 +345,8 @@ export async function getDisputeEvidence(disputeId: number, loanId: number): Pro
     dispute_id: disputeId,
     loan_id: loan.id,
     item_key: loan.item_key,
+    custom_title: loan.custom_title,
+    category_key: loan.category_key,
     handover_photo: handoverPhoto,
     return_photo: returnPhoto,
     loan_status: loan.status as LoanStatus,

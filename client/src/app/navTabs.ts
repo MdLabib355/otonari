@@ -8,7 +8,7 @@ export interface NavTab {
   label: UiKey;
 }
 
-// Base resident tabs; Group Admins and Co-Admins also see the conditional Manage tab.
+// Base resident tabs; Group Admins also see the conditional Manage tab.
 export const NAV_TABS: NavTab[] = [
   { to: '/', Icon: ShelfIcon, label: 'nav.shelf' },
   { to: '/my-items', Icon: BoxIcon, label: 'nav.myItems' },

@@ -199,16 +199,6 @@
   font-weight: 500;
 }
 
-.landing-item-emoji {
-  display: grid;
-  place-items: center;
-  width: 2.2em;
-  height: 2.2em;
-  border-radius: 50%;
-  background: var(--bg);
-  font-size: 1.15em;
-}
-
 /* A background from one side of the window to the other */
 .landing-band {
   padding-top: 48px;

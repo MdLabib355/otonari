@@ -7,37 +7,38 @@ import { query } from '../../core/database.ts';
 import { usesS3 } from '../../core/s3.ts';
 
 const UPLOADS_DIR = path.join(import.meta.dirname, '..', '..', 'uploads');
+// An upload is stored a moment before its row is saved, so young files are never orphans.
+const MIN_ORPHAN_AGE_MS = 10 * 60 * 1000;
 const SOFT_QUOTA_BYTES = 50 * 1024 * 1024; // 50 MB default soft quota
 
+// Every column that points to a photo must be here: the cleanup deletes all other files.
 async function getReferencedPhotos(): Promise<{ localBasenames: Set<string>; s3Keys: Set<string> }> {
-  const rows = await query<{ handover_photo: string | null; return_photo: string | null }>(
-    'SELECT handover_photo, return_photo FROM loans WHERE handover_photo IS NOT NULL OR return_photo IS NOT NULL'
+  const rows = await query<{ photo: string }>(
+    `SELECT handover_photo AS photo FROM loans WHERE handover_photo IS NOT NULL
+     UNION SELECT return_photo FROM loans WHERE return_photo IS NOT NULL
+     UNION SELECT avatar FROM users WHERE avatar IS NOT NULL
+     UNION SELECT image FROM groups WHERE image IS NOT NULL
+     UNION SELECT photo FROM items WHERE photo IS NOT NULL`
   );
   const localBasenames = new Set<string>();
   const s3Keys = new Set<string>();
 
-  for (const row of rows) {
-    for (const value of [row.handover_photo, row.return_photo]) {
-      if (!value) continue;
-      if (value.startsWith('s3:')) {
-        s3Keys.add(value.slice(3));
-      } else {
-        localBasenames.add(path.basename(value));
-      }
-    }
+  for (const { photo } of rows) {
+    if (photo.startsWith('s3:')) s3Keys.add(photo.slice(3));
+    else localBasenames.add(path.basename(photo));
   }
   return { localBasenames, s3Keys };
 }
 
-function listUploadEntries(): { name: string; fullPath: string; size: number }[] {
+function listUploadEntries(): { name: string; fullPath: string; size: number; age: number }[] {
   if (!fs.existsSync(UPLOADS_DIR)) return [];
-  const entries: { name: string; fullPath: string; size: number }[] = [];
+  const entries: { name: string; fullPath: string; size: number; age: number }[] = [];
   for (const name of fs.readdirSync(UPLOADS_DIR)) {
     if (name === '.gitkeep' || name.startsWith('.')) continue;
     const fullPath = path.join(UPLOADS_DIR, name);
     try {
       const stat = fs.statSync(fullPath);
-      if (stat.isFile()) entries.push({ name, fullPath, size: stat.size });
+      if (stat.isFile()) entries.push({ name, fullPath, size: stat.size, age: Date.now() - stat.mtimeMs });
     } catch {
       // Ignore vanished files
     }
@@ -63,7 +64,7 @@ export async function getStorageHealth(): Promise<StorageHealth> {
   let orphanCount = 0;
   for (const entry of entries) {
     usedBytes += entry.size;
-    if (!localBasenames.has(entry.name)) orphanCount += 1;
+    if (!localBasenames.has(entry.name) && entry.age > MIN_ORPHAN_AGE_MS) orphanCount += 1;
   }
 
   return {
@@ -92,7 +93,9 @@ export async function cleanupOrphanUploads(dryRun: boolean): Promise<StorageClea
     Promise.resolve(listUploadEntries()),
   ]);
 
-  const orphans = entries.filter((entry) => !localBasenames.has(entry.name));
+  const orphans = entries.filter(
+    (entry) => !localBasenames.has(entry.name) && entry.age > MIN_ORPHAN_AGE_MS
+  );
   let deletedCount = 0;
   let reclaimedBytes = 0;
 

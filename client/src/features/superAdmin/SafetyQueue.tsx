@@ -5,8 +5,8 @@ import type {
   DisputeSummary,
 } from '../../../../shared/types.ts';
 import { api, ApiError } from '../../core/api.ts';
-import { findItem } from '../../data/catalog.ts';
-import { formatDate, itemName, renderPhrase } from '../../i18n/index.ts';
+import ItemVisual from '../../components/ItemVisual.tsx';
+import { formatDate, itemDisplayTitle, renderPhrase } from '../../i18n/index.ts';
 
 const BREAK_GLASS_REASONS = [
   'Damaged Item Claim',
@@ -156,10 +156,10 @@ export default function SafetyQueue({ disputes, onRefresh, onNotify }: SafetyQue
           {dispute && (
             <div className="sa-card">
               <div className="sa-card-head">
-                <div>
+                <ItemVisual itemKey={dispute.item_key} categoryKey={dispute.category_key} alt="" size="sm" />
+                <div className="sa-grow">
                   <h2>
-                    Loan #{dispute.loan_id} — {findItem(dispute.item_key)?.emoji}{' '}
-                    {itemName('en', dispute.item_key)} ({dispute.group_name})
+                    Loan #{dispute.loan_id} — {itemDisplayTitle('en', dispute.item_key, dispute.custom_title)} ({dispute.group_name})
                   </h2>
                   <p className="ga-meta">
                     Borrower: <strong>{dispute.borrower_nickname}</strong> ({dispute.borrower_lang}) · Lender:{' '}
@@ -169,7 +169,7 @@ export default function SafetyQueue({ disputes, onRefresh, onNotify }: SafetyQue
                 </div>
 
                 <div className="ga-actions">
-                  {isUnlocked && <span className="sa-countdown">⏱ {formatCountdown(remainingSeconds)}</span>}
+                  {isUnlocked && <span className="sa-countdown">{formatCountdown(remainingSeconds)}</span>}
                   <span className={`ga-badge ${isUnlocked ? 'ga-badge-amber' : 'ga-badge-indigo'}`}>
                     {isUnlocked ? 'Break-Glass Active' : 'Privacy Shield Locked'}
                   </span>
@@ -192,7 +192,7 @@ export default function SafetyQueue({ disputes, onRefresh, onNotify }: SafetyQue
                       disabled={busy || dispute.escalation_notice_sent}
                       onClick={sendNotice}
                     >
-                      {dispute.escalation_notice_sent ? 'Escalation Notice Sent ✓' : 'Send Platform Escalation Notice'}
+                      {dispute.escalation_notice_sent ? 'Escalation Notice Sent' : 'Send Platform Escalation Notice'}
                     </button>
                     <button
                       type="button"
@@ -200,7 +200,7 @@ export default function SafetyQueue({ disputes, onRefresh, onNotify }: SafetyQue
                       disabled={busy || dispute.status === 'resolved'}
                       onClick={markResolved}
                     >
-                      {dispute.status === 'resolved' ? 'Resolved ✓' : 'Mark Dispute Resolved'}
+                      {dispute.status === 'resolved' ? 'Resolved' : 'Mark Dispute Resolved'}
                     </button>
                     <button type="button" className="ga-btn" onClick={relock}>
                       Re-Lock Session
@@ -224,7 +224,7 @@ export default function SafetyQueue({ disputes, onRefresh, onNotify }: SafetyQue
                         </label>
                         <select
                           id="sa-bg-reason"
-                          className="sa-select"
+                          className="select-input"
                           value={reason}
                           onChange={(e) => setReason(e.target.value)}
                         >

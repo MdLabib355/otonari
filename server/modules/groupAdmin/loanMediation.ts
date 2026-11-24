@@ -12,6 +12,9 @@ import { createMessage } from '../message/messageModel.ts';
 
 interface GroupLoanQueryRow extends LoanRow {
   item_key: string;
+  custom_title: string | null;
+  category_key: string | null;
+  item_photo: string | null;
   spot: string;
   borrower_nickname: string;
   borrower_lang: Lang;
@@ -22,13 +25,12 @@ interface GroupLoanQueryRow extends LoanRow {
   last_nudge_at: string | null;
 }
 
-function actorRoleOf(admin: UserRow): 'super_admin' | 'group_admin' | 'co_admin' {
-  if (admin.role === 'super_admin') return 'super_admin';
-  return admin.role === 'group_admin' ? 'group_admin' : 'co_admin';
+function actorRoleOf(admin: UserRow): 'super_admin' | 'group_admin' {
+  return admin.role === 'super_admin' ? 'super_admin' : 'group_admin';
 }
 
 function actorLabelOf(admin: UserRow): string {
-  const prefix = admin.role === 'super_admin' ? 'SuperAdmin' : admin.role === 'group_admin' ? 'GroupAdmin' : 'CoAdmin';
+  const prefix = admin.role === 'super_admin' ? 'SuperAdmin' : 'GroupAdmin';
   return `${prefix} · ${admin.nickname || admin.email}`;
 }
 
@@ -60,7 +62,7 @@ async function listTimelineForLoan(loanId: number): Promise<GroupAdminLoanTimeli
 export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdminLoan[]> {
   const rows = await query<GroupLoanQueryRow>(
     `SELECT loans.*,
-            items.item_key, items.spot,
+            items.item_key, items.custom_title, items.category_key, items.photo AS item_photo, items.spot,
             borrower.nickname AS borrower_nickname, borrower.lang AS borrower_lang,
             lender.nickname AS lender_nickname, lender.lang AS lender_lang,
             dispute.reason_key AS flagged_reason,
@@ -99,8 +101,9 @@ export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdmi
   return Promise.all(
     rows.map(async (row) => {
       const isOverdue = row.status === 'active' && !row.return_photo && Date.parse(row.end_at) < now;
-      const [timeline, signedHandover, signedReturn] = await Promise.all([
+      const [timeline, itemPhoto, signedHandover, signedReturn] = await Promise.all([
         listTimelineForLoan(row.id),
+        photoUrl(row.item_photo),
         photoUrl(row.handover_photo),
         photoUrl(row.return_photo),
       ]);
@@ -108,6 +111,9 @@ export async function listGroupLoansForAdmin(groupId: number): Promise<GroupAdmi
         id: row.id,
         item_id: row.item_id,
         item_key: row.item_key,
+        custom_title: row.custom_title,
+        category_key: row.category_key,
+        item_photo: itemPhoto,
         spot: row.spot,
         status: row.status,
         is_overdue: isOverdue,

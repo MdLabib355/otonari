@@ -88,7 +88,7 @@ export default function PlatformOverview({
           <div>
             <strong>Orphaned Group Alert:</strong>{' '}
             {overview.orphaned_groups.map((g) => `${g.name} (${g.code})`).join(', ')} currently have no active
-            Primary Group Admin.
+            Group Admin.
           </div>
           <button type="button" className="ga-btn ga-btn-amber" onClick={() => onNavigate('groups')}>
             Open Admin Rescue →
@@ -139,7 +139,7 @@ export default function PlatformOverview({
             <strong>Database Engine</strong>
             <span className="ga-badge ga-badge-green">● OK ({overview.db_latency_ms} ms)</span>
           </div>
-          <div className="ga-meta">PostgreSQL connected · idempotent schema ready</div>
+          <div className="ga-meta">PostgreSQL connected · Demo mode {overview.demo_mode ? 'on' : 'off'}</div>
         </div>
 
         <div className="sa-health-tile">
@@ -239,17 +239,17 @@ export default function PlatformOverview({
             <tbody>
               {overview.recent_audits.map((entry) => (
                 <tr key={entry.id}>
-                  <td className="sa-mono">{entry.created_at.slice(0, 19).replace('T', ' ')}</td>
-                  <td>
+                  <td data-label="Timestamp" className="sa-mono">{entry.created_at.slice(0, 19).replace('T', ' ')}</td>
+                  <td data-label="Category">
                     <span className="ga-badge ga-badge-indigo">{entry.category}</span>
                   </td>
-                  <td>
+                  <td data-label="Action">
                     <span className="ga-code-chip">{entry.action}</span>
                   </td>
-                  <td>
+                  <td data-label="Actor">
                     <strong>{entry.actor_label}</strong>
                   </td>
-                  <td>{entry.detail}</td>
+                  <td data-label="Detail">{entry.detail}</td>
                 </tr>
               ))}
             </tbody>

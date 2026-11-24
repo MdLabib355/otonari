@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { GroupAdminLoan, Lang } from '../../../../shared/types.ts';
 import SpeakButton from '../../components/SpeakButton.tsx';
+import Modal from '../../components/Modal.tsx';
 import { api, ApiError } from '../../core/api.ts';
-import { findItem } from '../../data/catalog.ts';
-import { displayName, formatDate, itemName, meta, renderPhrase, spotName, t } from '../../i18n/index.ts';
+import ItemVisual from '../../components/ItemVisual.tsx';
+import { displayName, formatDate, itemDisplayTitle, meta, renderPhrase, spotName, t } from '../../i18n/index.ts';
 
 const MEDIATION_KEYS = ['admin.gentleReminder', 'admin.spotAssist', 'admin.receivedAtDesk'] as const;
 
@@ -73,7 +74,7 @@ export default function LoansTab({ lang, loans, onRefresh, onNotify }: LoansTabP
         </div>
       ) : (
         loans.map((loan) => {
-          const label = itemName(lang, loan.item_key);
+          const label = itemDisplayTitle(lang, loan.item_key, loan.custom_title);
           const spot = spotName(lang, loan.spot);
           const statusCls = loan.is_overdue
             ? 'ga-badge-red'
@@ -86,9 +87,7 @@ export default function LoansTab({ lang, loans, onRefresh, onNotify }: LoansTabP
             <div key={loan.id} className={`ga-card ${loan.is_overdue ? 'ga-card-overdue' : ''}`}>
               <div className="ga-card-top">
                 <div className="ga-identity">
-                  <div className="ga-item-emoji" aria-hidden="true">
-                    {findItem(loan.item_key)?.emoji ?? '📦'}
-                  </div>
+                  <ItemVisual itemKey={loan.item_key} categoryKey={loan.category_key} photo={loan.item_photo} alt="" />
                   <div>
                     <div className="ga-entity-name">
                       <span>
@@ -186,88 +185,85 @@ export default function LoansTab({ lang, loans, onRefresh, onNotify }: LoansTabP
 
       {/* Dual-Language Gentle Mediation Modal */}
       {mediationLoan && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-dialog">
-            <div className="modal-header">
-              <h2>{t(lang, 'groupAdmin.mediationTitle', { id: mediationLoan.id })}</h2>
-            </div>
-            <div className="modal-body">
-              <p className="ga-meta">{t(lang, 'groupAdmin.mediationDesc')}</p>
-              <div className="ga-stack" style={{ marginTop: 12 }}>
-                {MEDIATION_KEYS.map((key) => {
-                  const preview = renderPhrase(lang, key, {
-                    item: mediationLoan.item_key,
-                    spot: mediationLoan.spot,
-                  });
-                  return (
-                    <label
-                      key={key}
-                      className={`ga-radio-option ${selectedPhrase === key ? 'selected' : ''}`}
-                    >
-                      <input
-                        type="radio"
-                        name="mediation-phrase"
-                        value={key}
-                        checked={selectedPhrase === key}
-                        onChange={() => setSelectedPhrase(key)}
-                      />
-                      <div>
-                        <span className="ga-code-chip">{key}</span>
-                        <div style={{ marginTop: 4 }}>{preview}</div>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-
-              <div className="ga-preview-grid">
-                {[
-                  {
-                    roleLabel: t(lang, 'groupAdmin.borrowerPreview', {
-                      name: mediationLoan.borrower.nickname,
-                    }),
-                    targetLang: mediationLoan.borrower.lang,
-                  },
-                  {
-                    roleLabel: t(lang, 'groupAdmin.lenderPreview', {
-                      name: mediationLoan.lender.nickname,
-                    }),
-                    targetLang: mediationLoan.lender.lang,
-                  },
-                ].map(({ roleLabel, targetLang }) => {
-                  const text = renderPhrase(targetLang, selectedPhrase, {
-                    item: mediationLoan.item_key,
-                    spot: mediationLoan.spot,
-                  });
-                  return (
-                    <div key={roleLabel} className="ga-preview-box">
-                      <div className="ga-preview-head">
-                        <span>
-                          {roleLabel} ({meta(targetLang).name})
-                        </span>
-                        <SpeakButton lang={targetLang} text={text} />
-                      </div>
-                      <p style={{ margin: 0 }}>{text}</p>
+        <Modal title={t(lang, 'groupAdmin.mediationTitle', { id: mediationLoan.id })} onClose={() => setMediationLoan(null)}>
+          <div className="modal-body">
+            <p className="ga-meta">{t(lang, 'groupAdmin.mediationDesc')}</p>
+            <div className="ga-stack" style={{ marginTop: 12 }}>
+              {MEDIATION_KEYS.map((key) => {
+                const preview = renderPhrase(lang, key, {
+                  item: mediationLoan.item_key,
+                  item_label: mediationLoan.custom_title ?? undefined,
+                  spot: mediationLoan.spot,
+                });
+                return (
+                  <label
+                    key={key}
+                    className={`ga-radio-option ${selectedPhrase === key ? 'selected' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="mediation-phrase"
+                      value={key}
+                      checked={selectedPhrase === key}
+                      onChange={() => setSelectedPhrase(key)}
+                    />
+                    <div>
+                      <span className="ga-code-chip">{key}</span>
+                      <div style={{ marginTop: 4 }}>{preview}</div>
                     </div>
-                  );
-                })}
-              </div>
+                  </label>
+                );
+              })}
             </div>
-            <div className="modal-footer">
-              <button type="button" className="button-secondary" onClick={() => setMediationLoan(null)}>
-                {t(lang, 'common.cancel')}
-              </button>
-              <button
-                type="button"
-                className="button-primary"
-                disabled={busyId === mediationLoan.id}
-                onClick={sendMediation}
-              >
-                {t(lang, 'groupAdmin.sendStructuredNotice')}
-              </button>
+
+            <div className="ga-preview-grid">
+              {[
+                {
+                  roleLabel: t(lang, 'groupAdmin.borrowerPreview', {
+                    name: mediationLoan.borrower.nickname,
+                  }),
+                  targetLang: mediationLoan.borrower.lang,
+                },
+                {
+                  roleLabel: t(lang, 'groupAdmin.lenderPreview', {
+                    name: mediationLoan.lender.nickname,
+                  }),
+                  targetLang: mediationLoan.lender.lang,
+                },
+              ].map(({ roleLabel, targetLang }) => {
+                const text = renderPhrase(targetLang, selectedPhrase, {
+                  item: mediationLoan.item_key,
+                  item_label: mediationLoan.custom_title ?? undefined,
+                  spot: mediationLoan.spot,
+                });
+                return (
+                  <div key={roleLabel} className="ga-preview-box">
+                    <div className="ga-preview-head">
+                      <span>
+                        {roleLabel} ({meta(targetLang).name})
+                      </span>
+                      <SpeakButton lang={targetLang} text={text} />
+                    </div>
+                    <p style={{ margin: 0 }}>{text}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </div>
+          <div className="modal-footer">
+            <button type="button" className="button-secondary" onClick={() => setMediationLoan(null)}>
+              {t(lang, 'common.cancel')}
+            </button>
+            <button
+              type="button"
+              className="button-primary"
+              disabled={busyId === mediationLoan.id}
+              onClick={sendMediation}
+            >
+              {t(lang, 'groupAdmin.sendStructuredNotice')}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

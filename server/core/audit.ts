@@ -7,7 +7,7 @@ import { found, query, queryOne } from './database.ts';
 export interface NewAuditLogEntry {
   actorId?: number | null;
   actorLabel: string;
-  actorRole: 'super_admin' | 'group_admin' | 'co_admin' | 'system';
+  actorRole: AuditLogEntry['actor_role'];
   scopeGroupId?: number | null;
   category: AuditCategory;
   action: string;

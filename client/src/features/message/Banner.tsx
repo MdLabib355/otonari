@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { GroupAnnouncement, InboxMessage, Lang } from '../../../../shared/types.ts';
 import { api } from '../../core/api.ts';
-import { findItem } from '../../data/catalog.ts';
+import ItemVisual from '../../components/ItemVisual.tsx';
 import { displayName, renderPhrase, t } from '../../i18n/index.ts';
 import { useUser } from '../../core/UserContext.ts';
 import { BellIcon, MegaphoneIcon } from '../../components/Icons.tsx';
@@ -68,9 +68,7 @@ function BannerMessage({ message, lang }: { message: InboxMessage; lang: Lang })
 
   return (
     <div className="banner">
-      <span className="banner-emoji" aria-hidden="true">
-        {findItem(message.item_key)?.emoji}
-      </span>
+      <ItemVisual itemKey={message.item_key} categoryKey={message.category_key} alt="" size="sm" />
       <div className="banner-text">
         <strong className="inline-icon-text">
           {isReminder && <BellIcon className="icon-sm" />}

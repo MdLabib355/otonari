@@ -10,6 +10,7 @@ import type {
 } from '../../../shared/types.ts';
 import { found, query, queryOne, transaction } from '../../core/database.ts';
 import type { CountRow, ItemRow, UserRow } from '../../types.ts';
+import { withPhotoUrl } from '../item/itemModel.ts';
 import { clearGroup } from '../user/userModel.ts';
 
 export async function findGroupMember(groupId: number, userId: number): Promise<UserRow | undefined> {
@@ -25,7 +26,7 @@ export async function listGroupMembersRaw(groupId: number): Promise<UserRow[]> {
      WHERE group_id = $1 AND deactivated_at IS NULL
      ORDER BY
        CASE member_status WHEN 'pending' THEN 0 ELSE 1 END,
-       CASE role WHEN 'super_admin' THEN 0 WHEN 'group_admin' THEN 1 WHEN 'co_admin' THEN 2 ELSE 3 END,
+       CASE role WHEN 'super_admin' THEN 0 WHEN 'group_admin' THEN 1 ELSE 2 END,
        id ASC`,
     [groupId]
   );
@@ -56,6 +57,7 @@ export async function countOwnedAvailableItemsByUser(groupId: number): Promise<M
     `SELECT owner_id, COUNT(*)::int AS count
      FROM items
      WHERE group_id = $1 AND removed_at IS NULL AND hidden_at IS NULL AND status = 'available'
+       AND approval_status = 'approved'
      GROUP BY owner_id`,
     [groupId]
   );
@@ -90,9 +92,13 @@ export async function getActiveAnnouncement(groupId: number): Promise<GroupAnnou
 }
 
 export async function getDashboardStats(groupId: number) {
-  const [pending, activeMembers, overdue, flagged, announcement] = await Promise.all([
+  const [pending, pendingItems, activeMembers, overdue, flagged, announcement] = await Promise.all([
     queryOne<CountRow>(
       "SELECT COUNT(*)::int AS count FROM users WHERE group_id = $1 AND deactivated_at IS NULL AND member_status = 'pending'",
+      [groupId]
+    ),
+    queryOne<CountRow>(
+      "SELECT COUNT(*)::int AS count FROM items WHERE group_id = $1 AND removed_at IS NULL AND approval_status = 'pending'",
       [groupId]
     ),
     queryOne<CountRow>(
@@ -114,6 +120,7 @@ export async function getDashboardStats(groupId: number) {
 
   return {
     pending_count: found(pending).count,
+    pending_item_count: found(pendingItems).count,
     active_member_count: found(activeMembers).count,
     overdue_loan_count: found(overdue).count,
     flagged_loan_count: found(flagged).count,
@@ -185,34 +192,17 @@ export async function updateMemberRole(groupId: number, userId: number, role: Gr
   return found(row);
 }
 
-export async function transferPrimaryAdmin(
-  groupId: number,
-  currentPrimaryId: number,
-  newPrimaryId: number
-): Promise<UserRow> {
-  return transaction(async () => {
-    await query(
-      "UPDATE users SET role = 'co_admin' WHERE id = $1 AND group_id = $2 AND role = 'group_admin'",
-      [currentPrimaryId, groupId]
-    );
-    const promoted = await queryOne<UserRow>(
-      "UPDATE users SET role = 'group_admin' WHERE id = $1 AND group_id = $2 RETURNING *",
-      [newPrimaryId, groupId]
-    );
-    return found(promoted);
-  });
-}
-
 export async function listGroupItemsForAdmin(groupId: number): Promise<GroupAdminItem[]> {
-  return query<GroupAdminItem>(
-    `SELECT items.id, items.item_key, items.max_days, items.spot, items.trusted_only, items.status,
-            items.owner_id, users.nickname AS owner_nickname, items.hidden_at
+  const items = await query<GroupAdminItem>(
+    `SELECT items.id, items.item_key, items.max_days, items.spot, items.trusted_only, items.status, items.photo,
+            items.custom_title, items.category_key, items.approval_status, items.owner_id, users.nickname AS owner_nickname, items.hidden_at
      FROM items
      JOIN users ON users.id = items.owner_id
      WHERE items.group_id = $1 AND items.removed_at IS NULL
      ORDER BY items.id ASC`,
     [groupId]
   );
+  return Promise.all(items.map(withPhotoUrl));
 }
 
 export async function findGroupItem(groupId: number, itemId: number): Promise<ItemRow | undefined> {
@@ -224,6 +214,20 @@ export async function findGroupItem(groupId: number, itemId: number): Promise<It
 
 export async function setItemHidden(itemId: number, hidden: boolean) {
   await query('UPDATE items SET hidden_at = CASE WHEN $2 THEN now() ELSE NULL END WHERE id = $1', [itemId, hidden]);
+}
+
+type ItemChanges = Pick<ItemRow, 'item_key' | 'custom_title' | 'category_key' | 'photo' | 'approval_status'>;
+
+export async function updateGroupItem(itemId: number, changes: ItemChanges) {
+  await query(
+    `UPDATE items SET item_key = $2, custom_title = $3, category_key = $4, photo = $5, approval_status = $6
+     WHERE id = $1`,
+    [itemId, changes.item_key, changes.custom_title, changes.category_key, changes.photo, changes.approval_status]
+  );
+}
+
+export async function markItemRejected(itemId: number) {
+  await query("UPDATE items SET approval_status = 'rejected', removed_at = now() WHERE id = $1", [itemId]);
 }
 
 export async function pinGroupAnnouncement(

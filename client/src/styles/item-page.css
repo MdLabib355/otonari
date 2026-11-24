@@ -28,11 +28,6 @@
   margin: 2px 0 0;
 }
 
-.item-header-emoji {
-  font-size: 3em;
-  line-height: 1;
-}
-
 .item-facts {
   margin: 12px 0 18px;
   color: var(--muted);

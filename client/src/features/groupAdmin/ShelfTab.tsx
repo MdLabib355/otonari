@@ -3,8 +3,9 @@ import type { GroupAdminItem, Lang } from '../../../../shared/types.ts';
 import ChipGroup from '../../components/ChipGroup.tsx';
 import SpeakButton from '../../components/SpeakButton.tsx';
 import { api, ApiError } from '../../core/api.ts';
-import { findItem } from '../../data/catalog.ts';
-import { displayName, itemName, spotName, t } from '../../i18n/index.ts';
+import ItemVisual from '../../components/ItemVisual.tsx';
+import { categoryName, displayName, itemDisplayTitle, spotName, t } from '../../i18n/index.ts';
+import ItemEditor from './ItemEditor.tsx';
 
 type ShelfFilter = 'all' | 'available' | 'lent' | 'trusted' | 'hidden';
 
@@ -17,9 +18,13 @@ export interface ShelfTabProps {
 
 export default function ShelfTab({ lang, items, onRefresh, onNotify }: ShelfTabProps) {
   const [filter, setFilter] = useState<ShelfFilter>('all');
+  const [editing, setEditing] = useState<GroupAdminItem | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  const filtered = items.filter((item) => {
+  const requests = items.filter((item) => item.approval_status === 'pending');
+  const shelfItems = items.filter((item) => item.approval_status === 'approved');
+
+  const filtered = shelfItems.filter((item) => {
     if (filter === 'available') return item.status === 'available' && !item.hidden_at;
     if (filter === 'lent') return item.status === 'lent' || item.status === 'reserved';
     if (filter === 'trusted') return item.trusted_only;
@@ -27,12 +32,16 @@ export default function ShelfTab({ lang, items, onRefresh, onNotify }: ShelfTabP
     return true;
   });
 
-  async function moderate(item: GroupAdminItem, change: { trusted_only?: boolean; hidden?: boolean }) {
+  function moderate(item: GroupAdminItem, change: { trusted_only?: boolean; hidden?: boolean }) {
+    return run(item, () => api.patch(`/group-admin/items/${item.id}/moderate`, change));
+  }
+
+  async function run(item: GroupAdminItem, action: () => Promise<unknown>) {
     setBusyId(item.id);
     try {
-      await api.patch(`/group-admin/items/${item.id}/moderate`, change);
+      await action();
       await onRefresh();
-      onNotify(itemName(lang, item.item_key));
+      onNotify(itemDisplayTitle(lang, item.item_key, item.custom_title));
     } catch (error) {
       onNotify(error instanceof ApiError ? error.message : t(lang, 'common.error'), true);
     } finally {
@@ -50,9 +59,50 @@ export default function ShelfTab({ lang, items, onRefresh, onNotify }: ShelfTabP
 
   return (
     <div className="ga-stack">
+      <div className="ga-card">
+        <h2>
+          {t(lang, 'groupAdmin.itemRequests')} ({requests.length})
+        </h2>
+        {requests.length === 0 && <p className="ga-meta">{t(lang, 'groupAdmin.itemRequestsNone')}</p>}
+        <div className="ga-stack">
+          {requests.map((item) => (
+            <div key={item.id} className="ga-card ga-card-pending">
+              <div className="ga-identity ga-card-top">
+                <ItemVisual itemKey={item.item_key} categoryKey={item.category_key} photo={item.photo} alt="" size="lg" />
+                <div className="ga-identity-text">
+                  <div className="ga-entity-name">{itemDisplayTitle(lang, item.item_key, item.custom_title)}</div>
+                  <p className="ga-meta">
+                    {t(lang, 'shelf.from', { name: displayName(lang, item.owner_nickname) })} ·{' '}
+                    {item.category_key ? categoryName(lang, item.category_key) : t(lang, 'itemRequest.adminDecides')}
+                  </p>
+                </div>
+              </div>
+              <div className="ga-actions">
+                <button
+                  type="button"
+                  className="ga-btn ga-btn-primary"
+                  disabled={busyId === item.id}
+                  onClick={() => setEditing(item)}
+                >
+                  {t(lang, 'groupAdmin.reviewItem')}
+                </button>
+                <button
+                  type="button"
+                  className="ga-btn ga-btn-danger"
+                  disabled={busyId === item.id}
+                  onClick={() => run(item, () => api.post(`/group-admin/items/${item.id}/reject`))}
+                >
+                  {t(lang, 'groupAdmin.reject')}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div>
         <h2>
-          {t(lang, 'groupAdmin.shelfTitle')} ({items.length})
+          {t(lang, 'groupAdmin.shelfTitle')} ({shelfItems.length})
         </h2>
         <p className="ga-meta">{t(lang, 'groupAdmin.shelfSub')}</p>
       </div>
@@ -71,7 +121,7 @@ export default function ShelfTab({ lang, items, onRefresh, onNotify }: ShelfTabP
           </div>
         ) : (
           filtered.map((item) => {
-            const label = itemName(lang, item.item_key);
+            const label = itemDisplayTitle(lang, item.item_key, item.custom_title);
             const spot = spotName(lang, item.spot);
             const isHidden = Boolean(item.hidden_at);
             const isLocked = item.status !== 'available';
@@ -92,9 +142,7 @@ export default function ShelfTab({ lang, items, onRefresh, onNotify }: ShelfTabP
               <div key={item.id} className={`ga-card ${isHidden ? 'ga-card-dimmed' : ''}`}>
                 <div className="ga-card-top">
                   <div className="ga-identity">
-                    <div className="ga-item-emoji" aria-hidden="true">
-                      {findItem(item.item_key)?.emoji ?? '📦'}
-                    </div>
+                    <ItemVisual itemKey={item.item_key} categoryKey={item.category_key} photo={item.photo} alt="" />
                     <div>
                       <div className="ga-entity-name">
                         <span>{label}</span>
@@ -116,6 +164,14 @@ export default function ShelfTab({ lang, items, onRefresh, onNotify }: ShelfTabP
                 </div>
 
                 <div className="ga-actions">
+                  <button
+                    type="button"
+                    className="ga-btn ga-btn-soft"
+                    disabled={busyId === item.id}
+                    onClick={() => setEditing(item)}
+                  >
+                    {t(lang, 'groupAdmin.editItem')}
+                  </button>
                   <label className="ga-btn">
                     <input
                       type="checkbox"
@@ -143,6 +199,20 @@ export default function ShelfTab({ lang, items, onRefresh, onNotify }: ShelfTabP
           })
         )}
       </div>
+
+      {editing && (
+        <ItemEditor
+          key={editing.id}
+          lang={lang}
+          item={editing}
+          onClose={() => setEditing(null)}
+          onSaved={(title) => {
+            setEditing(null);
+            onNotify(title);
+            onRefresh().catch(() => onNotify(t(lang, 'common.error'), true));
+          }}
+        />
+      )}
     </div>
   );
 }

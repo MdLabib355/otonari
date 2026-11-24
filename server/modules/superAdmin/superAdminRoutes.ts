@@ -1,4 +1,4 @@
-// Super Admin API routes (/api/v1/super-admin/*) plus public active catalog route (/api/v1/catalog).
+// Super Admin API routes (/api/v1/super-admin/*) plus the public active catalog (/api/v1/catalog, /api/v1/categories).
 // Authentication uses Otonari's unified accounts & sessions (/api/v1/auth/login) with role = 'super_admin'.
 
 import express from 'express';
@@ -6,6 +6,7 @@ import { requireSuperAdmin } from '../../core/auth.ts';
 import { read, write } from '../../core/http.ts';
 import {
   createCatalogEntry,
+  createCategory,
   listCatalog,
   listDisputes,
   listGroups,
@@ -17,11 +18,15 @@ import {
   runRemindersNow,
   sendDisputeNotice,
   showAuditLogs,
+  showCategories,
+  showCustomItems,
   showDisputeEvidence,
   showOverview,
   showPublicCatalog,
+  showPublicCategories,
   unlockDisputeBreakGlass,
   updateCatalogEntry,
+  updateCategory,
   updateGroupStatus,
 } from './superAdminController.ts';
 
@@ -29,6 +34,7 @@ const router = express.Router();
 
 // Public active catalog for resident client synchronization
 router.get('/catalog', read(showPublicCatalog));
+router.get('/categories', read(showPublicCategories));
 
 // Platform Overview & Operations
 router.get('/super-admin/overview', read(requireSuperAdmin, showOverview));
@@ -46,6 +52,12 @@ router.patch('/super-admin/groups/:groupId/status', write(requireSuperAdmin, upd
 router.get('/super-admin/catalog', read(requireSuperAdmin, listCatalog));
 router.post('/super-admin/catalog', write(requireSuperAdmin, createCatalogEntry));
 router.patch('/super-admin/catalog/:key', write(requireSuperAdmin, updateCatalogEntry));
+router.get('/super-admin/custom-items', read(requireSuperAdmin, showCustomItems));
+
+// Global Categories
+router.get('/super-admin/categories', read(requireSuperAdmin, showCategories));
+router.post('/super-admin/categories', write(requireSuperAdmin, createCategory));
+router.patch('/super-admin/categories/:key', write(requireSuperAdmin, updateCategory));
 
 // Escalated Disputes & Audited Break-Glass Inspection
 router.get('/super-admin/disputes', read(requireSuperAdmin, listDisputes));

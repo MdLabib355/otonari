@@ -54,7 +54,7 @@ export async function requestLoan(req: Request) {
 
   if (!Number.isInteger(Number(item_id))) return refuse(400, 'item_id must be a number');
   const item = await findItem(toId(item_id));
-  if (!item || item.hidden_at) return refuse(404, 'Item not found');
+  if (!item || item.hidden_at || item.approval_status !== 'approved') return refuse(404, 'Item not found');
   if (item.group_id !== req.groupId) return refuse(403, 'Not in your neighborhood');
   if (item.owner_id === req.user.id) return refuse(403, "You can't borrow your own item");
 

@@ -3,10 +3,12 @@
 import type { Request } from 'express';
 import type { AuditCategory, SuperAdminOverview } from '../../../shared/types.ts';
 import {
-  CATEGORIES,
+  CATEGORY_ICON_KEYS,
+  CUSTOM_ITEM_KEY,
   GROUP_LIFECYCLE_STATUSES,
   GROUP_TYPES,
   JOIN_POLICIES,
+  isActiveCategoryKey,
   isOneOf,
 } from '../../core/allowedKeys.ts';
 import { listAuditLogs, writeAuditLog } from '../../core/audit.ts';
@@ -25,17 +27,22 @@ import { cleanupOrphanUploads, getStorageHealth } from './storageMaintenance.ts'
 import {
   dispatchEscalationNotice,
   findCatalogItem,
+  findCategory,
   findDisputeById,
   findGroupById,
   getDisputeEvidence,
   getPlatformCounters,
   insertCatalogItem,
+  insertCategory,
   listCatalogItems,
+  listCategories,
+  listCustomItems,
   listEscalatedDisputes,
   listGroupsForSuperAdmin,
   rescuePrimaryAdmin,
   resolveDisputeRecord,
   updateCatalogItemRecord,
+  updateCategoryRecord,
 } from './superAdminModel.ts';
 import { groupDirectoryView, overviewView } from './superAdminView.ts';
 
@@ -50,6 +57,8 @@ const AUDIT_CATEGORIES: AuditCategory[] = [
   'System',
 ];
 
+const CATEGORY_KEY_PATTERN = /^[a-z0-9_]{2,32}$/;
+const MAX_LABEL = 60;
 const ITEM_KEY_PATTERN = /^[a-z0-9_]{2,40}$/;
 
 function superAdminLabel(req: Request): string {
@@ -60,6 +69,11 @@ function superAdminLabel(req: Request): string {
 // Public active catalog endpoint for resident app sync.
 export async function showPublicCatalog() {
   return reply(200, await listCatalogItems(true));
+}
+
+// Public, like the catalog.
+export async function showPublicCategories() {
+  return reply(200, await listCategories(true));
 }
 
 export async function showOverview() {
@@ -258,20 +272,18 @@ export async function listCatalog() {
 
 export async function createCatalogEntry(req: Request) {
   const itemKey = toText(req.body?.item_key).toLowerCase();
-  const emoji = toText(req.body?.emoji);
+  const emoji = toText(req.body?.emoji); // not shown anymore; older clients still send it
   const category = toText(req.body?.category);
   const labelEn = toText(req.body?.label_en);
   const labelJa = toText(req.body?.label_ja);
   const labelJaEasy = toText(req.body?.label_ja_easy);
   const labelBn = toText(req.body?.label_bn);
 
-  if (!ITEM_KEY_PATTERN.test(itemKey)) {
+  if (!ITEM_KEY_PATTERN.test(itemKey) || itemKey === CUSTOM_ITEM_KEY) {
     return refuse(400, 'item_key must be snake_case (2-40 lowercase letters, digits, underscores)');
   }
-  if (!emoji || emoji.length > 8) return refuse(400, 'emoji is required');
-  if (!isOneOf(CATEGORIES, category)) {
-    return refuse(400, `category must be one of: ${CATEGORIES.join(', ')}`);
-  }
+  if (emoji.length > 8) return refuse(400, 'emoji is too long');
+  if (!(await isActiveCategoryKey(category))) return refuse(400, 'category must be an active category');
   if (!labelEn || !labelJa || !labelJaEasy || !labelBn) {
     return refuse(400, 'All 4 language translations (en, ja, ja-easy, bn) are required');
   }
@@ -299,7 +311,7 @@ export async function createCatalogEntry(req: Request) {
     action: 'catalog.item_added',
     targetType: 'catalog',
     targetId: itemKey,
-    detail: `Added ${emoji} ${itemKey} (${category}) with verified 4-locale translations.`,
+    detail: `Added ${itemKey} (${category}) with verified 4-locale translations.`,
     ipAddress: req.ip ?? null,
   });
 
@@ -324,11 +336,12 @@ export async function updateCatalogEntry(req: Request) {
   const nextCategory = req.body?.category !== undefined ? toText(req.body.category) : existing.category;
   const nextEmoji = req.body?.emoji !== undefined ? toText(req.body.emoji) : existing.emoji;
 
-  if (!isOneOf(CATEGORIES, nextCategory)) {
-    return refuse(400, `category must be one of: ${CATEGORIES.join(', ')}`);
+  // An unchanged category may be disabled by now: the item must still be editable.
+  if (nextCategory !== existing.category && !(await isActiveCategoryKey(nextCategory))) {
+    return refuse(400, 'category must be an active category');
   }
-  if (!nextEn || !nextJa || !nextJaEasy || !nextBn || !nextEmoji) {
-    return refuse(400, 'Emoji and all 4 language translations must remain non-empty');
+  if (!nextEn || !nextJa || !nextJaEasy || !nextBn) {
+    return refuse(400, 'All 4 language translations must remain non-empty');
   }
 
   const updated = await updateCatalogItemRecord(itemKey, {
@@ -354,6 +367,85 @@ export async function updateCatalogEntry(req: Request) {
   });
 
   return reply(200, updated);
+}
+
+export async function showCategories() {
+  return reply(200, await listCategories());
+}
+
+// The labels in all four languages, or null if one is missing, empty or too long.
+function categoryLabels(body: Record<string, unknown>) {
+  const labels = {
+    label_en: toText(body.label_en),
+    label_ja: toText(body.label_ja),
+    label_ja_easy: toText(body.label_ja_easy),
+    label_bn: toText(body.label_bn),
+  };
+  return Object.values(labels).every((label) => label.length >= 1 && label.length <= MAX_LABEL) ? labels : null;
+}
+
+export async function createCategory(req: Request) {
+  const body: Record<string, unknown> = req.body ?? {};
+  const categoryKey = toText(body.category_key).toLowerCase();
+  const iconKey: unknown = body.icon_key ?? 'default';
+  const labels = categoryLabels(body);
+
+  if (!CATEGORY_KEY_PATTERN.test(categoryKey) || categoryKey === 'all') {
+    return refuse(400, 'category_key must be snake_case (2-32 lowercase letters, digits, underscores)');
+  }
+  if (!isOneOf(CATEGORY_ICON_KEYS, iconKey)) return refuse(400, 'Unknown icon_key');
+  if (!labels) return refuse(400, 'All 4 language labels (en, ja, ja-easy, bn) are required, 60 characters at most');
+  if (await findCategory(categoryKey)) return refuse(409, `Category "${categoryKey}" already exists`);
+
+  const created = await insertCategory({ category_key: categoryKey, icon_key: iconKey, is_active: true, ...labels });
+  await writeAuditLog({
+    actorId: req.user.id,
+    actorLabel: superAdminLabel(req),
+    actorRole: 'super_admin',
+    category: 'Catalog',
+    action: 'catalog.category_added',
+    targetType: 'category',
+    targetId: categoryKey,
+    detail: `Added category "${categoryKey}" (${labels.label_en}) in 4 languages.`,
+    ipAddress: req.ip ?? null,
+  });
+  return reply(201, created);
+}
+
+export async function updateCategory(req: Request) {
+  const existing = await findCategory(toText(req.params.key).toLowerCase());
+  if (!existing) return refuse(404, 'Category not found');
+
+  const body: Record<string, unknown> = req.body ?? {};
+  const isActive: unknown = body.is_active ?? existing.is_active;
+  const iconKey: unknown = body.icon_key ?? existing.icon_key;
+  const labels = categoryLabels({ ...existing, ...body });
+  if (typeof isActive !== 'boolean') return refuse(400, 'is_active must be true or false');
+  if (!isOneOf(CATEGORY_ICON_KEYS, iconKey)) return refuse(400, 'Unknown icon_key');
+  if (!labels) return refuse(400, 'All 4 language labels (en, ja, ja-easy, bn) are required, 60 characters at most');
+
+  const updated = await updateCategoryRecord({
+    category_key: existing.category_key,
+    icon_key: iconKey,
+    is_active: isActive,
+    ...labels,
+  });
+  await writeAuditLog({
+    actorId: req.user.id,
+    actorLabel: superAdminLabel(req),
+    actorRole: 'super_admin',
+    category: 'Catalog',
+    action: isActive !== existing.is_active ? 'catalog.category_status_changed' : 'catalog.category_updated',
+    targetType: 'category',
+    targetId: existing.category_key,
+    detail: `Updated category "${existing.category_key}" (active=${updated.is_active}).`,
+    ipAddress: req.ip ?? null,
+  });
+  return reply(200, updated);
+}
+
+export async function showCustomItems() {
+  return reply(200, await listCustomItems());
 }
 
 export async function listDisputes() {

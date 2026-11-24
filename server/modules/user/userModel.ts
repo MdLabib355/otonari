@@ -147,7 +147,7 @@ export async function clearGroup(userId: number) {
   await query(
     `UPDATE users SET group_id = NULL, joined_at = NULL,
        member_status = 'active', muted_until = NULL, trust_override = NULL,
-       role = CASE WHEN role IN ('group_admin','co_admin') THEN 'user' ELSE role END
+       role = CASE WHEN role = 'group_admin' THEN 'user' ELSE role END
      WHERE id = $1`,
     [userId]
   );

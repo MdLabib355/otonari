@@ -11,11 +11,6 @@
   box-shadow: var(--shadow-md);
 }
 
-.banner-emoji {
-  font-size: 1.8em;
-  line-height: 1;
-}
-
 .banner-text {
   flex: 1;
   min-width: 0;

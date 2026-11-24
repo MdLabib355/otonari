@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { AdminUser, Role } from '../../../../shared/types.ts';
 import { api, ApiError } from '../../core/api.ts';
 
-const ALL_ROLES: Role[] = ['user', 'co_admin', 'group_admin', 'super_admin'];
+const ALL_ROLES: Role[] = ['user', 'group_admin', 'super_admin'];
 
 export interface AccountsDirectoryProps {
   meId: number;
@@ -84,19 +84,19 @@ export default function AccountsDirectory({ meId, users, onRefresh, onNotify }: 
                 const isSelf = u.id === meId;
                 return (
                   <tr key={u.id}>
-                    <td>
+                    <td data-label="Email">
                       <strong>{u.email}</strong>
                     </td>
-                    <td>{u.nickname || '–'}</td>
-                    <td>{u.group_name ?? <span className="ga-meta">No group</span>}</td>
-                    <td>
+                    <td data-label="Nickname">{u.nickname || '–'}</td>
+                    <td data-label="Neighborhood">{u.group_name ?? <span className="ga-meta">No group</span>}</td>
+                    <td data-label="Status">
                       <span className={`ga-badge ${u.active ? 'ga-badge-green' : 'ga-badge-red'}`}>
                         {u.active ? 'Active' : 'Deactivated'}
                       </span>
                     </td>
-                    <td>
+                    <td data-label="Role">
                       <select
-                        className="sa-select"
+                        className="select-input"
                         aria-label={`Role for ${u.email}`}
                         value={u.role}
                         disabled={isSelf || busyId === u.id}
@@ -109,7 +109,7 @@ export default function AccountsDirectory({ meId, users, onRefresh, onNotify }: 
                         ))}
                       </select>
                     </td>
-                    <td>
+                    <td data-label="Account Access">
                       <button
                         type="button"
                         className={`ga-btn ${u.active ? 'ga-btn-danger' : 'ga-btn-green'}`}

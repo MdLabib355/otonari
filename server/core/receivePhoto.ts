@@ -10,6 +10,20 @@ const MAX_BYTES = 5 * 1024 * 1024;
 // upload never leaves a file behind.
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_BYTES } }).single('photo');
 
+// For forms where a photo is possible but not needed. JSON requests just go on.
+export function receiveOptionalPhoto(req: Request, res: Response, next: NextFunction) {
+  if (!req.is('multipart/form-data')) return next();
+  upload(req, res, (error: unknown) => {
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'The photo is larger than 5 MB' });
+    }
+    if (error || (req.file && !imageExtension(req.file.buffer))) {
+      return res.status(400).json({ error: "Send at most one JPEG, PNG or WebP image as 'photo'" });
+    }
+    next();
+  });
+}
+
 // Puts the photo in req.file, or answers 400 / 413 if it isn't an image / is too big.
 export function receivePhoto(req: Request, res: Response, next: NextFunction) {
   upload(req, res, (error: unknown) => {

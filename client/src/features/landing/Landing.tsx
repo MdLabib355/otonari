@@ -9,6 +9,7 @@ import {
   SpeakerIcon,
   UsersIcon,
 } from '../../components/Icons.tsx';
+import ItemVisual from '../../components/ItemVisual.tsx';
 import { useUser } from '../../core/UserContext.ts';
 import { ITEMS, LANGUAGES } from '../../data/catalog.ts';
 import { itemName, meta, t, type UiKey } from '../../i18n/index.ts';
@@ -82,9 +83,7 @@ export default function Landing() {
         <ul className="landing-items">
           {ITEMS.filter((item) => SHOWN_ITEMS.includes(item.key)).map((item) => (
             <li key={item.key}>
-              <span className="landing-item-emoji" aria-hidden="true">
-                {item.emoji}
-              </span>
+              <ItemVisual itemKey={item.key} alt="" size="sm" />
               {itemName(lang, item.key)}
             </li>
           ))}

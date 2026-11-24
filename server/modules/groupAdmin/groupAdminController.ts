@@ -29,14 +29,12 @@ import { dashboardView, memberSummaryView } from './groupAdminView.ts';
 import { findGroupLoan, listGroupLoansForAdmin, resolveGroupLoan, sendGentleCheckIn } from './loanMediation.ts';
 import { changeMemberRoleGuarded, changeMemberStatusGuarded, safeRemoveMemberGuarded } from './memberControl.ts';
 
-function actorRoleOf(req: Request): 'super_admin' | 'group_admin' | 'co_admin' {
-  if (req.user.role === 'super_admin') return 'super_admin';
-  return req.user.role === 'group_admin' ? 'group_admin' : 'co_admin';
+function actorRoleOf(req: Request): 'super_admin' | 'group_admin' {
+  return req.user.role === 'super_admin' ? 'super_admin' : 'group_admin';
 }
 
 function actorLabelOf(req: Request): string {
-  const prefix =
-    req.user.role === 'super_admin' ? 'SuperAdmin' : req.user.role === 'group_admin' ? 'GroupAdmin' : 'CoAdmin';
+  const prefix = req.user.role === 'super_admin' ? 'SuperAdmin' : 'GroupAdmin';
   return `${prefix} · ${req.user.nickname || req.user.email}`;
 }
 
@@ -204,7 +202,7 @@ export async function setMemberStatus(req: Request) {
 
 export async function setMemberRole(req: Request) {
   const role: unknown = req.body?.role;
-  if (!isOneOf(GROUP_ROLES, role)) return refuse(400, "role must be 'user', 'co_admin', or 'group_admin'");
+  if (!isOneOf(GROUP_ROLES, role)) return refuse(400, "role must be 'user' or 'group_admin'");
 
   const target = await findGroupMember(req.groupId, toId(req.params.userId));
   if (!target) return refuse(404, 'Member not found');
@@ -328,6 +326,7 @@ export async function moderateItem(req: Request) {
   const item = await findGroupItem(req.groupId, toId(req.params.itemId));
   if (!item) return refuse(404, 'Item not found');
 
+  if (item.approval_status !== 'approved') return refuse(409, 'Approve or reject the item first');
   if (hidden === true && item.status !== 'available') {
     return refuse(409, 'Cannot hide an item while it is reserved or lent');
   }
@@ -343,7 +342,7 @@ export async function moderateItem(req: Request) {
       action: 'item.trusted_only_changed',
       targetType: 'item',
       targetId: item.id,
-      detail: `Set "${item.item_key}" Trusted-Only to ${trusted_only ? 'ON' : 'OFF'}.`,
+      detail: `Set "${item.custom_title ?? item.item_key}" Trusted-Only to ${trusted_only ? 'ON' : 'OFF'}.`,
       ipAddress: req.ip ?? null,
     });
   }
@@ -360,7 +359,7 @@ export async function moderateItem(req: Request) {
       action: hidden ? 'item.hidden' : 'item.restored',
       targetType: 'item',
       targetId: item.id,
-      detail: `${hidden ? 'Hidden' : 'Restored'} shelf item "${item.item_key}".`,
+      detail: `${hidden ? 'Hidden' : 'Restored'} shelf item "${item.custom_title ?? item.item_key}".`,
       ipAddress: req.ip ?? null,
     });
   }

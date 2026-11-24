@@ -61,31 +61,6 @@
   align-items: center;
   gap: 8px;
 }
-
-.sa-status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 11px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  white-space: nowrap;
-}
-
-.sa-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.sa-dot-green { background: var(--success); }
-.sa-dot-indigo { background: var(--accent); }
-.sa-dot-amber { background: var(--warn); }
-
 .sa-shell {
   display: grid;
   grid-template-columns: 262px minmax(0, 1fr);
@@ -437,36 +412,6 @@
   border: 1px solid rgba(154, 91, 0, 0.35);
 }
 
-.sa-login-wrap {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: var(--bg);
-}
-
-.sa-login-card {
-  width: 100%;
-  max-width: 420px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-  box-shadow: var(--shadow-md);
-}
-
-.sa-select {
-  width: 100%;
-  min-height: 42px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-}
-
 .sa-form-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -482,33 +427,286 @@
   }
 }
 
-@media (max-width: 860px) {
+/* The menu button and the drawer are for narrow screens only. */
+.sa-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.sa-drawer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(20, 30, 42, 0.45);
+  color: inherit;
+}
+
+.sa-drawer::backdrop {
+  background: none;
+}
+
+.sa-drawer-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(300px, 86vw);
+  height: 100%;
+  padding: 14px;
+  overflow-y: auto;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation: sa-drawer-in 180ms ease-out;
+}
+
+@keyframes sa-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sa-drawer-panel {
+    animation: none;
+  }
+}
+
+.sa-drawer-close {
+  align-self: flex-end;
+}
+
+.sa-drawer-account {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sa-drawer-account .ga-badge {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sa-drawer-account .ga-btn {
+  text-decoration: none;
+}
+
+@media (max-width: 859.98px) {
   .sa-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
-  .sa-sidebar {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 12px;
-  }
-  .sa-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  .sa-sidebar-label,
-  .sa-sidebar-footnote {
+
+  .sa-sidebar,
+  .sa-wide-only {
     display: none;
   }
-  .sa-nav-btn {
-    width: auto;
-    flex: 1 1 auto;
+
+  .sa-menu-btn {
+    display: inline-flex;
   }
+
+  .sa-topbar {
+    flex-wrap: nowrap;
+    padding: 6px 12px;
+  }
+
+  .sa-topbar-left,
+  .sa-topbar-left > div:last-child {
+    min-width: 0;
+  }
+
+  .sa-brand-title {
+    overflow: hidden;
+    font-size: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sa-topbar-right {
+    flex: none;
+  }
+
   .sa-main {
     padding: 18px 14px 44px;
   }
+
   .sa-phrase-grid,
-  .sa-trans-grid,
   .sa-form-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Phones: every row of a table becomes a card, with the heading of the column before each value. */
+@media (max-width: 767.98px) {
+  .sa-card {
+    padding: 14px;
+  }
+
+  .sa-kpi-grid {
+    gap: 10px;
+  }
+
+  .sa-table-wrap {
+    overflow-x: visible;
+  }
+
+  .sa-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .sa-table,
+  .sa-table tbody,
+  .sa-table tr,
+  .sa-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .sa-table tr {
+    margin-bottom: 12px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+
+  .sa-table td,
+  .sa-table tr:last-child td {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    overflow-wrap: anywhere;
+  }
+
+  .sa-table tr td:last-child {
+    border-bottom: none;
+  }
+
+  .sa-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+
+  .sa-table td > * {
+    justify-self: start;
+    max-width: 100%;
+  }
+
+  .sa-table td > .select-input,
+  .sa-table td > .sa-trans-grid {
+    justify-self: stretch;
+  }
+
+  .sa-table .inline-icon-text {
+    flex-wrap: wrap;
+  }
+
+  .sa-table .ga-code-chip {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .sa-table .ga-btn {
+    white-space: normal;
+  }
+
+  .sa-trans-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sa-main .ga-search {
+    max-width: none;
+  }
+}
+
+/* Takes the free space beside an icon */
+.sa-grow {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+/* ---------- Categories ---------- */
+
+.sa-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+  gap: 10px;
+}
+
+.sa-category {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.sa-category-icon {
+  width: 34px;
+  height: 34px;
+  color: var(--accent);
+}
+
+.sa-category-text {
+  display: flex;
+  flex: 1 1 160px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sa-icon-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 8px;
+}
+
+.sa-icon-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.sa-icon-option .item-svg {
+  width: 26px;
+  height: 26px;
+}
+
+.sa-icon-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }

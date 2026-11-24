@@ -17,11 +17,10 @@ export async function leaveGroup(userId: number, groupId: number) {
 
     await clearGroup(userId);
 
-    // A group always has an admin: if it was the last one, promote a co-admin or the longest-standing member.
+    // A group always has an admin: if it was the last one, the longest-standing member takes over.
     const members = await listMembers(groupId);
     if (members.length > 0 && members.every((member) => member.role !== 'group_admin')) {
-      const nextAdmin = members.find((member) => member.role === 'co_admin') ?? members[0];
-      await setRole(nextAdmin.id, 'group_admin');
+      await setRole(members[0].id, 'group_admin');
     }
   });
 }
