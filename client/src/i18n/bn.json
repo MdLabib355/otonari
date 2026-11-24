@@ -2,6 +2,7 @@
   "meta": { "lang": "bn", "name": "বাংলা", "locale": "bn-BD", "speech": "bn-BD" },
 
   "ui": {
+    "auth.useGoogle": "এই অ্যাকাউন্টটি Google দিয়ে খোলা হয়েছে। অনুগ্রহ করে Google বোতামটি ব্যবহার করুন।",
     "auth.registerTitle": "অ্যাকাউন্ট তৈরি করুন",
     "auth.thenJoin": "আগে লগ ইন বা নিবন্ধন করুন। তারপর পাড়ায় যোগ দিতে পারবেন।",
     "auth.wayLabel": "কীভাবে লগ ইন করবেন?",

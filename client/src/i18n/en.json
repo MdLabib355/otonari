@@ -2,6 +2,7 @@
   "meta": { "lang": "en", "name": "English", "locale": "en-US", "speech": "en-US" },
 
   "ui": {
+    "auth.useGoogle": "This account was made with Google. Please use “Continue with Google”.",
     "auth.registerTitle": "Create your account",
     "auth.thenJoin": "First log in or register. Then you can join the neighborhood.",
     "auth.wayLabel": "How do you want to log in?",

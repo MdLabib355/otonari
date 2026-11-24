@@ -36,6 +36,10 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       <h1>{t(lang, mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}</h1>
       {search.includes('code=') && <p className="notice">{t(lang, 'auth.thenJoin')}</p>}
 
+      {config?.google_client_id && (
+        <GoogleButton clientId={config.google_client_id} onLogin={(answer: Login) => login(answer)} />
+      )}
+
       {config?.email_code && (
         <div className="field">
           <ChipGroup label={t(lang, 'auth.wayLabel')} options={ways} value={way} onChange={setWay} />
@@ -45,10 +49,6 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
         <PasswordForm key={mode} mode={mode} onLogin={(answer: Login) => login(answer)} />
       ) : (
         <CodeForm onLogin={(answer: Login) => login(answer)} />
-      )}
-
-      {config?.google_client_id && (
-        <GoogleButton clientId={config.google_client_id} onLogin={(answer: Login) => login(answer)} />
       )}
 
       <p className="auth-switch">

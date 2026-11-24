@@ -8,6 +8,7 @@ export interface UserRow {
   email_verified: boolean;
   password_hash: string | null;
   google_sub: string | null;
+  google_only: boolean;
   role: Role;
   group_id: number | null;
   joined_at: string | null;

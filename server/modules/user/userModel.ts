@@ -30,21 +30,22 @@ interface NewUser {
   lang: Lang;
   password_hash?: string;
   email_verified?: boolean;
-  google_sub?: string;
+  google_sub?: string; // registers with Google: then that is the only way to log in
   nickname?: string;
 }
 
 // A new account. The nickname is asked when they join or create a group.
 export async function createUser(user: NewUser): Promise<UserRow> {
   const row = await queryOne<UserRow>(
-    `INSERT INTO users (email, lang, password_hash, email_verified, google_sub, nickname)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    `INSERT INTO users (email, lang, password_hash, email_verified, google_sub, google_only, nickname)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
     [
       user.email,
       user.lang,
       user.password_hash ?? null,
       user.email_verified ?? false,
       user.google_sub ?? null,
+      user.google_sub !== undefined,
       user.nickname ?? '',
     ]
   );
@@ -56,13 +57,14 @@ export async function confirmEmail(userId: number) {
   await query('UPDATE users SET email_verified = true, password_hash = NULL, google_sub = NULL WHERE id = $1', [userId]);
 }
 
-export async function setGoogle(userId: number, sub: string) {
-  await query('UPDATE users SET google_sub = $1 WHERE id = $2', [sub, userId]);
+// `only`: from now on there is no other way to log in.
+export async function setGoogle(userId: number, sub: string, only: boolean) {
+  await query('UPDATE users SET google_sub = $1, google_only = $2 WHERE id = $3', [sub, only, userId]);
 }
 
 // From the settings (super admin): whoever can set that owns the server, so the address counts as proved.
 export async function setPassword(userId: number, passwordHash: string) {
-  await query('UPDATE users SET password_hash = $1, email_verified = true, deactivated_at = NULL WHERE id = $2', [
+  await query('UPDATE users SET password_hash = $1, email_verified = true, google_only = false, deactivated_at = NULL WHERE id = $2', [
     passwordHash,
     userId,
   ]);

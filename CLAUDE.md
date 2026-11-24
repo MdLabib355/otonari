@@ -46,7 +46,9 @@ Fallback chain when a key is missing: `ja-easy → ja → en`, `bn → en`, `ja 
 
 ### Accounts and roles
 - **Everyone logs in first**, then joins a group (with its code) or starts one. Three ways: email + password, a 6-digit
-  code by email (10 minutes, 5 attempts), or Google. One account is in one group at a time.
+  code by email (10 minutes, 5 attempts), or "Continue with Google". One email = one account: who registered with Google
+  logs in with Google only; for an account that was made another way, Google is one more way in. One account is in one
+  group at a time.
 - `user`: a neighbor. `group_admin`: also sees and removes members and makes a new join code (whoever starts a group; if
   the last one leaves, the longest-standing member takes over). `super_admin`: all groups and accounts, roles,
   deactivating; the first one comes from the settings.
@@ -256,6 +258,7 @@ CREATE TABLE users (
   email_verified BOOLEAN NOT NULL DEFAULT false, -- proved with a code or Google
   password_hash TEXT,                 -- scrypt; NULL = logs in with a code or Google
   google_sub TEXT UNIQUE,             -- Google's id of the account
+  google_only BOOLEAN NOT NULL DEFAULT false, -- registered with Google: no other way to log in
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('super_admin','group_admin','user')),
   group_id INTEGER REFERENCES groups(id),  -- NULL = in no group
   joined_at TIMESTAMPTZ,              -- when they joined that group

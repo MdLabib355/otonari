@@ -56,6 +56,7 @@ export default function GoogleButton({ clientId, onLogin }: { clientId: string; 
         window.google.accounts.id.initialize({ client_id: clientId, callback: handleCredential });
         window.google.accounts.id.renderButton(area.current, {
           size: 'large',
+          width: Math.min(320, area.current.offsetWidth), // fits on a phone, also after turning it
           text: 'continue_with',
           locale: language,
         });
@@ -68,9 +69,9 @@ export default function GoogleButton({ clientId, onLogin }: { clientId: string; 
 
   return (
     <div className="auth-google">
-      <p className="muted">{t(lang, 'auth.or')}</p>
-      <div ref={area} />
+      <div ref={area} className="auth-google-button" />
       {problem && <p className="error">{t(lang, problem)}</p>}
+      <p className="auth-or">{t(lang, 'auth.or')}</p>
     </div>
   );
 }

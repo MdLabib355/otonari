@@ -13,7 +13,7 @@ services:
       POSTGRES_PASSWORD: otonari
       POSTGRES_DB: otonari
     volumes:
-      - database:/var/lib/postgresql/data
+      - accounts_database:/var/lib/postgresql/data
     healthcheck:
       # 127.0.0.1: while the image sets itself up, it answers only on its local socket.
       test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U otonari -d otonari']
@@ -60,5 +60,5 @@ services:
     restart: on-failure
 
 volumes:
-  database:
+  accounts_database: # not "database": that one is from before there were accounts
   photos:

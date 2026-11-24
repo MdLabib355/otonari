@@ -9,7 +9,7 @@ import cors from 'cors';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { createV1 } from './api/v1.ts';
-import { createTables, query, waitForDatabase } from './core/database.ts';
+import { addNewColumns, createTables, query, waitForDatabase } from './core/database.ts';
 import { startReminders } from './modules/loan/reminders.ts';
 import { countGroups } from './modules/group/groupModel.ts';
 import { ensureSuperAdmin } from './modules/auth/superAdmin.ts';
@@ -70,6 +70,7 @@ app.use((err: Error & { status?: number }, req: Request, res: Response, next: Ne
 // An empty database (e.g. after a fresh deploy) gets the demo data, exactly like `npm run seed`.
 await waitForDatabase();
 await createTables();
+await addNewColumns();
 if ((await countGroups()) === 0) {
   console.log('The database is empty, so it gets the demo data.');
   await seed(!DEMO_MODE); // without demo mode: only the two groups

@@ -2,6 +2,7 @@
   "meta": { "lang": "ja-easy", "name": "やさしい にほんご", "locale": "ja-JP", "speech": "ja-JP" },
 
   "ui": {
+    "auth.useGoogle": "この アカウントは Googleで つくりました。Googleの ボタンを おして ください。",
     "auth.registerTitle": "アカウントを つくる",
     "auth.thenJoin": "さきに ログインか とうろくを して ください。",
     "auth.wayLabel": "ログインの しかた",

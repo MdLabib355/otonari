@@ -9,10 +9,26 @@
   letter-spacing: 0.3em;
 }
 
-.auth-google {
-  margin-top: 20px;
-  padding-top: 8px;
+.auth-google-button {
+  display: flex;
+  justify-content: center;
+  min-height: var(--tap);
+}
+
+/* ---- or ---- */
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+  color: var(--muted);
+}
+
+.auth-or::before,
+.auth-or::after {
+  flex: 1;
   border-top: 1px solid var(--border);
+  content: "";
 }
 
 .admin-block {

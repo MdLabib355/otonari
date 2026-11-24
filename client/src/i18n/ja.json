@@ -2,6 +2,7 @@
   "meta": { "lang": "ja", "name": "日本語", "locale": "ja-JP", "speech": "ja-JP" },
 
   "ui": {
+    "auth.useGoogle": "このアカウントはGoogleで登録されています。「Googleで続行」をご利用ください。",
     "auth.registerTitle": "アカウントを作成",
     "auth.thenJoin": "まずログインまたは登録をしてください。その後、ご近所に参加できます。",
     "auth.wayLabel": "ログイン方法",

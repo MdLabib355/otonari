@@ -28,6 +28,8 @@ import { hashSecret, matchesHash } from './password.ts';
 import { createSession, deleteSession, deleteSessionsOf } from './sessionModel.ts';
 
 const TOO_MANY = refuse(429, 'Too many attempts, please wait a few minutes');
+// One email = one account. Who registered with Google logs in with Google.
+const USE_GOOGLE = reply(409, { error: 'This account logs in with Google', use_google: true });
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 128;
 
@@ -65,7 +67,9 @@ export async function register(req: Request) {
 
   const passwordHash = await hashSecret(password);
   return transaction(async () => {
-    if (await findUserByEmail(email)) return refuse(409, 'There is already an account with this email');
+    const existing = await findUserByEmail(email);
+    if (existing?.google_only) return USE_GOOGLE;
+    if (existing) return refuse(409, 'There is already an account with this email');
     return logIn(await createUser({ email, password_hash: passwordHash, lang: toLang(req.body?.lang) }));
   });
 }
@@ -78,6 +82,7 @@ export async function login(req: Request) {
 
   const user = email ? await findUserByEmail(email) : undefined;
   const given = typeof password === 'string' ? password.slice(0, MAX_PASSWORD + 1) : '';
+  if (user?.google_only) return USE_GOOGLE;
   // The same answer for a wrong email and a wrong password: it doesn't tell who has an account.
   if (!(await matchesHash(given, user?.password_hash)) || !user) return refuse(401, 'Wrong email or password');
 
@@ -85,7 +90,7 @@ export async function login(req: Request) {
   return logIn(user);
 }
 
-// Always the same answer, whether there is an account or not: a new one is created with the code.
+// The same answer whether there is an account or not: a new one is created with the code.
 export async function requestCode(req: Request) {
   if (!canSendEmail) return refuse(503, 'This server cannot send emails');
   const email = toEmail(req.body?.email);
@@ -93,6 +98,7 @@ export async function requestCode(req: Request) {
   if (tooMany(`code ${email}`, 5, 60) || tooMany(`code ${req.ip}`, 20, 60)) return TOO_MANY;
 
   const user = await findUserByEmail(email);
+  if (user?.google_only) return USE_GOOGLE;
   if (user?.is_demo) return reply(204); // their addresses don't exist
 
   const code = String(crypto.randomInt(1_000_000)).padStart(6, '0');
@@ -117,6 +123,7 @@ export async function loginWithCode(req: Request) {
   return transaction(async () => {
     if (!(await deleteEmailCode(email, codeHash))) return refuse(401, 'Wrong or expired code');
     const user = await findUserByEmail(email);
+    if (user?.google_only) return USE_GOOGLE;
     if (user) return logIn(await provedEmail(user));
     return logIn(await createUser({ email, email_verified: true, lang: toLang(req.body?.lang) }));
   });
@@ -136,10 +143,13 @@ export async function loginWithGoogle(req: Request) {
     if (!sameEmail) {
       return logIn(await createUser({ email, email_verified: ownsEmail, google_sub: sub, lang: toLang(req.body?.lang) }));
     }
-    // Connect the two only if Google knows for sure that it is the same person.
+    // Not a second account with the same email: Google becomes one more way into the existing one. Only if Google
+    // knows for sure that it is the same person.
     if (!ownsEmail || sameEmail.google_sub) return refuse(409, 'There is already an account with this email');
+    // (An account whose owner never proved the address may be somebody else's: then this is like registering.)
+    const only = !sameEmail.email_verified;
     await provedEmail(sameEmail);
-    await setGoogle(sameEmail.id, sub);
+    await setGoogle(sameEmail.id, sub, only);
     return logIn(await getUser(sameEmail.id));
   });
 }

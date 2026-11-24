@@ -88,6 +88,7 @@ export async function createTables() {
       email_verified BOOLEAN NOT NULL DEFAULT false, -- proved with a code or Google
       password_hash TEXT,                 -- scrypt; NULL = logs in with a code or Google
       google_sub TEXT UNIQUE,             -- Google's id of the account
+      google_only BOOLEAN NOT NULL DEFAULT false, -- registered with Google: no other way to log in
       role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('super_admin','group_admin','user')),
       group_id INTEGER REFERENCES groups(id),  -- NULL = in no group
       joined_at TIMESTAMPTZ,              -- when they joined that group
@@ -154,6 +155,11 @@ export async function createTables() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
     );
   `);
+}
+
+// Databases from before this column existed get it here.
+export async function addNewColumns() {
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS google_only BOOLEAN NOT NULL DEFAULT false');
 }
 
 // Start from empty tables: drop them all and create them again (used by seedData.ts).

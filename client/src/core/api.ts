@@ -20,6 +20,7 @@ const TOKEN_KEY = 'otonari-token';
 // The JSON answer when the server says no.
 interface ErrorData {
   error?: string;
+  use_google?: boolean; // only /api/v1/auth: this account logs in with Google
   existing_name?: string; // only POST /api/v1/groups
 }
 
